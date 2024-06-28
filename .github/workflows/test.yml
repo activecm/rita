@@ -1,9 +1,12 @@
 name: Tests
 
-on: [pull_request]
+on: 
+  pull_request:
+  push:
+    branches: 'main'
 
 jobs:
-  build:
+  test:
 
     runs-on: 
       labels: ubuntu-latest-m
