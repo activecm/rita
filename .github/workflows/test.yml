@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-
+    name: 'Run Tests'
     runs-on: 
       labels: ubuntu-latest-m
 

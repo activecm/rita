@@ -19,7 +19,7 @@ on:
 
 jobs:
   upload-installer:
-    name: Upload Artifacts
+    name: Upload Installer to Release
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4

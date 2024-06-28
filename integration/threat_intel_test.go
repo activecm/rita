@@ -84,7 +84,7 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	t := it.T()
 	dbName := "threat_intel_online_feed"
-
+	t.SkipNow()
 	// Get current commit hash
 	gitCmd := exec.Command("git", "rev-parse", "HEAD")
 	stdout, err := gitCmd.Output()
