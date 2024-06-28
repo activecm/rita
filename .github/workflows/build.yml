@@ -34,7 +34,9 @@ jobs:
             type=schedule
             type=ref,event=branch
             type=ref,event=pr
+            type=ref,event=tag
             type=semver,pattern={{raw}}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
             type=sha        
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -52,7 +54,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           # TODO: comment this back in
-#           push: ${{ github.event_name != 'pull_request' }}
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
+          # push: true
           tags: ${{ steps.meta.outputs.tags }}
 
