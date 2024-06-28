@@ -38,6 +38,11 @@ var ListCommand = &cli.Command{
 			return err
 		}
 
+		// check for updates after running the command
+		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+			return err
+		}
+
 		return nil
 	},
 }

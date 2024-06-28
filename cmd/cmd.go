@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"activecm/rita/config"
+	"activecm/rita/util"
 	"errors"
+	"fmt"
 
+	"github.com/google/go-github/github"
 	"github.com/spf13/afero"
 	"github.com/urfave/cli/v2"
 )
@@ -32,4 +36,27 @@ func ConfigFlag(required bool) *cli.StringFlag {
 			return ValidateConfigPath(afero.NewOsFs(), path)
 		},
 	}
+}
+
+func CheckForUpdate(cCtx *cli.Context, afs afero.Fs) error {
+	// get the current version
+	currentVersion := config.Version
+
+	// load config file
+	cfg, err := config.LoadConfig(afs, cCtx.String("config"))
+	if err != nil {
+		return fmt.Errorf("error loading config file: %w", err)
+	}
+
+	// check for update if version is set
+	if cfg.UpdateCheckEnabled && currentVersion != "" {
+		newer, latestVersion, err := util.CheckForNewerVersion(github.NewClient(nil), "v0.0.0")
+		if err != nil {
+			return fmt.Errorf("error checking for newer version of RITA: %w", err)
+		}
+		if newer {
+			fmt.Printf("\n\t✨ A newer version (%s) of RITA is available! https://github.com/activecm/rita/releases ✨\n\n", latestVersion)
+		}
+	}
+	return nil
 }

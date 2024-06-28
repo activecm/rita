@@ -93,6 +93,8 @@ var ImportCommand = &cli.Command{
 		if err != nil {
 			return err
 		}
+
+		// set the number of workers based on the number of CPUs
 		numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
 		numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
 		numWriters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
@@ -102,7 +104,16 @@ var ImportCommand = &cli.Command{
 
 		// run import command
 		_, err = RunImportCmd(startTime, cfg, afs, cCtx.String("logs"), cCtx.String("database"), cCtx.Bool("rolling"), cCtx.Bool("rebuild"))
-		return err
+		if err != nil {
+			return err
+		}
+
+		// check for updates after running the command
+		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+			return err
+		}
+
+		return nil
 	},
 }
 

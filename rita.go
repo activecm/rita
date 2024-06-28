@@ -4,13 +4,11 @@ import (
 	"activecm/rita/cmd"
 	"activecm/rita/config"
 	"activecm/rita/logger"
-	"activecm/rita/util"
 	"activecm/rita/viewer"
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/google/go-github/github"
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 )
@@ -61,17 +59,6 @@ func main() {
 				log.Fatal("Error loading .env file", err)
 			}
 
-			// check for update if version is set
-			if Version != "" {
-				newer, latestVersion, err := util.CheckForNewerVersion(github.NewClient(nil), "v0.0.0")
-				if err != nil {
-					log.Fatalf("Error checking for newer version: %v", err)
-				}
-				if newer {
-					fmt.Printf("\n\t✨ A newer version (%s) of RITA is available! https://github.com/activecm/rita/releases ✨\n", latestVersion)
-				}
-			}
-
 			return nil
 		},
 	}
@@ -88,7 +75,7 @@ func exitErrHandler(c *cli.Context, err error) {
 	if err == nil {
 		return
 	}
-	fmt.Fprintf(c.App.ErrWriter, "\n[!] %+v\n", err.Error())
+	fmt.Fprintf(c.App.ErrWriter, "\n\n\t[!] %+v\n\n", err.Error())
 	cli.OsExiter(1)
 
 }

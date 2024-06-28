@@ -35,6 +35,12 @@ var ValidateConfigCommand = &cli.Command{
 
 		// validate config file
 		if err := RunValidateConfigCommand(afs, cCtx.String("config")); err != nil {
+			fmt.Printf("\n\t[!] Configuration file is not valid...")
+			return err
+		}
+
+		// check for updates after running the command
+		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
 			return err
 		}
 
@@ -54,7 +60,7 @@ func RunValidateConfigCommand(afs afero.Fs, configPath string) error {
 		return err
 	}
 
-	fmt.Println("configuration file is valid")
+	fmt.Printf("\n\t[✨] Configuration file is valid \n\n")
 
 	return nil
 }

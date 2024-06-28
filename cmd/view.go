@@ -77,8 +77,16 @@ var ViewCommand = &cli.Command{
 			}
 		}
 
-		err := runViewCmd(afs, cCtx.String("config"), cCtx.Args().First(), cCtx.Bool("stdout"), cCtx.String("search"), cCtx.Int("limit"))
-		return err
+		if err := runViewCmd(afs, cCtx.String("config"), cCtx.Args().First(), cCtx.Bool("stdout"), cCtx.String("search"), cCtx.Int("limit")); err != nil {
+			return err
+		}
+
+		// check for updates after running the command
+		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+			return err
+		}
+
+		return nil
 	},
 }
 
