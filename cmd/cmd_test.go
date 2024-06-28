@@ -37,6 +37,11 @@ func TestMain(m *testing.M) {
 	if err := godotenv.Overload("../.env", "../integration/test.env"); err != nil {
 		log.Fatalf("error loading .env file: %v", err)
 	}
+
+	// set version
+	config.Version = ""
+
+	// run the tests
 	os.Exit(m.Run())
 }
 
@@ -60,6 +65,7 @@ func (c *CmdTestSuite) SetupSuite() {
 
 	// update the config to use the clickhouse container connection
 	cfg.DBConnection = c.clickhouseConnection
+	cfg.UpdateCheckEnabled = false
 	err = config.UpdateConfig(cfg)
 	require.NoError(t, err, "config should update without error")
 	c.cfg = cfg
