@@ -81,10 +81,10 @@ fi
 
 
 
-# TODO remove when repo is public
-./build_image.sh
-cp "./rita-$VERSION-image.tar" "$ANSIBLE_FILES" # was $INSTALL_OPT
-rm "./rita-$VERSION-image.tar"
+
+# ./build_image.sh
+# cp "./rita-$VERSION-image.tar" "$ANSIBLE_FILES" # was $INSTALL_OPT
+# rm "./rita-$VERSION-image.tar"
 
 # create tar
 # TODO the inner folder is named stage, should be rita-$VERSION
