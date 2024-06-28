@@ -67,7 +67,7 @@ cp ../README.md "$INSTALL_OPT"/README
 if [ "$(uname)" == "Darwin" ]; then
     sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.yml" # WAS $ANSIBLE_PLAYBOOKS
     sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"
-    sed -i'.bak' "s#ghcr.io/activecm/rita-v2:latest#ghcr.io/activecm/rita-v2:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
+    sed -i'.bak' "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
 
     rm "$BASE_DIR/install_rita.yml.bak"
     rm "$BASE_DIR/install_rita.sh.bak"
@@ -75,7 +75,7 @@ if [ "$(uname)" == "Darwin" ]; then
 else 
     sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.yml" # WAS $ANSIBLE_PLAYBOOKS
     sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"
-    sed -i  "s#ghcr.io/activecm/rita-v2:latest#ghcr.io/activecm/rita-v2:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
+    sed -i  "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
 fi
 
 
@@ -83,8 +83,8 @@ fi
 
 # TODO remove when repo is public
 ./build_image.sh
-cp "./rita-v2-$VERSION-image.tar" "$ANSIBLE_FILES" # was $INSTALL_OPT
-rm "./rita-v2-$VERSION-image.tar"
+cp "./rita-$VERSION-image.tar" "$ANSIBLE_FILES" # was $INSTALL_OPT
+rm "./rita-$VERSION-image.tar"
 
 # create tar
 # TODO the inner folder is named stage, should be rita-$VERSION

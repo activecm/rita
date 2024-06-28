@@ -81,11 +81,8 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 	checkThreatIntel(t, db)
 }
 
-// TODO check this test works once repo is public
 func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	t := it.T()
-	// TODO remove
-	t.SkipNow()
 	dbName := "threat_intel_online_feed"
 
 	// Get current commit hash
@@ -96,7 +93,7 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	require.NotEmpty(t, commitHash)
 
 	// Get online feed by pulling the file feed from Github
-	feedURL := "https://github.com/activecm/rita-v2/blob/" + commitHash + "/integration/threat_intel_feeds/feed.txt"
+	feedURL := "https://github.com/activecm/rita/blob/" + commitHash + "/integration/threat_intel_feeds/feed.txt"
 
 	// set up file system interface
 	afs := afero.NewMemMapFs()

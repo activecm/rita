@@ -34,7 +34,7 @@ logType='tsv'
 # dst='165.227.216.194'
 
 # path = './test_data/proxy'
-path = '/Users/lisa/Desktop/go_ws/rita-v2/test_data/valid_tsv'
+path = './test_data/valid_tsv'
 # path = '/home/parallels/Desktop/chris/dnscat2-ja3-strobe-agent'
 order = ['ts','uid','id.orig_h','id.orig_p','id.resp_h','id.resp_p','proto','service','duration','orig_bytes','resp_bytes','conn_state','local_orig','local_resp','missed_bytes','history','orig_pkts','orig_ip_bytes','resp_pkts','resp_ip_bytes','tunnel_parents','agent_hostname','agent_uuid']
 # size = 'multiple'

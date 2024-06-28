@@ -23,11 +23,8 @@
   become: true
 
   vars:
-    rita_version: "REPLACE_ME"									#FIXME - replace with the right version
-    #rita_container_image: hello-world								# Test container to confirm that we can install images.
-    #rita_container_image: activecm/rita							# Confirm exact image name to pull
-    #rita_container_image: activecm/rita:4.3.1
-    rita_container_image: "ghcr.io/activecm/rita-v2:{{  rita_version  }}"
+    rita_version: "REPLACE_ME"								
+    rita_container_image: "ghcr.io/activecm/rita:{{  rita_version  }}"
     clickhouse_container_image: clickhouse/clickhouse-server:latest
     ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
 
@@ -510,15 +507,14 @@
       rescue:
         - name: "RITA Install: Transfer RITA container image to target system"
           copy:
-          # TODO remove -v2
-            src: "rita-v2-{{  rita_version  }}-image.tar"
+            src: "rita-{{  rita_version  }}-image.tar"
             dest: /opt/rita
             owner: root
             group: root
             mode: 0644
         - name: "Install {{ rita_container_name }} container image from file"
           community.docker.docker_image_load:
-            path: "/opt/rita/rita-v2-{{  rita_version  }}-image.tar"
+            path: "/opt/rita/rita-{{  rita_version  }}-image.tar"
           register: load_result
           #This final one prints a list of the loaded images if we use the above 2 stanzas to load from a file.
         - name: "RITA Install: Print loaded image names."

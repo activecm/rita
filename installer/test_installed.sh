@@ -25,8 +25,8 @@ fi
 [ -d /etc/rita/threat_intel_feeds ] || { echo >&2 "/threat_intel_feeds should be in /etc/rita"; exit 1; }
 
 # verify that sed worked during installer generation
-if [ "$(grep -c "image: ghcr.io/activecm/rita-v2:${VERSION}" /opt/rita/docker-compose.yml)" -ne 1 ]; then
-    echo "/opt/rita/docker-compose.yml should have ghcr.io/activecm/rita-v2:${VERSION} set as the image definition for the rita service."
+if [ "$(grep -c "image: ghcr.io/activecm/rita:${VERSION}" /opt/rita/docker-compose.yml)" -ne 1 ]; then
+    echo "/opt/rita/docker-compose.yml should have ghcr.io/activecm/rita:${VERSION} set as the image definition for the rita service."
     exit 1
 fi 
 
