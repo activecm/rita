@@ -1,0 +1,35 @@
+volumes:
+  clickhouse_test_persistent:
+networks:
+  rita-test-network: {}
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.1.8
+    container_name: clickhouse_test
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      start_period: 5s
+      retries: 30
+    # entrypoint: ./entrypoint.sh
+    networks:
+      - rita-test-network
+    ports:
+      - 127.0.0.1:8124:8123
+      - 127.0.0.1:9001:9000
+    cap_add:
+      - SYS_TIME
+    volumes:
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+      # - ./init_ch.sh:/docker-entrypoint-initdb.d/init_ch.sh
+      - clickhouse_test_persistent:/var/lib/clickhouse
+      - ./config.xml:/etc/clickhouse-server/users.d/custom_config.xml:ro
+      - ./timezone.xml:/etc/clickhouse-server/config.d/timezone.xml:ro
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 131070
+        hard: 131070

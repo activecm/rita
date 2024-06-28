@@ -1,0 +1,13 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	http
+#open	2019-02-28-12-07-01
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	trans_depth	method	host	uri	referrer	version	user_agent	request_body_len	response_body_len	status_code	status_msg	info_code	info_msg	tags	username	password	proxied	orig_fuids	orig_filenames	orig_mime_types	resp_fuids	i_dont_exist	resp_filenames	resp_mime_types
+#types	time	string	addr	port	addr	port	count	string	string	string	string	string	string	count	count	count	string	count	string	set[enum]	string	string	set[string]	vector[string]	vector[string]	vector[string]	vector[string]	int64	vector[string]	vector[string]
+1517336154.078555	CsDSTo3cGyb7sbxsj5	10.55.100.109	52068	52.44.164.170	80	1	GET	www.alexa.com	/topsites/category;2/Top/Business/	-	1.1	Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.16299.98	0	178	301	Moved Permanently	-	-	(empty)	-	-	-	-	-	-	FfN3lR2RQPdyjaiHo9	-	text/html
+1517336162.615244	ClmlDRtRxVxeI68pc	10.55.100.109	52135	72.21.91.29	80	1	GET	ocsp.digicert.com	/MFEwTzBNMEswSTAJBgUrDgMCGgUABBQQX6Z6gAidtSefNc6DC0OInqPHDQQUD4BhHIIxYdUvKOeNRji0LOHG2eICEA0xaNqvbgoWhaatVZDMkfU=	-	1.1	Microsoft-CryptoAPI/10.0	0	471	200	OK	-	-	(empty)	-	-	-	-	-	-	FXoOb7k8rzRYNzHJ4	bingbong	-	application/ocsp-response
+1517336162.680510	ClmlDRtRxVxeI68pc	10.55.100.109	52135	72.21.91.29	80	2	GET	ocsp.digicert.com	/MFEwTzBNMEswSTAJBgUrDgMCGgUABBQQX6Z6gAidtSefNc6DC0OInqPHDQQUD4BhHIIxYdUvKOeNRji0LOHG2eICEA43oR3iLsJeAJczwVsnQCI=	-	1.1	Microsoft-CryptoAPI/10.0	0	471	200	OK	-	-	(empty)	-	-	-	-	-	-	FcUaPr28AJNXHOggG6	bingbong	-	application/ocsp-response
+1517336162.725153	CCWo4orreGs2jPNm6	10.55.100.109	52137	72.21.91.29	80	1	GET	ocsp.digicert.com	/MFEwTzBNMEswSTAJBgUrDgMCGgUABBQQX6Z6gAidtSefNc6DC0OInqPHDQQUD4BhHIIxYdUvKOeNRji0LOHG2eICEA43oR3iLsJeAJczwVsnQCI=	-	1.1	Microsoft-CryptoAPI/10.0	0	471	200	OK	-	-	(empty)	-	-	-	-	-	-	F3LsYm3leQvjXuzTu4	bingbong	-	application/ocsp-response
+1517336162.705568	CP4HnL1chY8ajVKasj	10.55.100.109	52136	72.21.91.29	80	1	GET	ocsp.digicert.com	/MFEwTzBNMEswSTAJBgUrDgMCGgUABBQQX6Z6gAidtSefNc6DC0OInqPHDQQUD4BhHIIxYdUvKOeNRji0LOHG2eICEA2PRHwc6RWDvxkHoMg08os=	-	1.1	Microsoft-CryptoAPI/10.0	0	471	200	OK	-	-	(empty)	-	-	-	-	-	-	Ff3vY03uNgIMavws4h	bingbong	-	application/ocsp-response

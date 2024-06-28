@@ -1,0 +1,13 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	known_hosts
+#open	2023-01-05-18-51-06
+#fields	ts	host
+#types	time	addr
+1672843056.913199	10.136.0.18
+1672843056.913199	10.136.0.16
+1672929522.193040	10.136.0.18
+1672929522.193040	10.136.0.16
+#close	2023-01-05-18-51-07

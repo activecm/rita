@@ -1,0 +1,10 @@
+All interesting traffic is coming from 73.54.23.243 to 64.225.56.201
+The zeek sensor was running on 64.225.56.201
+
+The logs contain the following data:
+3 days worth of log files
+An SSH session that is open the entire time
+An HTTP connection with a blank "Host:" parameter
+It has a unique user agent string of "'Modzilla/0.0001 (Atari 7800)'"
+HTTP connection is beaconing every 200-350 seconds
+

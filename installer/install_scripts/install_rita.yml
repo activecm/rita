@@ -1,0 +1,609 @@
+---
+#ansible install playbook for rita V2.
+#Version: 202406261404
+#sample runs:
+#	Optional: Add the following block, without #'s  to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
+#The hosts must each be on their own line.  These can be full or short hostnames or a name following "Host" in ~/.ssh/config .
+#
+#[allritas]
+#ro810
+#ub2404
+#
+#	Then run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
+#
+#	ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '	#-C (no changes) means do a dry run
+#	ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '
+
+#Many thanks to but-i-am-dominator for his help with this playbook.
+
+
+- name: "RITA Install: RITA installer and system prep and checks."
+  hosts: "{{  install_hosts  }}"
+  #hosts: "{{  install_hosts | default('all')  }}"						#Not a good idea to fall back on every host in your ansible hosts file.
+  become: true
+
+  vars:
+    rita_version: "REPLACE_ME"									#FIXME - replace with the right version
+    #rita_container_image: hello-world								# Test container to confirm that we can install images.
+    #rita_container_image: activecm/rita							# Confirm exact image name to pull
+    #rita_container_image: activecm/rita:4.3.1
+    rita_container_image: "ghcr.io/activecm/rita-v2:{{  rita_version  }}"
+    clickhouse_container_image: clickhouse/clickhouse-server:latest
+    ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
+
+#Early tasks needed to support the rest of the install
+  pre_tasks:
+#Known distribution?
+    - name: "RITA Install: Checking Linux distribution."
+      ansible.builtin.fail:
+        msg: "Distribution name: {{  ansible_distribution  }}  does not appear to be recognized - please contact ACM"
+      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' )
+      # and ansible_distribution != 'RedHat'
+      tags:
+        - linux
+
+    - name: "RITA Install: Checking Linux distribution version."
+      ansible.builtin.fail:
+        msg: "Warning: Linux distribution {{  ansible_distribution  }} {{  ansible_distribution_major_version  }} may not have been tested - please contact ACM and report whether the install worked or not"
+      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '24') ) )
+      #or ( ansible_distribution != 'RedHat' and (ansible_distribution_major_version == '9') ) 
+      ignore_errors: True		#We print a warning but do not abort if this is an unknown combination of distribution and major version.
+      tags:
+        - linux
+
+#CPU Architecture
+    - name: "RITA Install: Check system architecture."
+      ansible.builtin.fail:
+        msg: "Unsupported CPU architecture: {{  ansible_architecture  }}"
+      when: ( ansible_architecture != "x86_64" ) 	#and ansible_architecture != "aarch64" ) # "aarch64" for pi.  #pi0w is armv6l.  i386.  amd64?
+
+#Selinux checks
+    - name: "RITA Install: /sys/fs/selinux/enforce  exists."
+      stat:
+        path: "/sys/fs/selinux/enforce"
+      check_mode: true
+      changed_when: false
+      register: selinuxenforce_check
+      tags:
+        - linux
+
+    - name: "RITA Install: sys filesystem check for selinux."
+      lineinfile:
+        path: /sys/fs/selinux/enforce
+        regexp: '^1'
+        line: 0
+        create: false
+        unsafe_writes: true									#Needed because the original file in the sys filesystem and Ansible's tmp directory are on different filesystems.
+        state: present
+      #check_mode: yes
+      changed_when: false
+      #register: enforce_check
+      when: selinuxenforce_check.stat.exists
+      tags:
+        - linux
+
+#Add tools needed by later stages
+    # Provides "needs-restarting" for ansible's ability to manage rebooting after patching
+    - name: "RITA Install: Check for yum-utils before proceeding."
+      command: rpm -qa | grep yum-utils
+      check_mode: true
+      changed_when: false
+      register: package_check
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+    - name: "RITA Install: Install yum-utils if not found."
+      package:
+        name: yum-utils
+        state: latest
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' ) and '"yum-utils" not in package_check'
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+    # Install aptitude, preferred by ansible for package management on Debian/Ubuntu
+    - name: "RITA Install: Install aptitude on debian-based system."
+      apt:
+        name: aptitude
+        state: latest
+        update_cache: true
+        cache_valid_time: 3600
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu' )		#While Kali is based on Debian, it does not include the aptitude package.
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+
+  tasks:
+# Make sure all rpm packages up to date, add packages
+    - name: "RITA Install: Patch and install packages on rpm-based servers."
+      block:
+        - name: "RITA Install: Patch all rpm-based servers."
+          yum:											#We use the "yum" module insteead of dnf to support rpm distros that only have yum
+            name: "*"
+            state: latest
+            skip_broken: yes
+            update_cache: yes
+          tags:
+            - packages
+            - linux
+            - linuxrpm
+
+        - name: "RITA Install: Install rpm packages on rpm-based distributions."
+          yum:
+            name:
+              - nano
+              - nmap-ncat
+              - dnf-plugins-core								#Provides config-manager binary on Fedora
+              - wget
+              - lshw										#For user troubleshooting
+              - net-tools									#For user troubleshooting
+            state: latest
+            update_cache: true
+          tags:
+            - packages
+            - linux
+            - linuxrpm
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+
+    - name: "RITA Install: Install pip on Centos/Fedora."
+      yum:
+        name:
+          - python3-pip
+        state: latest
+        update_cache: true
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      #  or ansible_distribution == 'OracleLinux'		#Note: OracleLinux, and therefore SecurityOnion too, do not include pip3.  Disabled.
+
+    - name: "RITA Install: Patch and install packages on debian-based servers."
+      block:
+        - name: "RITA Install: Patch all debian-based servers."
+          apt:
+            name: "*"
+            state: latest
+            update_cache: yes
+            cache_valid_time: 3600
+          tags:
+            - packages
+            - linux
+            - linuxdeb
+
+        - name: "RITA Install: Install apt packages on deb-based distributions."
+          apt:
+            pkg:
+              - nano
+              #Following are to support docker
+              - apt-transport-https
+              - ca-certificates
+              - curl
+              - python3-pip
+              - python3-setuptools
+              - wget
+              #Following is for user troubleshooting
+              - net-tools
+            state: latest
+            update_cache: true
+            cache_valid_time: 3600
+          tags:
+            - packages
+            - linux
+            - linuxdeb
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu' )
+
+
+    - name: "RITA Install: Install packages on Debian and Ubuntu."
+      apt:
+        pkg:
+          - ncat				#"ncat" is nmap's netcat on Ubuntu and Debian, listd but not available on Kali
+          - software-properties-common
+          - virtualenv
+          - lshw				#listed, but somehow not available on Kali
+        state: latest
+        update_cache: true
+        cache_valid_time: 3600
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu' )
+
+    - name: "RITA Install: Install packages on Kali."
+      apt:
+        pkg:
+          - netcat-traditional
+          - python3-virtualenv
+        state: latest
+        update_cache: true
+        cache_valid_time: 3600
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+      when: ( ansible_distribution == 'Kali' )
+
+
+
+#Add repositories
+    - name: "RITA Install: Add Docker Ubuntu GPG apt key."
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      when: ( ansible_distribution == 'Ubuntu' )
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Add Docker Debian GPG apt key."
+      apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        state: present
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' )
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Add Docker Repository to Ubuntu or Debian."
+      apt_repository:
+        repo: deb https://download.docker.com/linux/{{  ansible_distribution|lower  }} {{  ansible_distribution_release  }} stable
+        state: present
+      when: ( ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian' )
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Add Docker Repository to Kali."
+      apt_repository:
+        repo: deb https://download.docker.com/linux/debian bookworm stable
+        state: present
+      when: ( ansible_distribution == 'Kali' and ansible_distribution_major_version == '2024' )
+      #Debian bookworm appears to be the right one to use according to https://www.kali.org/docs/containers/installing-docker-on-kali/
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Add Docker repository to Fedora distributions."
+      yum_repository:
+        name: docker-ce
+        description: Docker package repository
+        gpgkey: https://download.docker.com/linux/fedora/gpg
+        baseurl: https://download.docker.com/linux/fedora/$releasever/$basearch/stable/
+        state: present
+        enabled: true
+      when: ( ansible_distribution == 'Fedora' )	# and ansible_distribution_major_version == '40' )
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+    - name: "RITA Install: Add Docker Repository to AlmaLinux/Centos/OracleLinux/Rocky distributions."
+      #shell: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+      yum_repository:
+        name: docker-ce
+        description: Docker package repository
+        gpgkey: https://download.docker.com/linux/centos/gpg
+        baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable/
+        state: present
+        enabled: true
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'Rocky' )
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+    - name: "RITA Install: Add Docker Repository to RHEL distribution."
+      yum_repository:
+        name: docker-ce
+        description: Docker package repository
+        gpgkey: https://download.docker.com/linux/rhel/gpg
+        baseurl: https://download.docker.com/linux/rhel/$releasever/$basearch/stable/
+        state: present
+        enabled: true
+      when: ( ansible_distribution == 'RedHat' )
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+
+#Install docker
+    - name: "RITA Install: Install docker on debian-based distributions."
+      block:
+        - name: "RITA Install: Uninstall unofficial docker packages on debian-based distributions."
+          apt:
+            name:
+              - docker-client
+              - docker-client-latest
+              - docker-common
+              - docker-compose
+              - docker-compose-v2
+              - docker-doc
+              - docker-engine
+              - docker-latest
+              - docker-latest-logrotate
+              - docker-logrotate
+              - docker.io
+              - podman-docker
+            state: absent
+            update_cache: true
+            cache_valid_time: 3600
+          tags:
+            - docker
+            - linux
+            - linuxdeb
+
+        - name: "RITA Install: Install docker-ce on debian-based distributions."
+          apt:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - docker-compose-plugin
+              - containerd.io
+            state: latest
+            update_cache: true
+            cache_valid_time: 3600
+          tags:
+            - docker
+            - linux
+            - linuxdeb
+
+        - name: "RITA Install: Install docker modules for Python on deb-based distributions."
+          apt:
+            name:
+              - python3-docker
+              - python3-requests								#We'll have to see if debian/ubuntu can work with the stock (2.28.1 in debian 12.05 / 2.31.0 in ubuntu 24.04)
+          tags:
+            - docker
+            - linux
+            - linuxdeb
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu')
+
+
+    - name: "RITA Install: Install docker on rpm-based distributions."
+      block:
+        - name: "RITA Install: Uninstall unofficial docker packages on rpm-based distributions."
+          yum:
+            name:
+              - docker-client
+              - docker-client-latest
+              - docker-common
+              - docker-compose
+              - docker-compose-v2
+              - docker-doc
+              - docker-engine-selinux
+              - docker-engine
+              - docker-latest
+              - docker-latest-logrotate
+              - docker-logrotate
+              - docker-selinux
+              - docker.io
+              - docker
+              - podman-docker
+              - podman
+              - runc
+            state: absent
+            update_cache: true
+          tags:
+            - docker
+            - linux
+            - linuxrpm
+
+        - name: "RITA Install: Install docker-ce on rpm-based distributions."
+          yum:
+            name:
+              - docker-ce
+              - docker-ce-cli
+              - docker-buildx-plugin
+              - docker-compose-plugin
+              - containerd.io
+            state: latest
+            update_cache: true
+          tags:
+            - docker
+            - linux
+            - linuxrpm
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      #Reminder that RedHat/RHEL 9 is broken as of 20240618
+
+
+    - name: "RITA Install: replace python3-requests with a new version installed by pip."
+      block:
+        - name: "RITA Install: Uninstall unofficial docker packages on rpm-based distributions."
+          yum:
+            name:
+              - python3-requests								#As of 20240618, issue with requests code: "Error connecting: Error while fetching server API version: Not supported URL scheme http+docker".  Installing requests with pip appears to install a newer version that handles the issue.
+            state: absent
+            update_cache: true
+          tags:
+            - docker
+            - linux
+            - linuxrpm
+
+        - name: "RITA Install: Install docker modules for Python on rpm-based distributions."
+          pip:
+            name:
+              - docker
+              - requests
+          tags:
+            - docker
+            - linux
+            - linuxrpm
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      #OracleLinux and SecurityOnion don't include pip so we can't do these steps there.
+
+
+    - name: "RITA Install: Start and enable docker in systemd."
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+      when: ( ansible_distribution != 'OracleLinux' )
+      tags:
+        - docker
+        - linux
+        - linuxdeb
+        - linuxrpm
+      #It appears the "docker modules for python on rpm-based linux" is needed to use the ansible "systemd" module, so we can't use that module on OracleLinux...
+
+      #...so we fall back on starting and enabling it on OracleLinux by hand.
+    - name: "RITA Install: Start and enable docker in systemd on OracleLinux."
+      shell: systemctl enable docker.service ; systemctl start docker.service
+      when: ( ansible_distribution == 'OracleLinux' )
+      tags:
+        - docker
+        - linux
+        - linuxrpm
+
+    - name: "RITA Install: Transfer docker-compose script to target system for backwards compatibility."
+      copy:
+        src: docker-compose
+        dest: /usr/local/bin/docker-compose
+        owner: root
+        group: root
+        mode: 0755
+      tags:
+        - docker
+        - rita
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+#Make directories
+    - name: "RITA Install: Create configuration directories."
+      ansible.builtin.file:
+        path: "{{  item  }}"
+        state: directory
+        owner: root		#FIXME - check
+        group: root		#FIXME - check
+        mode: 0755
+      loop:
+        - /etc/rita/
+        - /opt/rita/
+      tags:
+        - docker
+        - rita
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+#Install RITA
+    #Following pulls right from dockerhub.  We may not be able to do this if the system is airgapped
+    - name: "RITA Install: Install {{  rita_container_image  }} docker image."
+      block:
+        - name: "Pull from Github.io Container repo"
+          community.docker.docker_image:
+            name: "{{  rita_container_image  }}"
+            source: pull
+            force_source: true
+      rescue:
+        - name: "RITA Install: Transfer RITA container image to target system"
+          copy:
+          # TODO remove -v2
+            src: "rita-v2-{{  rita_version  }}-image.tar"
+            dest: /opt/rita
+            owner: root
+            group: root
+            mode: 0644
+        - name: "Install {{ rita_container_name }} container image from file"
+          community.docker.docker_image_load:
+            path: "/opt/rita/rita-v2-{{  rita_version  }}-image.tar"
+          register: load_result
+          #This final one prints a list of the loaded images if we use the above 2 stanzas to load from a file.
+        - name: "RITA Install: Print loaded image names."
+          ansible.builtin.debug:
+            msg: "Loaded the following images: {{  load_result.image_names | join(', ')  }}"
+      tags:
+        - docker
+        - rita
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "RITA Install: Transfer rita shell script to target system."
+      copy:
+        src: ./opt/rita.sh
+        dest: /usr/local/bin/rita
+        owner: root
+        group: root
+        mode: 0755
+      tags:
+        - docker
+        - rita
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "RITA Install: Transfer rita install files to /opt/rita."
+      copy:
+        src: ./opt/
+        dest: /opt/rita
+        owner: root
+        group: root
+        mode: 0755
+      tags:
+        - docker
+        - rita
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "RITA Install: Transfer rita user files to /etc/rita."
+      copy:
+        src: ./etc/
+        dest: /etc/rita
+        owner: root
+        group: root
+        mode: 0755
+      tags:
+        - docker
+        - rita
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+#Late tasks, including rebooting
+    - name: "RITA Install: Check if reboot required on rpm-based systems."
+      command: needs-restarting -r
+      register: reboot_result
+      ignore_errors: true
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+    - name: "RITA Install: Check if reboot required on Debian/Ubuntu-based systems."
+      register: reboot_required_file
+      stat:
+        path: /var/run/reboot-required
+        get_checksum: no
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu' )
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Rebooting system if needed."
+      reboot:
+        reboot_timeout: 120
+      when: ( ansible_connection != 'local' and ( ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu' ) and ( reboot_required_file.stat.exists ) ) or ( ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' ) and ( reboot_result.rc == 1 ) ) )
+      register: reboot_status
+      async: 1
+      poll: 0
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+        - linuxrpm

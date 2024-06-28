@@ -1,0 +1,69 @@
+volumes:
+  clickhouse_persistent:
+networks:
+  rita-network: {}
+services:
+  rita:
+    image: ghcr.io/activecm/rita-v2:latest
+    build: .
+    depends_on:
+      - clickhouse
+    volumes:
+      - ${CONFIG_FILE:-/etc/rita/config.hjson}:/config.hjson
+      - ${CONFIG_DIR:-/etc/rita}/http_extensions_list.csv:/http_extensions_list.csv
+      - /opt/rita/.env:/.env
+      # - ${LOGS:?"You must provide a directory for logs to be read from"}:/logs:ro
+    links:
+      - "clickhouse:db"
+      - "syslog-ng:syslogng"
+    environment:
+      - DB_ADDRESS=db:9000
+      - TERM=xterm-256color
+
+  syslog-ng:
+    image: lscr.io/linuxserver/syslog-ng:latest
+    container_name: rita-syslog-ng
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      # TODO: run the cron on the host, not in the container since this seems to cause issues
+      - ${CONFIG_DIR:-/etc/rita}/logger-cron:/etc/cron.d/logger-cron
+      - ${CONFIG_DIR:-/etc/rita}/syslog-ng.conf:/config/syslog-ng.conf
+      - ${APP_LOGS:-/var/log/rita}:/config/logs/rita
+    # ports:
+    #   - 514:5514/udp
+    #   - 601:6601/tcp
+    #   - 6514:6514/tcp
+    expose:
+      - 5514/udp
+      - 6601/tcp
+    restart: unless-stopped
+  clickhouse:
+    image: clickhouse/clickhouse-server:${CLICKHOUSE_VERSION?"Missing ClickHouse version"}
+    container_name: rita-clickhouse
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
+      interval: 5s
+      start_period: 5s
+      retries: 30
+    restart: unless-stopped
+    expose:
+      - 9000
+    # ports:
+    #   - 127.0.0.1:8123:8123
+    #   - 127.0.0.1:9000:9000
+    volumes:
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+      - clickhouse_persistent:/var/lib/clickhouse
+      # - /tmp/clickhouse_logs:/var/log/clickhouse-server
+      - ${CONFIG_DIR:-/etc/rita}/config.xml:/etc/clickhouse-server/users.d/custom_config.xml
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 131070
+        hard: 131070

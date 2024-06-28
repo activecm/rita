@@ -1,0 +1,13 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	software
+#open	2023-01-05-18-51-06
+#fields	ts	host	host_p	software_type	name	version.major	version.minor	version.minor2	version.minor3	version.addl	unparsed_version
+#types	time	addr	port	enum	string	count	count	count	count	string	string
+1672843056.914972	10.136.0.18	-	HTTP::BROWSER	Modzilla	-	2	0	-	Atari 7800	Modzilla/-2.0 (Atari 7800)
+1672845441.718514	10.136.0.18	-	HTTP::BROWSER	curl	7	58	0	-	-	curl/7.58.0
+1672929522.194325	10.136.0.18	-	HTTP::BROWSER	Modzilla	-	2	0	-	Atari 7800	Modzilla/-2.0 (Atari 7800)
+1672932892.207249	10.136.0.18	-	HTTP::BROWSER	curl	7	58	0	-	-	curl/7.58.0
+#close	2023-01-05-18-51-07

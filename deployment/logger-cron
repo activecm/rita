@@ -1,0 +1,1 @@
+0 3 * * * /usr/bin/find /var/log -type f -daystart -mtime +90 -exec rm {} \;

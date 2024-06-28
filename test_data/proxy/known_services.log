@@ -1,0 +1,13 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	known_services
+#open	2023-01-05-18-51-06
+#fields	ts	host	port_num	port_proto	service
+#types	time	addr	port	enum	set[string]
+1672843056.914972	10.136.0.16	3128	tcp	HTTP
+1672843056.941541	10.136.0.16	3128	tcp	SSL
+1672929522.194325	10.136.0.16	3128	tcp	HTTP
+1672929522.225824	10.136.0.16	3128	tcp	SSL
+#close	2023-01-05-18-51-07

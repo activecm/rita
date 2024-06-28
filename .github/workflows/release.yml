@@ -1,0 +1,32 @@
+name: Generate Installer
+
+on:
+  release:
+    types:
+      - published
+      #- unpublished
+      - created
+      - edited
+      #- deleted
+      - prereleased
+      - released
+
+  workflow_run:
+    workflows: ["Build Docker Images"]
+    branches: [main]
+    types: 
+        - completed
+
+jobs:
+  upload:
+    name: Upload Artifacts
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: installer/generate_installer.sh
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+            files: rita-${{ github.ref_name }}.tar.gz

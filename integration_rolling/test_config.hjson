@@ -1,0 +1,6 @@
+{
+    update_check_enabled: true,
+    filter_external_to_internal: true,
+    http_extensions_file_path: "../deployment/http_extensions_list.csv",
+    threat_intel: {custom_feeds_directory: "../deployment/threat_intel_feeds"}
+}

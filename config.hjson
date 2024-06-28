@@ -1,0 +1,12 @@
+{
+    update_check_enabled: true,
+    filtering: {
+        filter_external_to_internal: true,
+        internal_subnets: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"]
+    },
+    threat_intel: {
+        online_feeds: ["https://feodotracker.abuse.ch/downloads/ipblocklist.txt"],
+        custom_feeds_directory: "./deployment/threat_intel_feeds"
+    },
+    http_extensions_file_path: "./deployment/http_extensions_list.csv"
+}

@@ -1,0 +1,315 @@
+#!/bin/bash
+#Performs all the setup steps needed to connect to one or more hosts listed on the command line
+#Copyright 2022 William Stearns <william.l.stearns@gmail.com>
+#Released under the GPL 3.0
+#Version 0.1.5
+
+
+
+askYN() {
+    # Prints a question mark, reads repeatedly until the user
+    # repsonds with t/T/y/Y or f/F/n/N.
+	TESTYN=""
+	while [ "$TESTYN" != 'Y' ] && [ "$TESTYN" != 'N' ] ; do
+		echo -n '? ' >&2
+		read -e TESTYN <&2 || :
+		case $TESTYN in
+		T*|t*|Y*|y*)		TESTYN='Y'	;;
+		F*|f*|N*|n*)		TESTYN='N'	;;
+		esac
+	done
+
+	if [ "$TESTYN" = 'Y' ]; then
+		return 0 #True
+	else
+		return 1 #False
+	fi
+}
+
+
+fail() {
+	echo "$@ , exiting." >&2
+	exit 1
+}
+
+
+require_util() {
+	#Returns true if all binaries listed as parameters exist somewhere in the path, False if one or more missing.
+	while [ -n "$1" ]; do
+		if ! type -path "$1" >/dev/null 2>/dev/null ; then
+			echo Missing utility "$1". Please install it. >&2
+			return 1	#False, app is not available.
+		fi
+		shift
+	done
+	return 0	#True, app is there.
+} #End of require_util
+
+
+status() {
+	if [ "$verbose" = 'yes' ]; then
+		echo "== $@" >&2
+	fi
+}
+
+
+step() {
+	if [ "$step" = 'yes' ]; then
+		echo "About to $@ , continue" >&2
+		if askYN ; then
+			return
+		else
+			exit 99
+		fi
+	fi
+}
+
+
+show_help() {
+	echo "This tool does all the setup needed to ssh to one or more hosts using ssh keys." >&2
+	echo "Usage:" >&2
+	echo >&2
+	echo "$0 [host] [host] [host]..." >&2
+	echo -e "\tDo basic setup and install ssh key on all hosts specified on the command line." >&2
+	echo -e "\tHost may optionally include a username, like bob@www.example.com" >&2
+	echo "$0 -v [host]..." >&2
+	echo -e "\tBe verbose - show steps to be taken." >&2
+	echo "$0 -s [host]..." >&2
+	echo -e "\tSingle step mode - ask permission before making changes (verbose mode is automatically enabled in single step mode)." >&2
+	echo "$0 --authpath /etc/ssh/keys-root/ [host]..." >&2
+	echo -e "\tLocation of the authorized_keys file (useful for VMWare ESXi).  This path is used for _all_ hosts on this command line." >&2
+	echo "$0 -h" >&2
+	echo "$0 --help" >&2
+	echo -e "\tShow this help text." >&2
+	exit 0
+}
+
+
+load_params() {
+	target_list=''
+
+	if [ "z$1" = "z" ]; then
+		echo "No target systems requested, this will perform basic ssh setup only." >&2
+	fi
+
+	while [ -n "$1" ]; do
+		case "$1" in
+		-v|--verbose)
+			verbose='yes'
+			;;
+		-s|--step)
+			verbose='yes'
+			step='yes'
+			;;
+		-h|--help)
+			show_help
+			;;
+		--authpath)
+			authpath="$2"
+			shift
+			;;
+		*)
+			target_list="$target_list $1"
+			;;
+		esac
+		shift
+	done
+}
+
+
+check_requirements() {
+	status "Checking system requirements"
+	require_util awk basename chmod cp date dig egrep head mkdir mktemp ssh ssh-add ssh-keygen touch uniq || fail "Missing one or more tools, please install and rerun"
+	step "perform system checks"
+	mkdir -p "$HOME/.ssh"
+	chmod -R go-rwx "$HOME/.ssh"
+	if [ -z "$SSH_AUTH_SOCK" ] || [ ! -S "$SSH_AUTH_SOCK" ]; then
+		fail 'We do not appear to have an ssh-agent to talk to.  You may want to add the following 3 lines to ~/.bashrc :
+if [ -z "$SSH_AUTH_SOCK" ] || [ ! -S "$SSH_AUTH_SOCK" ]; then
+	eval $(ssh-agent -s)
+fi
+	(and then logout, log back in, and try again.)'
+	fi
+	[ -w "$HOME/.ssh" ] || fail "User .ssh directory does not appear to be writeable"
+	[ -s "$HOME/.ssh/config" ] || touch "$HOME/.ssh/config"
+}
+
+
+check_key() {
+	status "Checking that we have a keypair available to load into the agent"
+	#Confirm we have an ssh RSA keypair; create if not.
+
+	if [ ! -s "$HOME/.ssh/id_rsa" ] && [ ! -s "$HOME/.ssh/id_rsa.pub" ]; then
+		status "No SSH RSA keypair, creating one.  We strongly encourage you to provide a strong passphrase."
+		step "create ssh rsa keypair"
+		ssh-keygen -t rsa -b 4096 -f "$HOME/.ssh/id_rsa"		#We don't force the comment; "user@host" is the default
+
+	elif [ -s "$HOME/.ssh/id_rsa" ] && [ ! -s "$HOME/.ssh/id_rsa.pub" ]; then
+		status "private key available but no public; we'll create the public key.  You will be asked for your id_rsa private key passphrase."
+		step "regenerate public key from private"
+		ssh-keygen -y -f "$HOME/.ssh/id_rsa" >"$HOME/.ssh/id_rsa.pub"
+	elif [ ! -s "$HOME/.ssh/id_rsa" ] && [ -s "$HOME/.ssh/id_rsa.pub" ]; then
+		status "Public key available, but no private"
+		fail "Missing private key, please provide $HOME/.ssh/id_rsa"
+	elif [ -s "$HOME/.ssh/id_rsa" ] && [ -s "$HOME/.ssh/id_rsa.pub" ]; then
+		status "Both private and public keys available"
+	fi
+}
+
+
+check_agent() {
+	status "Checking that keys are loaded into the agent"
+	#Confirm we have at least one key loaded into ssh-agent.
+
+	if [ $(ssh-add -l | wc -l) -eq 0 ] || [ "$(ssh-add -l)" = 'The agent has no identities.' ]; then
+		#No keys currently loaded into the agent, load at least one
+		[ -s "$HOME/.ssh/id_rsa" -a -s "$HOME/.ssh/id_rsa.pub" ] || check_key
+		status "About to load keys into ssh-agent; you may be asked for your passphrase(s)"
+		step "load keys into agent"
+		ssh-add
+	fi
+
+	if [ $(ssh-add -l | wc -l) -eq 0 ] || [ "$(ssh-add -l)" = 'The agent has no identities.' ]; then
+		fail "Unable to get any keys into the ssh-agent"
+	fi
+
+	status "ssh-agent has at least one key loaded, continuing"
+}
+
+
+prepend_config_block() {
+	#We prepend new stanzas since the end of the file may contain a default stanza like "Host * ......"
+
+	if [ -s "$HOME/.ssh/config" ]; then
+		cp -p "$HOME/.ssh/config" "$HOME/.ssh/config.$(date '+%Y%m%d%H%M%S%N')"
+	elif [ ! -e "$HOME/.ssh/config" ]; then
+		touch "$HOME/.ssh/config"
+	fi
+
+	new_config=$(mktemp -q /tmp/$(basename $0).XXXXXX) || fail "Unable to make temporary file during ~/.ssh/config update."
+	echo -e "$1" >"$new_config"
+	cat "$HOME/.ssh/config" >>"$new_config"
+	step "move new config file ($new_config) over existing $HOME/.ssh/config"
+	mv "$new_config" "$HOME/.ssh/config"
+}
+
+
+check_config_block() {
+	#Make sure we have a config block for this host, and add one if not
+	#Param 1: user, Param 2: host, Param 3: optional hostname or ip address to use as "Hostname"
+
+	status "Checking if we have a config block for $2"
+	if [ -n "$1" ]; then
+		user_line="	User			${1}"
+	else
+		user_line=''
+	fi
+
+	if egrep -q "(^Host.*[[:space:]]${2}[[:space:]]|^Host.*[[:space:]]${2}\$)" "$HOME/.ssh/config" ; then
+		status "$2 has a configuration block in ~/.ssh/config"
+	else
+		status "$2 does not have a configuration block in ~/.ssh/config, adding one."
+		if [ -n "$3" ]; then
+			status "User-supplied target IP or hostname ($3) for $2"
+			prepend_config_block "\nHost ${2} ${3}\n\tHostname\t\t${3}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+		elif [ -n "$(which getent 2>/dev/null)" ] && [ -n "$(getent hosts "$2")" ]; then
+			status "running on non-mac, appears we have an entry in /etc/hosts"
+			ip4=$(getent ahostsv4 "$2" | awk '{print $1}' | uniq | head -1)
+			ip6=$(getent ahostsv6 "$2" | awk '{print $1}' | uniq | head -1)
+
+			if [ -n "$ip4" -a -n "$ip6" ]; then
+				status "Have both ipv4 and ipv6 addresses for $2, adding both blocks"
+				prepend_config_block "\nHost ${2} ${ip4}\n\tHostname\t\t$ip4\n\tHostKeyAlias\t\t${2}\n${user_line}\n\nHost ${2}-v6 ${ip6}\n\tHostname\t\t$ip6\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+			elif [ -n "$ip4" -o -n "$ip6" ]; then		#One or the other but not both, which is why we can have both ip4 and ip6 on the Hostname line.
+				prepend_config_block "\nHost ${2} ${ip4}${ip6}\n\tHostname\t\t${ip4}${ip6}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+			#We don't include a block for neither ip4 nor ip6 set as "getent hosts" did successfully get one or the other.
+			fi
+		elif [ -n "$(which dscacheutil 2>/dev/null)" ] && [ -n "$(dscacheutil -q host -a name "$2")" ]; then
+			status "running on mac, appears we have an entry in /etc/hosts"
+			local_ip=$(dscacheutil -q host -a name "$2" | grep '^ip_address' | awk '{print $2}')
+			prepend_config_block "\nHost ${2} ${local_ip}\n\tHostname\t\t${local_ip}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+		else
+			status "No user-supplied target IP or hostname for $2, look one up"
+			ip4=$(dig +short ${2} A)
+			ip6=$(dig +short ${2} AAAA)
+
+			if [ -n "$ip4" ]; then
+				if [ -n "$ip6" ]; then
+					status "Have both ipv4 and ipv6 addresses for $2, adding both blocks"
+					prepend_config_block "\nHost ${2} ${ip4}\n\tHostname\t\t${ip4}\n\tHostKeyAlias\t\t${2}\n${user_line}\n\nHost ${2}-v6 ${ip6}\n\tHostname\t\t${ip6}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+				else
+					status "Have an IPv4 address only for $2"
+					prepend_config_block "\nHost ${2} ${ip4}\n\tHostname\t\t${ip4}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+				fi
+			else
+				if [ -n "$ip6" ]; then
+					status "Have an ipv6 address only for $2"
+					prepend_config_block "\nHost ${2} ${2}-v6 ${ip6}\n\tHostname\t\t${ip6}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+				else
+					status "No ipv4 or ipv6 address found for ${2}.  Please enter an IP address to use:"
+					read ip_or_hostname
+					prepend_config_block "\nHost ${2} ${ip_or_hostname}\n\tHostname\t\t${ip_or_hostname}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
+				fi
+			fi
+		fi
+	fi
+
+}
+
+
+sshprep_main() {
+	load_params "$@"
+	check_requirements
+	check_agent
+
+	status "Retrieving public key(s)"
+	pub_key_content="$(ssh-add -L)"
+
+	retval=0
+	for one_target in $target_list ; do
+		step "start setting up $one_target"
+		status "Setting up ssh connection to $one_target"
+		if echo "$one_target" | grep -q '@' - ; then
+			#We have an "@" in the target, so this is "user@host"
+			one_user="${one_target%%@*}"
+			one_host="${one_target##*@}"
+		else
+			#No "@" in target, so this is just a host
+			one_user=''
+			one_host="$one_target"
+		fi
+
+		#Check if we have a config block for this target; create one if not, place at top of file
+		check_config_block "$one_user" "$one_host"		#FIXME - arrange a way for the user to supply an optional hostname/ip as param3
+
+		status "Checking that we can now connect without using a password."
+		status "If this is your first time connecting to $one_target, you may be asked to verify a fingerprint.  To see the correct value, run 'ssh-keygen -l -f /etc/ssh/ssh_host_ecdsa_key.pub' on that system's console."
+		step "confirm $one_target reachable by key"
+		if ssh -o 'PasswordAuthentication=no' -o 'PreferredAuthentications=publickey' "$one_target" 'touch .ssh/reached-by-key ; true' 2>/dev/null ; then
+			status "Key appears to be successfully installed on $one_target"
+		else
+			status "Sending public key(s) over to $one_target .  You may be asked for your password for this account."
+			step "send public keys over to $one_target"
+			if [ -n "$authpath" ]; then
+				echo "$pub_key_content" \
+				 | ssh "$one_target" 'mkdir -p '"$authpath"' ; cat >>'"$authpath"'/authorized_keys ; chmod go-rwx '"$authpath"' '"$authpath"'/authorized_keys'
+			else
+				echo "$pub_key_content" \
+				 | ssh "$one_target" 'mkdir -p .ssh ; cat >>.ssh/authorized_keys ; chmod go-rwx ./ .ssh/ .ssh/authorized_keys'
+			fi
+
+			step "confirm $one_target reachable by key"
+			if ssh -o 'PasswordAuthentication=no' -o 'PreferredAuthentications=publickey' "$one_target" 'touch .ssh/reached-by-key ; true' 2>/dev/null ; then
+				status "Key is now successfully installed on $one_target"
+			else
+				status "Unable to reach $one_target by ssh key."
+				retval=2
+			fi
+		fi
+	done
+	exit "$retval"
+}
+
+
+sshprep_main "$@"
+

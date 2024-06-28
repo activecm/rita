@@ -1,0 +1,55 @@
+{
+    "folders": [
+        {
+            "path": ".."
+        }
+    ],
+    "extensions": {
+        "recommendations": [
+            "qufiwefefwoyn.inline-sql-syntax",
+            "wayou.vscode-todo-highlight",
+            "golang.go",
+            "hjson.hjson",
+            "Tanh.hjson-formatter",
+        ]
+    },
+    "settings": {
+        "go.languageServerExperimentalFeatures": {
+            "diagnostics": false
+        },
+        "go.vetOnSave": "off",
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": [
+            "--fast",
+            "--config=${workspaceFolder}/.golangci.yml"
+        ],
+        "gopls": {
+            "ui.semanticTokens": true
+        },
+        "[go]": {
+            "editor.defaultFormatter": "golang.go",
+            "editor.formatOnSave": true
+        },
+        "[json]": {
+            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.formatOnSave": true
+        },
+        "[jsonc]": {
+            "editor.defaultFormatter": "vscode.json-language-features",
+            "editor.formatOnSave": true
+        },
+        "[hjson]": {
+            "editor.defaultFormatter": "Tanh.hjson-formatter",
+            "editor.formatOnSave": true
+        },
+        "hjson-formatter.options": {
+            "separator": true,
+            "condense": 100,
+            "bracesSameLine": true,
+            "emitRootBraces": true,
+            "quotes": "strings",
+            "space": 4,
+            "eol": "auto",
+        },
+    }
+}

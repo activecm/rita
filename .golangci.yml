@@ -1,0 +1,228 @@
+linters-settings:
+  # Checks for unchecked errors
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`. # Default: false
+    check-type-assertions: true
+
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`. # Default: false
+    check-blank: true # Default: false
+
+  # Provides diagnostics that check for bugs, performance and style issues
+  gocritic:
+    # Enable multiple checks by tags in addition to default checks.
+    # See https://github.com/go-critic/go-critic#usage -> section "Tags".
+    # Default: []
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-tags:
+      - experimental
+      - opinionated
+
+    # Settings passed to gocritic.
+    # The settings key is the name of a supported gocritic checker.
+    # The list of supported checkers can be find in https://go-critic.github.io/overview.
+    settings:
+      captLocal:
+        # Whether to restrict checker to params only
+        paramsOnly: false # Default: true
+      underef:
+        # Whether to skip (*x).method() calls where x is a pointer receiver
+        skipRecvDeref: false # Default: true
+      rangeExprCopy:
+        sizeThreshold: 512 # Default: 512
+        skipTestFuncs: true
+      rangeValCopy:
+        sizeThreshold: 1000  # Default: 128
+        skipTestFuncs: true
+      hugeParam:
+        sizeThreshold: 80 # Default: 80
+
+  # Examines Go source code and reports suspicious constructs. It is roughly the same as 'go vet' and uses its passes.
+  govet:
+    enable:
+      # Check for shadowed variables
+      - shadow
+    settings:
+      shadow:
+        # Whether to be strict about shadowing; can be noisy.
+        strict: false # Default: true
+
+  # Checks that functions with naked returns are not longer than a maximum size (can be zero).
+  nakedret:
+    max-func-lines: 30 # Default: 30
+
+  # analyzer that detects using os.Setenv instead of t.Setenv since Go1.17.
+  tenv:
+    # The option `all` will run against whole test files (`_test.go`) regardless of method/function signatures.
+    # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
+    # Default: false
+    all: false
+
+  # Reports ill-formed or insufficient nolint directives
+  nolintlint:
+    # Disable to ensure that all nolint directives actually have an effect.
+    # Default: false
+    allow-unused: true
+    # Exclude following linters from requiring an explanation.
+    # Default: []
+    allow-no-explanation: []
+    # Enable to require an explanation of nonzero length after each nolint directive.
+    # Default: false
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter being suppressed.
+    # Default: false
+    require-specific: true
+  
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true
+  
+  goconst:
+    # Minimum occurrences of constant string count to trigger issue.
+    # Default: 3
+    min-occurrences: 5
+    # Ignore test files.
+    # Default: false
+    ignore-tests: true
+  
+  stylecheck:
+    checks: ["all", "-ST1003"]
+
+linters:
+  # Set to true runs only fast linters
+  fast: false
+
+  enable:
+    # Check for pass []any as any in variadic func(...any)
+    - asasalint
+
+    # Checks for unusual ASCII identifiers.
+    - asciicheck
+
+    # Checks for dangerous unicode character sequences.
+    - bidichk
+
+    # Checks whether HTTP response body is closed successfully.
+    - bodyclose
+
+    # Check for two durations multiplied together.
+    - durationcheck
+
+    # Forces to not skip error check.
+    - errcheck 
+
+    # Checks `Err-` prefix for var and `-Error` suffix for error type.
+    - errname
+
+    # Suggests to use `%w` for error-wrapping.
+    - errorlint
+
+    # Checks for pointers to enclosing loop variables.
+    - exportloopref
+
+    # Validates go compiler directive comments (//go:)
+    - gocheckcompilerdirectives
+
+    # Finds repeated strings that could be replaced by a constant
+    - goconst
+
+    # Maintains checks which are currently not implemented in other linters.
+    - gocritic
+
+    # Checks standard formatting (whitespace, indentation, etc.)
+    - gofmt
+
+    # Checks 
+    - goimports
+
+    # Allow or ban replace directives in go.mod or force explanation for retract directives.
+    - gomoddirectives
+
+    # Powerful security-oriented linter. But requires some time to
+    # configure it properly, see https://github.com/securego/gosec#available-rules
+    - gosec
+
+    # Linter that specializes in simplifying code.
+    - gosimple
+
+    # Examines Go source code and reports suspicious constructs. It is roughly the same as 'go vet' and uses its passes.
+    - govet
+
+    # Detects when assignments to existing variables are not used
+    - ineffassign
+
+    # Spell checker
+    - misspell
+
+    # Checks that functions with naked returns are not longer than a maximum size (can be zero).
+    - nakedret
+
+    # Both require a bit more explicit returns.
+    - nilerr
+    - nilnil
+
+    # Finds sending HTTP request without context.Context.
+    - noctx
+
+    # Forces comment why another check is disabled.
+    - nolintlint
+
+    # Finds shadowing of Go's predeclared identifiers
+    - predeclared
+
+    # Lint your Prometheus metrics name
+    - promlinter
+
+    # Checks that package variables are not reassigned.
+    - reassign
+
+    # Drop-in replacement of `golint`.
+    - revive
+
+    # For `database/sql` package.
+    - rowserrcheck
+    - sqlclosecheck
+
+    # Detects bugs, suggests code simplifications, points out dead code, etc
+    - staticcheck
+
+    # Replacement for `golint`, similar to `revive`.
+    - stylecheck
+
+    # Test-related checks
+    - tenv
+    - testableexamples
+    - testifylint
+    - thelper
+    - tparallel
+
+    # Parses and type-checks
+    - typecheck
+
+    # Remove unnecessary type conversions
+    - unconvert
+
+    # Finds unused parameters
+    # - unparam
+
+    # Finds unused declarations
+    - unused
+
+    # Detect the possibility to use variables/constants from stdlib.
+    - usestdlibvars
+
+    # Finds wasted assignment statements.
+    - wastedassign
+
+    # detects the wrong usage of zerolog that a user forgets to dispatch zerolog.Event
+    - zerologlint
+
+issues:
+  exclude:
+    - "var-naming: don't use an underscore in package name"
+  exclude-rules:
+    - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+      linters: [ govet ]

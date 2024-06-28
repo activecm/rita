@@ -1,0 +1,140 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	weird
+#open	2021-03-19-16-07-55
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	name	addl	notice	peer
+#types	time	string	addr	port	addr	port	string	string	bool	string
+1610645107.487185	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610645138.469364	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610645233.374949	CjeD8p1g3hp9yCMn17	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610645233.374949	CkF0lr1WXryJLeTiUl	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610645446.153737	CE6gQi1NHdcyCZXsh3	fe80::e874:5e35:c585:ef71	54695	ff02::1:3	5355	dns_unmatched_msg	-	F	bro
+1610645446.153737	CVJoMo4CwT9zOh0Cyg	192.168.0.15	53856	224.0.0.252	5355	dns_unmatched_msg	-	F	bro
+1610645456.459875	CcZvwn48RkjUUZwkpa	192.168.0.15	137	192.168.0.255	137	dns_unmatched_msg	-	F	bro
+1610645461.376044	Ct71IO2jGYNSfXGPmi	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610645471.416158	Ct71IO2jGYNSfXGPmi	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610645479.169161	CoGohG1fUFQMlUNobe	192.168.0.15	137	185.167.164.43	137	dns_unmatched_msg	-	F	bro
+1610645732.433874	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610645752.209280	CAjkwccTdNM46RTsf	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610645752.209280	CogNgv1d9q4M1YX8F3	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610645923.941190	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610646357.387652	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610646390.472564	C405Ii11PMva8CdYN6	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610646390.472564	CuEuMb2KKxdz4hHh2i	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610646589.435194	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610646609.174266	Cr6ZPq3D50XEJVxHvk	192.168.0.15	137	209.85.146.120	137	dns_unmatched_msg	-	F	bro
+1610646782.379543	CvBZfW3kMXCStLFm21	fe80::e874:5e35:c585:ef71	57556	ff02::1:3	5355	dns_unmatched_msg	-	F	bro
+1610646782.379543	C17XOpWkkOAQAFCQa	192.168.0.15	50325	224.0.0.252	5355	dns_unmatched_msg	-	F	bro
+1610646792.732464	C8LRX34VmRXYOy37Ui	192.168.0.15	137	192.168.0.255	137	dns_unmatched_msg	-	F	bro
+1610646982.337980	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610647160.759326	CTgRG14VlCRRx0ino7	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610647160.759326	CRxzYz3JStMZxZBy05	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610647261.343734	Chs0lt2RLSpkq4k0Aj	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610647271.386485	Chs0lt2RLSpkq4k0Aj	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610647282.052599	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610647607.288239	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610647910.929192	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610648017.183317	CHgCgp19Z4TrQVLQC8	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610648017.183317	CHxSRj3KNWcrDuHjwl	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610648140.057668	CVCOeg2Uog96FA09I7	192.168.0.15	55179	172.217.1.99	443	binpac exception: out_of_bound: SSLRecord:rec: 57244 > 27	-	F	bro
+1610648198.030196	CTTZVcGJ82HIt9vNg	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610648198.030196	C73mxkIzWc4a9eFC5	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610648232.240124	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610648666.490346	CEOwRa2QAtzVdZfe43	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610648666.490346	CWIA483Iu9DB8MY7Mb	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610648814.083991	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610648857.188428	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610649061.322090	C5J6xY1CCNzb8JaLP1	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610649071.346341	C5J6xY1CCNzb8JaLP1	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610649328.988136	Cf4zDsDkmZCyrUlfk	fe80::e874:5e35:c585:ef71	59743	ff02::1:3	5355	dns_unmatched_msg	-	F	bro
+1610649328.988136	CFXlRDFw0fl3dikPe	192.168.0.15	64001	224.0.0.252	5355	dns_unmatched_msg	-	F	bro
+1610649339.317492	C2eypJ31DBiuVZNIWd	192.168.0.15	137	192.168.0.255	137	dns_unmatched_msg	-	F	bro
+1610649349.296566	COYJFU2zBDQbTFO5ql	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610649349.296566	CvJArGhHhg91CAWIk	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610649400.940154	Csb1Vg2o5ukHc5KC5d	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610649400.940154	Cu7neAbsE5dJYvln2	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610649482.147890	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610649685.056024	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610650107.098404	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610650317.932253	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610650654.791731	CZ90g51pJ6Rqzgyhvj	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610650664.764456	CWCxtQ1hD1KeSfCBK7	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610650732.047523	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610650848.254209	CZqH8aMylHAlJlLd6	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610650848.254209	CVBPM57klxgXU3Ip3	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610650861.302045	CAfeJ63nHLFj6Byhe2	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610650871.303936	CAfeJ63nHLFj6Byhe2	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610650940.179337	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610651301.546553	CpKJl91PsVyJYNacl8	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610651301.546553	C9SaRn4SBvLk0mvlP9	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610651356.991690	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610651559.912807	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610651698.204119	CDgvUg4lOmA3877p5l	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610651698.216136	C07A0n4YraqWZkcI8d	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610651981.940681	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610652156.036734	C1E4gNQP4dL1cxiUe	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610652156.036734	CqCAcu2XcvKWBLbv63	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610652168.917312	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610652606.890993	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610652661.282603	CDHzpK1jg51S8nYQz2	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610652671.283747	CDHzpK1jg51S8nYQz2	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610652794.275809	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610653101.070349	CaOtv1NfskmoizET2	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610653101.070349	C0Kygj1W4TdidG7mUg	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610653231.844256	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610653500.281554	Cdeiyd4kRegCHp3yi9	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610653500.281554	C8QnCm4rmh6JIGJLd9	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610653726.149518	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610653856.792395	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610653894.386680	CBWyQr4CEyK9HUSme5	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610653894.386680	CwmARx1ucFGqxhYDdk	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610654461.264797	CW2HXW3nc9GwJtLIRf	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610654471.271354	CW2HXW3nc9GwJtLIRf	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610654481.739704	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610654492.052117	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610654497.539277	CU42J6pKHU6Qg1lUj	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610654497.539277	C7o5in34YC0ZIhIEsg	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610654922.239066	CV1WSO38Qp64bhs5Ob	192.168.0.15	52531	172.217.3.74	443	binpac exception: out_of_bound: SSLRecord:rec: 38573 > 278	-	F	bro
+1610655106.686316	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610655127.931611	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610655308.124028	C0KJBo2ik75soowbxh	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610655308.124028	CotSBD2y3EtsGgcMIk	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610655502.320915	CW7fRk1aw3V06gYpt7	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610655502.320915	CGfT18JlwniIHNc9b	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610655731.633003	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610655776.343828	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610655943.942016	CkfhTd4wm0GeCOgs85	192.168.0.15	137	104.42.151.234	137	dns_unmatched_msg	-	F	bro
+1610656236.889603	CsDExq3EhYuiYzJy4j	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610656236.889603	Cjff7lJc1dJKOasE3	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610656261.247433	CCgriV1IFmLza5epUa	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610656271.248001	CCgriV1IFmLza5epUa	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610656333.828531	CgKcg57kyfPXO5opc	192.168.0.15	53559	1.1.1.1	53	dns_unmatched_msg	-	F	bro
+1610656356.582649	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610656394.457520	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610656981.533377	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610657012.033829	CJj42z4dFkKUWfG7C	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610657012.033829	Cj7J6n1HwTargEDYWe	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610657044.917627	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610657110.275096	CAzarc48UKzPnEHas7	fe80::1cf5:d76b:681a:e11a	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610657110.275096	Cbqot5r5i9VOVpAn8	192.168.0.7	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610657606.479781	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610657655.813400	CzaZkayLLo4mw1Dme	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610657655.813400	CUAqPD3EQxN7ulzkVc	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610657659.003853	CiBMGu2mT88SK04Wkj	fe80::e874:5e35:c585:ef71	53545	ff02::1:3	5355	dns_unmatched_msg	-	F	bro
+1610657659.003853	C6tJGz120fCY1eN9Pk	192.168.0.15	60058	224.0.0.252	5355	dns_unmatched_msg	-	F	bro
+1610657669.325485	CEYfSL2Mtvt73rObIf	192.168.0.15	137	192.168.0.255	137	dns_unmatched_msg	-	F	bro
+1610658061.224063	CI5V5a4b9Yf99fdm58	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_reply	-	F	bro
+1610658066.566270	-	-	-	-	-	ip_hdr_len_zero	-	F	bro
+1610658071.235929	CI5V5a4b9Yf99fdm58	192.168.0.8	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+1610658185.962551	CFgu6l3izHmkr4y154	192.168.0.15	137	142.250.105.113	137	dns_unmatched_msg	-	F	bro
+1610658231.431338	-	-	-	-	-	unknown_protocol_2	-	F	bro
+1610658235.916336	C3mRr83qg4gE8mcchj	192.168.0.15	137	74.125.136.132	137	dns_unmatched_msg	-	F	bro
+1610658239.799174	C46CVb4ERKEbrxhDUe	192.168.0.15	50797	172.217.2.142	443	binpac exception: out_of_bound: SSLRecord:rec: 22783 > 1350	-	F	bro
+1610658263.915378	CzbAZdod8MyDCJCdg	192.168.0.15	137	142.250.9.132	137	dns_unmatched_msg	-	F	bro
+1610658326.366631	CuFs33cztezK2187h	192.168.0.15	50795	172.217.2.65	443	binpac exception: out_of_bound: SSLRecord:rec: 17119 > 1350	-	F	bro
+1610658327.908036	CuFs33cztezK2187h	192.168.0.15	50795	172.217.2.65	443	binpac exception: out_of_bound: SSLRecord:rec: 33744 > 1350	-	F	bro
+1610658349.796716	CMwfVr10e1ziGRX3c8	fe80::c8f:f724:910a:bb99	5353	ff02::fb	5353	dns_unmatched_msg	-	F	bro
+1610658349.796716	CQNtsE1tfg8VMdR6ae	192.168.0.20	5353	224.0.0.251	5353	dns_unmatched_msg	-	F	bro
+#close	2021-03-19-16-08-26

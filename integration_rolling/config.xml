@@ -1,0 +1,11 @@
+
+<clickhouse>
+    <profiles>
+        <default>
+            <mutations_sync>1</mutations_sync>
+            <optimize_aggregation_in_order>1</optimize_aggregation_in_order>
+            <max_insert_threads>32</max_insert_threads>
+        </default>
+    </profiles>
+</clickhouse>
+		
