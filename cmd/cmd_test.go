@@ -29,7 +29,6 @@ type CmdTestSuite struct {
 	clickhouseContainer  *cl.ClickHouseContainer
 	clickhouseConnection string
 	server               *database.ServerConn
-	// testDB               *dbTester
 }
 
 func TestMain(m *testing.M) {

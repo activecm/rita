@@ -15,6 +15,8 @@ Thank you for considering contributing to RITA! We appreciate your interest and 
     - [Style](#style)
     - [Testing](#testing)
     - [Submitting a Pull Request](#submitting-a-pull-request)
+    - [PR Has Been Reviewed and Merged](#pr-has-been-reviewed-and-merged)
+4. [Contact](#contact)
 
 ## Code of Conduct
 
@@ -92,10 +94,13 @@ Contribution to this project will require the following:
    ```
    go test ./...
    ```
-5. Run the project:
+5. Start the backend containers for Clickhouse:
+   ```
+   docker-compose up -d
+   ```
+6. Run the project:
     * Using Go:
         ```
-        docker compose up -d
         go run main.go <command> <flags>
         ```
     * Using a Compiled Binary:
@@ -107,7 +112,7 @@ Contribution to this project will require the following:
         ```
         ./rita.sh
         ```
-5. Make your changes and ensure that they pass the tests before submitting a pull request.
+7. Make your changes and ensure that they pass the tests before submitting a pull request.
 
 For more information about setting up a development environment, see the [docs](docs/Development.md).
 
