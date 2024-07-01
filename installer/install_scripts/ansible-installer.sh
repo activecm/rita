@@ -33,7 +33,7 @@ require_sudo() {
 	#Stops the script if the user does not have root priviledges and cannot sudo
 	#Additionally, sets $SUDO to "sudo" and $SUDO_E to "sudo -E" if needed.
 
-	status "Checking sudo"		#================
+	status "Checking sudo; if asked for a password this will be your user password on the machine running the installer."		#================
 	if [ "$EUID" -eq 0 ]; then
 		SUDO=""
 		SUDO_E=""
@@ -73,11 +73,11 @@ enable_repositories() {
 	else
 		. /etc/os-release
 		case "$ID/$VERSION_ID" in
-		alma/8|rocky/8)
+		alma/8*|rocky/8*)
 			dnf config-manager --set-enabled powertools
 			dnf install epel-release
 			;;
-		alma/9|rocky/9)
+		alma/9*|rocky/9*)
 			dnf config-manager --set-enabled crb
 			dnf install epel-release
 			;;
@@ -143,9 +143,9 @@ patch_system() {
 		done
 	elif [ -x /usr/bin/yum -a -x /bin/rpm ]; then
 		$SUDO yum -q -e 0 makecache
-		$SUDO yum -y -q -e 0 -y install deltarpm
 		$SUDO yum -q -e 0 -y update
-		$SUDO yum -y -q -e 0 -y install redhat-lsb-core yum-utils
+		$SUDO yum -y -q -e 0 -y install yum-utils
+		$SUDO yum -y -q -e 0 -y install redhat-lsb-core >/dev/null 2>/dev/null || /bin/true		#If available, we install it.  If not, we ignore the error and continue on.
 		if [ -s /etc/redhat-release -a -s /etc/os-release ]; then
 			. /etc/os-release
 			if [ "$VERSION_ID" = "7" ]; then
@@ -320,7 +320,7 @@ ansible-galaxy collection install community.docker --force
 	# if [ "$install_target" = "localhost" -o "$install_target" = "127.0.0.1" -o "$install_target" = "::1" ]; then
 	# 	ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," ~/.ansible/playbooks/install_rita.yml
 	# else
-	# 	status "Setting up future ssh connections to $install_target .  You may be asked to provide your ssh password to this system."		#================
+	# 	status "Setting up future ssh connections to $install_target .  You may be asked to provide your ssh password to $install_target ."		#================
 	# 	sshprep "$install_target"
 	# 	ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," ~/.ansible/playbooks/install_rita.yml
 	# fi
@@ -334,7 +334,6 @@ ansible-galaxy collection install community.docker --force
 # echo "Unless you see warnings above that an install failed, you should have RITA installed." >&2
 # echo '!!!!!!!!!!!!You must log out and log back in to make sure your PATH is set correctly!!!!!!!!!!!!' >&2
 
-touch "$HOME/rita-installed.flag"
 
 
 
