@@ -20,7 +20,7 @@ The configuration file includes various parameters that control the scoring mech
 Below are some of the key sections and parameters you can adjust:
 
 ### Scoring
-This section defines scoring parameters for each type of network threat. Please refer to the [default configuration file](/default-config.hjson) for a concise summary of each parameter and how it affects the detection and scoring of different threat types. This will provide a comprehensive overview of the available configuration options and how to customize them to meet your specific needs.  Below is an explanation of some common parameters that apply to multiple threat types.
+This section defines scoring parameters for each type of network threat. Please refer to the [default configuration file](/default_config.hjson) for a concise summary of each parameter and how it affects the detection and scoring of different threat types. This will provide a comprehensive overview of the available configuration options and how to customize them to meet your specific needs.  Below is an explanation of some common parameters that apply to multiple threat types.
 
 #### Score Thresholds
 The score_thresholds section defines the thresholds for categorizing the severity of network activities based on their scores. Each scoring category (e.g., beacon, long_connection) has its own thresholds for determining whether an activity falls into the base, low, medium, or high severity levels.
