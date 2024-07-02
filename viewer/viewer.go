@@ -3,7 +3,6 @@ package viewer
 import (
 	"activecm/rita/config"
 	"activecm/rita/database"
-	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -17,7 +16,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
-	"golang.design/x/clipboard"
 )
 
 var DebugMode bool
@@ -52,7 +50,6 @@ type keyMap struct {
 	unfocusFilter  key.Binding
 	toggleScroll   key.Binding
 	quit           key.Binding
-	copy           key.Binding
 }
 
 type column struct {
@@ -170,11 +167,6 @@ func (m *Model) Init() tea.Cmd {
 		key.WithHelp("q | ctrl+c", "quit"),
 	)
 
-	m.keys.copy = key.NewBinding(
-		key.WithKeys("C"),
-		key.WithHelp("shift+c", "copy line"),
-	)
-
 	return m.Footer.spinner.Tick
 }
 
@@ -209,10 +201,6 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// toggle main search help
 				m.ViewHelp = !m.ViewHelp
 			}
-
-		// copy row to clipboard
-		case key.Matches(msg, m.keys.copy):
-			m.CopyRowToClipboard()
 
 		// focus search bar
 		case key.Matches(msg, m.keys.filter):
@@ -410,18 +398,6 @@ func (m *Model) handleBrowsing(msg tea.KeyMsg) tea.Cmd {
 
 }
 
-func (m *Model) CopyRowToClipboard() {
-	if err := clipboard.Init(); err != nil {
-		// handle error
-		panic(err)
-	}
-	row := m.List.Rows.Items()[m.List.Rows.Index()]
-	a, err := json.Marshal(row)
-	if err == nil {
-		clipboard.Write(clipboard.FmtText, a)
-	}
-}
-
 // requestResults queries the database for results based on the search bar filter
 func (m *Model) requestResults(appendResults bool) {
 
@@ -604,9 +580,7 @@ func mainHelpText() string {
 
 	helpText = lipgloss.JoinVertical(lipgloss.Top, helpText, helpStyle.Render(
 		helpStyle.Render("ctrl+x"), subduedHelpStyle.Render("clear filter"),
-		subduedHelpStyle.Render(bullet),
-		helpStyle.Render("shift+c"), subduedHelpStyle.Render("copy")),
-	)
+	))
 
 	return lipgloss.NewStyle().Margin(1, 0, 0, 2).Render(helpText)
 
