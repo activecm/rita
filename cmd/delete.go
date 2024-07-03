@@ -1,13 +1,14 @@
 package cmd
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
 	"context"
 	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/afero"

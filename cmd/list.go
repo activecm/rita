@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
 	"context"
 	"fmt"
 	"os"
 	"strconv"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"

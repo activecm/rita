@@ -1,10 +1,11 @@
 package cmd_test
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/database"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"

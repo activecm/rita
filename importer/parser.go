@@ -1,8 +1,6 @@
 package importer
 
 import (
-	zerolog "activecm/rita/logger"
-	"activecm/rita/util"
 	"bufio"
 	"compress/gzip"
 	"errors"
@@ -12,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	zerolog "github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/util"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/afero"

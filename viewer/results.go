@@ -1,13 +1,14 @@
 package viewer
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
 	"fmt"
 	"math"
 	"net"
 	"strings"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/charmbracelet/bubbles/list"

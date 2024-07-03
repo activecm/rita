@@ -1,10 +1,11 @@
 package cmd
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/util"
 	"errors"
 	"fmt"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/google/go-github/github"
 	"github.com/spf13/afero"

@@ -1,12 +1,13 @@
 package logger
 
 import (
-	"activecm/rita/config"
 	"io"
 	"log/syslog"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/activecm/ritav2/config"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"

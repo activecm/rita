@@ -1,9 +1,6 @@
 package database_test
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/config"
-	"activecm/rita/database"
 	"context"
 	"fmt"
 	"log"
@@ -11,6 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/joho/godotenv"

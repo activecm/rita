@@ -1,15 +1,16 @@
 package importer
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/importer/zeektypes"
-	"activecm/rita/util"
 	"errors"
 	"net"
 	"strings"
 	"sync/atomic"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/importer/zeektypes"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/google/uuid"
 )

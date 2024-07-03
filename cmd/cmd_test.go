@@ -1,14 +1,15 @@
 package cmd_test
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
 	"context"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"

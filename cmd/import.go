@@ -1,13 +1,6 @@
 package cmd
 
 import (
-	"activecm/rita/analysis"
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/importer"
-	"activecm/rita/logger"
-	"activecm/rita/modifier"
-	"activecm/rita/util"
 	"errors"
 	"fmt"
 	"math"
@@ -20,6 +13,14 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/activecm/ritav2/analysis"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/importer"
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/modifier"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/spf13/afero"
 	"github.com/urfave/cli/v2"

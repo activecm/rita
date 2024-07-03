@@ -1,14 +1,15 @@
 package integration_test
 
 import (
-	"activecm/rita/modifier"
-	"activecm/rita/util"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
 	"testing"
+
+	"github.com/activecm/ritav2/modifier"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/stretchr/testify/require"

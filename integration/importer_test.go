@@ -1,12 +1,13 @@
 package integration_test
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/config"
-	"activecm/rita/database"
-	i "activecm/rita/importer"
 	"context"
 	"time"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	i "github.com/activecm/ritav2/importer"
 
 	"reflect"
 

@@ -1,15 +1,16 @@
 package analysis
 
 import (
-	"activecm/rita/logger"
-	"activecm/rita/progressbar"
-	"activecm/rita/util"
 	"context"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/progressbar"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/charmbracelet/bubbles/progress"

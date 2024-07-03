@@ -1,8 +1,6 @@
 package database
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/logger"
 	"context"
 	"database/sql"
 	"errors"
@@ -10,6 +8,9 @@ import (
 	"log"
 	"net"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/logger"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	driver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"

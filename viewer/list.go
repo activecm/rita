@@ -1,9 +1,10 @@
 package viewer
 
 import (
-	"activecm/rita/config"
 	"fmt"
 	"io"
+
+	"github.com/activecm/ritav2/config"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

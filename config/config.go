@@ -1,11 +1,12 @@
 package config
 
 import (
-	"activecm/rita/util"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
+
+	"github.com/activecm/ritav2/util"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/spf13/afero"

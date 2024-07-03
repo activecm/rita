@@ -1,10 +1,11 @@
 package viewer_test
 
 import (
-	"activecm/rita/viewer"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/viewer"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/stretchr/testify/require"

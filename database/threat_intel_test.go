@@ -1,7 +1,6 @@
 package database
 
 import (
-	"activecm/rita/util"
 	"bufio"
 	"context"
 	"io"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/activecm/ritav2/util"
 
 	"github.com/stretchr/testify/require"
 )

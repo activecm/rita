@@ -1,10 +1,6 @@
 package viewer_test
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/viewer"
 	"context"
 	"fmt"
 	"log"
@@ -12,6 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/viewer"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joho/godotenv"

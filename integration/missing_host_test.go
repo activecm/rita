@@ -1,15 +1,16 @@
 package integration_test
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/viewer"
 	"context"
 	"fmt"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/viewer"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/spf13/afero"

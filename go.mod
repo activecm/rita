@@ -1,4 +1,4 @@
-module activecm/rita
+module github.com/activecm/ritav2
 
 go 1.22.3
 

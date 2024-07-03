@@ -1,14 +1,15 @@
 package database
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/util"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/spf13/afero"
 	"golang.org/x/time/rate"

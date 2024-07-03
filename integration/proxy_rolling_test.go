@@ -1,14 +1,15 @@
 package integration_test
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/viewer"
 	"context"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/viewer"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"

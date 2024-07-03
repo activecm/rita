@@ -1,8 +1,6 @@
 package viewer
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/util"
 	"fmt"
 	"net/netip"
 	"regexp"
@@ -10,6 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"

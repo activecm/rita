@@ -1,12 +1,13 @@
 package importer
 
 import (
-	"activecm/rita/importer/zeektypes"
-	"activecm/rita/util"
 	"errors"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/importer/zeektypes"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"

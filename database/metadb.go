@@ -1,11 +1,12 @@
 package database
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/util"
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 )

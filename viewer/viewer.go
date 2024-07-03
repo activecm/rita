@@ -1,14 +1,15 @@
 package viewer
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
 	"fmt"
 	"math"
 	"os"
 	"runtime"
 	"slices"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"

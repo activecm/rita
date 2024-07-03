@@ -1,15 +1,16 @@
 package modifier
 
 import (
-	"activecm/rita/analysis"
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/logger"
-	"activecm/rita/util"
 	"context"
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/activecm/ritav2/analysis"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/google/uuid"

@@ -1,11 +1,12 @@
 package viewer
 
 import (
-	"activecm/rita/database"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/activecm/ritav2/database"
 
 	"github.com/charmbracelet/bubbles/list"
 )

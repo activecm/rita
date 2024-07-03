@@ -1,9 +1,6 @@
 package database
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/logger"
-	"activecm/rita/util"
 	"bufio"
 	"context"
 	"errors"
@@ -14,6 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/util"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/spf13/afero"

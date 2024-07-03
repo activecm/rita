@@ -1,12 +1,13 @@
 package config
 
 import (
-	"activecm/rita/util"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"testing"
+
+	"github.com/activecm/ritav2/util"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"

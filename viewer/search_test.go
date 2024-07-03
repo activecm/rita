@@ -1,12 +1,13 @@
 package viewer_test
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/viewer"
 	"fmt"
 	"math"
 	"testing"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/viewer"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

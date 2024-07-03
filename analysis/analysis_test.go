@@ -1,9 +1,10 @@
 package analysis
 
 import (
-	"activecm/rita/config"
 	"log"
 	"testing"
+
+	"github.com/activecm/ritav2/config"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"

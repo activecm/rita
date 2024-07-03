@@ -1,13 +1,14 @@
 package main
 
 import (
-	"activecm/rita/cmd"
-	"activecm/rita/config"
-	"activecm/rita/logger"
-	"activecm/rita/viewer"
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/activecm/ritav2/cmd"
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/viewer"
 
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"

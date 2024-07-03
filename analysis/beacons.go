@@ -1,13 +1,14 @@
 package analysis
 
 import (
-	"activecm/rita/logger"
-	"activecm/rita/util"
 	"errors"
 	"fmt"
 	"math"
 	"slices"
 	"sort"
+
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/montanaflynn/stats"
 )

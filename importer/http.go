@@ -1,18 +1,19 @@
 package importer
 
 import (
-	"activecm/rita/config"
-	"activecm/rita/database"
-	"activecm/rita/importer/zeektypes"
-	"activecm/rita/logger"
-	"activecm/rita/progressbar"
-	"activecm/rita/util"
 	"context"
 	"errors"
 	"net"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/activecm/ritav2/config"
+	"github.com/activecm/ritav2/database"
+	"github.com/activecm/ritav2/importer/zeektypes"
+	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/ritav2/progressbar"
+	"github.com/activecm/ritav2/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	tea "github.com/charmbracelet/bubbletea"
