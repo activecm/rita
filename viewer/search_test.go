@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activecm/rita/config"
-	"github.com/activecm/rita/viewer"
+	"github.com/activecm/rita/v5/config"
+	"github.com/activecm/rita/v5/viewer"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

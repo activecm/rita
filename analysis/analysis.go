@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/activecm/rita/config"
-	"github.com/activecm/rita/database"
-	"github.com/activecm/rita/logger"
-	"github.com/activecm/rita/util"
+	"github.com/activecm/rita/v5/config"
+	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/logger"
+	"github.com/activecm/rita/v5/util"
 
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"

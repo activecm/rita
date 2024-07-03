@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/activecm/rita/config"
-	"github.com/activecm/rita/database"
-	"github.com/activecm/rita/importer/zeektypes"
-	zerolog "github.com/activecm/rita/logger"
-	"github.com/activecm/rita/progressbar"
-	"github.com/activecm/rita/util"
+	"github.com/activecm/rita/v5/config"
+	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/importer/zeektypes"
+	zerolog "github.com/activecm/rita/v5/logger"
+	"github.com/activecm/rita/v5/progressbar"
+	"github.com/activecm/rita/v5/util"
 
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/spf13/afero"

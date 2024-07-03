@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/activecm/rita/util"
+	"github.com/activecm/rita/v5/util"
 
 	"net"
 )

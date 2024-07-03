@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/activecm/rita/config"
-	"github.com/activecm/rita/logger"
-	"github.com/activecm/rita/util"
+	"github.com/activecm/rita/v5/config"
+	"github.com/activecm/rita/v5/logger"
+	"github.com/activecm/rita/v5/util"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/spf13/afero"

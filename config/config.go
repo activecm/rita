@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/activecm/rita/util"
+	"github.com/activecm/rita/v5/util"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/spf13/afero"
