@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/util"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/util"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	zerolog "github.com/activecm/rita/v5/logger"
-	"github.com/activecm/rita/v5/util"
+	zerolog "github.com/activecm/rita/logger"
+	"github.com/activecm/rita/util"
 
 	jsoniter "github.com/json-iterator/go"
 	"github.com/spf13/afero"

@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/activecm/rita/v5/util"
+	"github.com/activecm/rita/util"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"

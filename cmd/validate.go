@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/util"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/util"
 
 	"github.com/spf13/afero"
 	"github.com/urfave/cli/v2"

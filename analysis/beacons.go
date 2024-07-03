@@ -7,8 +7,8 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/activecm/rita/v5/logger"
-	"github.com/activecm/rita/v5/util"
+	"github.com/activecm/rita/logger"
+	"github.com/activecm/rita/util"
 
 	"github.com/montanaflynn/stats"
 )
