@@ -2,6 +2,9 @@ module github.com/activecm/rita/v5
 
 go 1.22.3
 
+
+replace github.com/activecm/rita/v5/test_data => ./test_data
+
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.23.2
 	github.com/charmbracelet/bubbles v0.18.0
