@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/activecm/ritav2/cmd"
-	"github.com/activecm/ritav2/database"
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/cmd"
+	"github.com/activecm/rita/database"
+	"github.com/activecm/rita/util"
 
 	iofs "io/fs"
 	"os"
@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activecm/ritav2/importer"
+	"github.com/activecm/rita/importer"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/spf13/afero"

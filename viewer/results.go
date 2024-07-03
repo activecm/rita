@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/charmbracelet/bubbles/list"

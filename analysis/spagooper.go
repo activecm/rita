@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/activecm/ritav2/logger"
-	"github.com/activecm/ritav2/progressbar"
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/logger"
+	"github.com/activecm/rita/progressbar"
+	"github.com/activecm/rita/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/charmbracelet/bubbles/progress"

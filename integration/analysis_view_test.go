@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/activecm/ritav2/modifier"
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/modifier"
+	"github.com/activecm/rita/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/stretchr/testify/require"

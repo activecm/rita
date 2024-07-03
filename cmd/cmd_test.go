@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activecm/ritav2/cmd"
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
+	"github.com/activecm/rita/cmd"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/joho/godotenv"

@@ -6,8 +6,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"

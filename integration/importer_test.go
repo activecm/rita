@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/activecm/ritav2/cmd"
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
-	i "github.com/activecm/ritav2/importer"
+	"github.com/activecm/rita/cmd"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
+	i "github.com/activecm/rita/importer"
 
 	"reflect"
 

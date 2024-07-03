@@ -9,8 +9,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/logger"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/logger"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	driver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"

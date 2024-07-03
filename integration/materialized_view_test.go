@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/activecm/ritav2/importer"
+	"github.com/activecm/rita/importer"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/stretchr/testify/require"

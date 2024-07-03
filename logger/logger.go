@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/activecm/ritav2/config"
+	"github.com/activecm/rita/config"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"

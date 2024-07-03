@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/util"
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"

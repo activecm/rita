@@ -6,11 +6,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/activecm/ritav2/analysis"
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
-	"github.com/activecm/ritav2/logger"
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/analysis"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
+	"github.com/activecm/rita/logger"
+	"github.com/activecm/rita/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/google/uuid"

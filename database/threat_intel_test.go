@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/util"
 
 	"github.com/stretchr/testify/require"
 )

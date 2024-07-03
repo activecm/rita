@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/afero"

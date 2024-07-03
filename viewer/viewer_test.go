@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activecm/ritav2/cmd"
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
-	"github.com/activecm/ritav2/viewer"
+	"github.com/activecm/rita/cmd"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
+	"github.com/activecm/rita/viewer"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/joho/godotenv"

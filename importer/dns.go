@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/database"
-	"github.com/activecm/ritav2/importer/zeektypes"
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/database"
+	"github.com/activecm/rita/importer/zeektypes"
+	"github.com/activecm/rita/util"
 
 	"github.com/google/uuid"
 )

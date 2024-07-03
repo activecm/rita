@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/util"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/util"
 
 	"github.com/spf13/afero"
 	"golang.org/x/time/rate"

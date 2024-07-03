@@ -5,10 +5,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/activecm/ritav2/cmd"
-	"github.com/activecm/ritav2/config"
-	"github.com/activecm/ritav2/logger"
-	"github.com/activecm/ritav2/viewer"
+	"github.com/activecm/rita/cmd"
+	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/logger"
+	"github.com/activecm/rita/viewer"
 
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
