@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activecm/rita/importer/zeektypes"
-	"github.com/activecm/rita/util"
+	"github.com/activecm/rita/v5/importer/zeektypes"
+	"github.com/activecm/rita/v5/util"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"

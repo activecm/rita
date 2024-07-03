@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/activecm/rita/viewer"
+	"github.com/activecm/rita/v5/viewer"
 
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/stretchr/testify/require"

@@ -4,7 +4,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/v5/config"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"

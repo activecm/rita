@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/activecm/rita/config"
+	"github.com/activecm/rita/v5/config"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"

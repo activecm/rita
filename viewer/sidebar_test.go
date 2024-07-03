@@ -1,7 +1,7 @@
 package viewer_test
 
 import (
-	"github.com/activecm/rita/viewer"
+	"github.com/activecm/rita/v5/viewer"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/require"

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/activecm/rita/config"
-	"github.com/activecm/rita/logger"
+	"github.com/activecm/rita/v5/config"
+	"github.com/activecm/rita/v5/logger"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
 	driver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
