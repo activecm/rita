@@ -8,12 +8,16 @@ import (
 
 	"github.com/activecm/rita/v5/importer/zeektypes"
 	"github.com/activecm/rita/v5/util"
+	"github.com/joho/godotenv"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
 func TestTruncatedTSV(t *testing.T) {
+	err := godotenv.Load("../.env")
+	require.NoError(t, err)
+
 	path := "../test_data/truncated/conn.log"
 	entries := make(chan zeektypes.Conn)
 	errc := make(chan error)
@@ -60,6 +64,9 @@ func TestTruncatedTSV(t *testing.T) {
 }
 
 func TestTruncatedHeader(t *testing.T) {
+	err := godotenv.Load("../.env")
+	require.NoError(t, err)
+
 	path := "../test_data/truncated/conn_top.log"
 	entries := make(chan zeektypes.Conn)
 	errc := make(chan error)
@@ -104,6 +111,9 @@ func TestTruncatedHeader(t *testing.T) {
 }
 
 func TestTruncatedJSON(t *testing.T) {
+	err := godotenv.Load("../.env")
+	require.NoError(t, err)
+
 	path := "../test_data/truncated/conn_json.log"
 	entries := make(chan zeektypes.Conn)
 	errc := make(chan error)
@@ -150,6 +160,9 @@ func TestTruncatedJSON(t *testing.T) {
 }
 
 func TestHasUnknownFieldTSV(t *testing.T) {
+	err := godotenv.Load("../.env")
+	require.NoError(t, err)
+
 	path := "../test_data/has_unknown_field/http.log"
 
 	entries := make(chan zeektypes.HTTP)
@@ -201,6 +214,9 @@ func TestHasUnknownFieldTSV(t *testing.T) {
 }
 
 func TestPlainTextFile(t *testing.T) {
+	err := godotenv.Load("../.env")
+	require.NoError(t, err)
+
 	path := "../test_data/text_file/conn.log"
 
 	entries := make(chan zeektypes.Conn)

@@ -4,10 +4,14 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLoggerNil(t *testing.T) {
+	err := godotenv.Load("../.env")
+	require.NoError(t, err)
+
 	logger := GetLogger()
 	require.NotNil(t, logger, "logger cannot be nil")
 
