@@ -1054,6 +1054,26 @@ func (it *ValidDatasetTestSuite) TestThreatMixtape() {
 	require.EqualValues(t, 4668, count, "threat mixtape should have one non-modifier row per unique hash, got: %d", count)
 
 	err = it.db.Conn.QueryRow(it.db.GetContext(), `
+		SELECT count() FROM (
+			SELECT hash, count() as c FROM threat_mixtape
+			WHERE modifier_name = 'rare_signature'
+			GROUP BY hash
+		) WHERE c > 1
+	`).Scan(&count)
+	require.NoError(t, err)
+	require.EqualValues(t, 0, count, "threat mixtape should have at most one rare_signature modifier row per unique hash, got: %d", count)
+
+	err = it.db.Conn.QueryRow(it.db.GetContext(), `
+		SELECT count() FROM (
+			SELECT hash, count() as c FROM threat_mixtape
+			WHERE modifier_name = 'mime_type_mismatch'
+			GROUP BY hash
+		) WHERE c > 1
+	`).Scan(&count)
+	require.NoError(t, err)
+	require.EqualValues(t, 0, count, "threat mixtape should have at most one mime_type_mismatch modifier row per unique hash, got: %d", count)
+
+	err = it.db.Conn.QueryRow(it.db.GetContext(), `
 		SELECT count() FROM threat_mixtape
 		WHERE beacon_type != 'dns' AND count != open_count
 	`).Scan(&count)
@@ -1086,10 +1106,10 @@ func (it *ValidDatasetTestSuite) TestThreatMixtape() {
 
 	err = it.db.Conn.QueryRow(chCtx, `
 		SELECT count() FROM threat_mixtape
-		WHERE modifier_name = '' AND first_seen_score != {first_seen_increase_score:Float32}
+		WHERE first_seen_score != 0
 	`).Scan(&count)
 	require.NoError(t, err)
-	require.EqualValues(t, 0, count, "no non-modifier entries should have a historical first seen score other than the increase score")
+	require.EqualValues(t, 0, count, "no entries should have a historical first seen score for a non-rolling dataset")
 
 	err = it.db.Conn.QueryRow(chCtx, `
 		SELECT count(DISTINCT import_id) FROM threat_mixtape

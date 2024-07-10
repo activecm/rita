@@ -130,9 +130,6 @@ type (
 		Modifiers Modifiers `json:"modifiers"`
 
 		ThreatIntel ThreatIntel `json:"threat_intel"`
-
-		LogLevel       int  `json:"log_level"`
-		LoggingEnabled bool `json:"logging_enabled"`
 	}
 )
 
@@ -473,11 +470,6 @@ func (cfg *Config) verifyConfig() error {
 		return fmt.Errorf("the MIME type/URI mismatch score increase must be between 0 and 1, got %v", cfg.Modifiers.MIMETypeMismatchScoreIncrease)
 	}
 
-	// validate log level
-	if cfg.LogLevel < -1 || cfg.LogLevel > 5 {
-		return fmt.Errorf("the LogLevel must be between -1 and 5 (inclusive)")
-	}
-
 	return nil
 }
 
@@ -651,7 +643,5 @@ func defaultConfig() Config {
 			OnlineFeeds:          []string{},
 			CustomFeedsDirectory: "/etc/rita/threat_intel_feeds",
 		},
-		LogLevel:       1,    // INFO level is default
-		LoggingEnabled: true, // enable logging by default
 	}
 }

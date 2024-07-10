@@ -240,6 +240,19 @@ func (m *sidebarModel) getModifiers() []modifier {
 		modifiers = append(modifiers, modifier{label: "Threat Intel " + label, value: m.Data.TotalBytesFormatted, delta: m.Data.ThreatIntelDataSizeScore})
 	}
 
+	if m.Data.C2OverDNSDirectConnScore != 0 {
+		modifiers = append(modifiers, modifier{label: "No Direct Connections", value: "", delta: 10})
+	}
+
+	for _, mod := range m.Data.Modifiers {
+		switch mod["modifier_name"] {
+		case "rare_signature":
+			modifiers = append(modifiers, modifier{label: "Rare Signature", value: mod["modifier_value"], delta: 10})
+		case "mime_type_mismatch":
+			modifiers = append(modifiers, modifier{label: "MIME Type Mismatch", value: "", delta: 10})
+		}
+	}
+
 	return modifiers
 }
 

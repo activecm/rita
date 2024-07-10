@@ -61,15 +61,19 @@ func FormatToCSV(items []list.Item, relativeTimestamp time.Time) (string, error)
 		"Connection Count",
 		"Total Bytes",
 		"Port:Proto:Service",
+		"Modifiers",
 	}
 
 	// loop over the results and format into rows and columns
 	var data []string
 	for _, row := range items {
+		// get current row
 		item, ok := row.(Item)
 		if !ok {
 			return "", fmt.Errorf("error casting item to Item")
 		}
+
+		// create a slice to hold the fields for this row
 		fields := []string{
 			item.GetSeverity(false), item.Src.String(), item.Dst.String(), item.FQDN,
 			fmt.Sprint(item.BeaconScore), strconv.FormatBool(item.StrobeScore > 0),
@@ -78,6 +82,16 @@ func FormatToCSV(items []list.Item, relativeTimestamp time.Time) (string, error)
 			fmt.Sprint(item.Prevalence), item.GetFirstSeen(relativeTimestamp), strconv.FormatBool(item.MissingHostCount > 0),
 			fmt.Sprint(item.Count), fmt.Sprint(item.TotalBytes), fmt.Sprintf("\"%s\"", strings.Join(item.PortProtoService, ",")),
 		}
+
+		// create a slice to hold the modifiers
+		modifierList := make([]string, 0, len(item.Modifiers))
+		for _, mod := range item.Modifiers {
+			modifierList = append(modifierList, fmt.Sprintf("%s:%s", mod["modifier_name"], mod["modifier_value"]))
+		}
+
+		// add the modifiers to the fields
+		fields = append(fields, fmt.Sprintf("\"%s\"", strings.Join(modifierList, ",")))
+
 		// create comma-delimited string from each field in this row
 		formattedRow := strings.Join(fields, ",")
 		data = append(data, formattedRow)

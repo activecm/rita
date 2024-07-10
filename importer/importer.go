@@ -28,7 +28,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var errAllFilesPreviouslyImported = errors.New("all files were previously imported")
+var ErrAllFilesPreviouslyImported = errors.New("all files were previously imported")
 
 type zeekRecord interface {
 	zeektypes.Conn | zeektypes.DNS | zeektypes.HTTP | zeektypes.SSL
@@ -221,7 +221,7 @@ func (importer *Importer) Import(afs afero.Fs, files map[string][]string) error 
 
 	// verify that there are still files left to import and set file count
 	if totalFileCount < 1 {
-		return errAllFilesPreviouslyImported
+		return ErrAllFilesPreviouslyImported
 	}
 	importer.TotalFileCount = totalFileCount
 

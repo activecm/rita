@@ -110,21 +110,22 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 
 	rows, err := modifier.Database.Conn.Query(chCtx, `--sql
 	WITH rare_sig_modifiers AS (
-		SELECT src, src_nuid, any(signature) as modifier_value, min(times_used_dst) as times_used_dst, min(times_used_fqdn) as times_used_fqdn FROM (
+		SELECT src, src_nuid, dst, dst_nuid, fqdn, signature as modifier_value, x.times_used_dst as times_used_dst, x.times_used_fqdn as times_used_fqdn
+		FROM rare_signatures rs 
+		SEMI JOIN (
 			SELECT src, src_nuid, signature, uniqExactMerge(times_used_dst) as times_used_dst, uniqExactMerge(times_used_fqdn) as times_used_fqdn 
 			FROM rare_signatures
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND signature != ''
 			GROUP BY src, src_nuid, signature
-			HAVING times_used_dst == 1 OR times_used_fqdn == 1
-		)
-		GROUP BY src, src_nuid
+			HAVING times_used_fqdn = 1 OR  times_used_dst = 1
+		) x ON rs.src = x.src AND rs.src_nuid = x.src_nuid AND rs.signature = x.signature
+		WHERE if(fqdn != '', times_used_fqdn = 1, times_used_dst = 1)
 	)
 	SELECT hash, src, src_nuid, dst, dst_nuid, fqdn, r.modifier_value as modifier_value, last_seen, toFloat32(if(length(fqdn) > 0, times_used_fqdn, times_used_dst)) as modifier_score
 	FROM threat_mixtape t 
-	-- WHERE modifier_score == 1
-	INNER JOIN rare_sig_modifiers r USING src, src_nuid
-	WHERE t.import_id = unhex({import_id:String})
-
+	SEMI JOIN rare_sig_modifiers r USING src, src_nuid, dst, dst_nuid, fqdn
+	WHERE modifier_name = '' -- join only on non-modifier rows to avoid duplicating results
+	AND t.import_id = unhex({import_id:String}) -- join only on the results for this import
 	`)
 
 	if err != nil {

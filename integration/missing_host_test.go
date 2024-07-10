@@ -107,7 +107,7 @@ func (it *MissingHostSuite) TestThreat() {
 	}
 	expected := expectedResults{
 		src: "73.54.23.243", dst: "64.225.56.201",
-		finalScore: 1.05, beaconScore: 0.963, longConnScore: config.HIGH_CATEGORY_SCORE,
+		finalScore: 0.9000, beaconScore: 0.963, longConnScore: config.HIGH_CATEGORY_SCORE,
 		totalDuration: 270036.631115, count: 331, missingHostCount: 330, missingHostScore: 0.1,
 		totalBytes: 1679442, portProtoService: []string{"80:tcp:http", "22:tcp:ssh"}, prevalence: 1,
 		firstSeen: time.Unix(1713470872, 0).UTC(),
@@ -162,7 +162,7 @@ func (it *MissingHostSuite) TestThreat() {
 		require.InDelta(t, expected.missingHostScore, res.MissingHostHeaderScore, 0.001, "missing host score should match")
 		require.InDelta(t, expected.prevalence, res.Prevalence, 0.001, "prevalence should match")
 		require.InDelta(t, -it.cfg.Modifiers.PrevalenceScoreDecrease, res.PrevalenceScore, 0.001, "prevalence score should equal the prevalence decrease config value")
-		require.InDelta(t, it.cfg.Modifiers.FirstSeenScoreIncrease, res.FirstSeenScore, 0.001, "first seen score should equal the first seen score increase config value")
+		require.EqualValues(t, 0, res.FirstSeenScore, 0.001, "first seen score should equal 0 for a non-rolling dataset")
 		require.EqualValues(t, expected.firstSeen.UTC(), res.FirstSeen, "first seen date should match")
 		require.InDelta(t, it.cfg.Modifiers.MissingHostCountScoreIncrease, res.MissingHostHeaderScore, 0.001, "missing host header score should equal the missing host header increase score config value")
 		require.InDelta(t, it.cfg.Modifiers.RareSignatureScoreIncrease, res.TotalModifierScore, 0.001, "total modifier score should equal the rare signature increase score config value")

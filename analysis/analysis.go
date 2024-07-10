@@ -283,10 +283,14 @@ func (analyzer *Analyzer) runAnalysis() error {
 			timeSince := relativeTime.Sub(entry.FirstSeenHistorical)
 			daysSinceFirstSeen := float32(timeSince.Hours() / 24)
 
-			if daysSinceFirstSeen <= analyzer.Config.Modifiers.FirstSeenIncreaseThreshold {
-				mixtape.FirstSeenScore = analyzer.Config.Modifiers.FirstSeenScoreIncrease
-			} else if daysSinceFirstSeen >= analyzer.Config.Modifiers.FirstSeenDecreaseThreshold {
-				mixtape.FirstSeenScore = -1 * analyzer.Config.Modifiers.FirstSeenScoreDecrease
+			// Historical First Seen Scoring
+			// only apply to rolling datasets
+			if analyzer.Database.Rolling {
+				if daysSinceFirstSeen <= analyzer.Config.Modifiers.FirstSeenIncreaseThreshold {
+					mixtape.FirstSeenScore = analyzer.Config.Modifiers.FirstSeenScoreIncrease
+				} else if daysSinceFirstSeen >= analyzer.Config.Modifiers.FirstSeenDecreaseThreshold {
+					mixtape.FirstSeenScore = -1 * analyzer.Config.Modifiers.FirstSeenScoreDecrease
+				}
 			}
 
 			// Prevalence Scoring

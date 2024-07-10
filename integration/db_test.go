@@ -49,7 +49,7 @@ func (it *ValidDatasetTestSuite) TestPrimaryKeySize() {
 		"openconnhash_tmp": {NumParts: 2, TotalMarks: 40, AvgMarks: 40, TotalPrimaryKeySize: 2000, CompressionRatio: 0.4},
 		"ssl":              {NumParts: 2, TotalMarks: 20, AvgMarks: 20, TotalPrimaryKeySize: 1500, CompressionRatio: 0.7},
 		"ssl_tmp":          {NumParts: 2, TotalMarks: 20, AvgMarks: 20, TotalPrimaryKeySize: 1500, CompressionRatio: 0.7},
-		"threat_mixtape":   {NumParts: 4, TotalMarks: 10, AvgMarks: 5, TotalPrimaryKeySize: 700, CompressionRatio: 0.75},
+		"threat_mixtape":   {NumParts: 4, TotalMarks: 10, AvgMarks: 5, TotalPrimaryKeySize: 700, CompressionRatio: 0.7},
 		"tls_proto":        {NumParts: 2, TotalMarks: 10, AvgMarks: 10, TotalPrimaryKeySize: 600, CompressionRatio: 0.7},
 		"uconn":            {NumParts: 2, TotalMarks: 15, AvgMarks: 15, TotalPrimaryKeySize: 800, CompressionRatio: 0.5},
 		"uconn_tmp":        {NumParts: 2, TotalMarks: 60, AvgMarks: 60, TotalPrimaryKeySize: 2000, CompressionRatio: 0.35},

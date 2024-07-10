@@ -2,16 +2,15 @@ package logger
 
 import (
 	"io"
+	"log"
 	"log/syslog"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/activecm/rita/v5/config"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/pkgerrors"
-	"github.com/spf13/afero"
 )
 
 var once sync.Once
@@ -25,14 +24,16 @@ type LevelWriterAdapter struct {
 	Level zerolog.Level
 }
 
-// zerolog allows for logging at the following levels (from highest to lowest):
-// panic (zerolog.PanicLevel, 5)
-// fatal (zerolog.FatalLevel, 4)
-// error (zerolog.ErrorLevel, 3)
-// warn (zerolog.WarnLevel, 2)
-// info (zerolog.InfoLevel, 1)
-// debug (zerolog.DebugLevel, 0)
-// trace (zerolog.TraceLevel, -1)
+/*
+zerolog allows for logging at the following levels (from highest to lowest):
+	panic (zerolog.PanicLevel, 5)
+	fatal (zerolog.FatalLevel, 4)
+	error (zerolog.ErrorLevel, 3)
+	warn  (zerolog.WarnLevel, 2)
+	info  (zerolog.InfoLevel, 1)
+	debug (zerolog.DebugLevel, 0)
+	trace (zerolog.TraceLevel, -1)
+*/
 
 // GetLogger returns a logger instance, initializing it if necessary
 func GetLogger() zerolog.Logger {
@@ -48,27 +49,37 @@ func GetLogger() zerolog.Logger {
 		}
 		tmpLogger := zerolog.New(output).With().Timestamp().Logger()
 
-		// get logging settings from config
-		cfg, err := config.GetConfig()
+		// get logging configuration from environment variables
+		// check if logging is enabled
+		loggingEnabledEnv := os.Getenv("LOGGING_ENABLED")
+		if loggingEnabledEnv == "" {
+			log.Fatal("Environment variable LOGGING_ENABLED is not set")
+		}
+		loggingEnabled, err := strconv.ParseBool(loggingEnabledEnv)
 		if err != nil {
-			cfg, err = config.LoadConfig(afero.NewOsFs(), config.DefaultConfigPath)
-			if err != nil {
-				tmpLogger.Err(err).Msg("unable to read logging settings from config, reverting to basic logging settings... ")
-				cfg.LoggingEnabled = false
-				cfg.LogLevel = 1
-			}
+			log.Fatal(err)
 		}
 
-		logLevel := zerolog.Level(1) // cfg.LogLevel)
-
-		var writers []io.Writer
+		// get log level
+		logLevelEnv := os.Getenv("LOG_LEVEL")
+		if logLevelEnv == "" {
+			log.Fatal("Environment variable LOG_LEVEL is not set")
+		}
+		logLevelInt, err := strconv.Atoi(logLevelEnv)
+		if err != nil {
+			log.Fatal(err)
+		}
+		logLevel := zerolog.Level(logLevelInt)
 
 		// set both file writer and stdout logging level to debug if DebugMode is set
 		if DebugMode {
 			logLevel = zerolog.DebugLevel
 		}
 
-		if cfg.LoggingEnabled {
+		var writers []io.Writer
+
+		// if logging is enabled, set up writer for syslog
+		if loggingEnabled {
 			// set up syslog
 			syslogAddress := os.Getenv("SYSLOG_ADDRESS")
 			if syslogAddress == "" {
@@ -104,6 +115,7 @@ func GetLogger() zerolog.Logger {
 	return zLogger
 }
 
+// WriteLevel writes the given bytes to the writer if the level is greater than or equal to the LevelWriterAdapter's Level
 func (lw LevelWriterAdapter) WriteLevel(l zerolog.Level, p []byte) (n int, err error) {
 	if l >= lw.Level {
 		return lw.Write(p)

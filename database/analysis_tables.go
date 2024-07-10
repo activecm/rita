@@ -257,13 +257,16 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			hour DateTime(),
 			src IPv6,
 			src_nuid UUID,
+			dst IPv6,
+			dst_nuid UUID,
+			fqdn String,
 			signature String,
 			is_ja3 Bool,
 			times_used_dst AggregateFunction(uniqExact, IPv6),
 			times_used_fqdn AggregateFunction(uniqExact, String)
 		)
 		ENGINE = AggregatingMergeTree()
-		PRIMARY KEY (src_nuid, src, signature )
+		PRIMARY KEY (src_nuid, src, dst, dst_nuid, fqdn, signature )
 	`)
 
 	if err != nil {
@@ -278,13 +281,14 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			toStartOfHour(ts) as hour,
 			src,
 			src_nuid,
+			host AS fqdn,
 			useragent as signature,
 			false as is_ja3,
 			uniqExactState(dst) as times_used_dst,
 			uniqExactState(host) as times_used_fqdn
 		FROM {database:Identifier}.http
 		WHERE length(useragent) > 0
-		GROUP BY (import_hour, hour, src, src_nuid, signature, is_ja3)
+		GROUP BY (import_hour, hour, src, src_nuid, fqdn, signature, is_ja3)
 	`)
 
 	if err != nil {
@@ -299,13 +303,14 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			toStartOfHour(ts) as hour,
 			src,
 			src_nuid,
+			server_name AS fqdn,
 			ja3 as signature,
 			true as is_ja3,
 			uniqExactState(dst) as times_used_dst,
 			uniqExactState(server_name) as times_used_fqdn
 		FROM {database:Identifier}.ssl
 		WHERE length(ja3) > 0
-		GROUP BY (import_hour, hour, src, src_nuid, signature, is_ja3)
+		GROUP BY (import_hour, hour, src, src_nuid, fqdn, signature, is_ja3)
 	`)
 	if err != nil {
 		return err
@@ -319,12 +324,14 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			toStartOfHour(ts) as hour,
 			src,
 			src_nuid,
+			dst,
+			dst_nuid,
 			missing_host_useragent as signature,
 			false as is_ja3,
 			uniqExactState(if(src_local, dst, src)) as times_used_dst
 		FROM {database:Identifier}.conn
 		WHERE length(missing_host_useragent) > 0 AND missing_host_header = true
-		GROUP BY (import_hour, hour, src, src_nuid, signature, is_ja3)
+		GROUP BY (import_hour, hour, src, src_nuid, dst, dst_nuid, signature, is_ja3)
 	`)
 	if err != nil {
 		return err
@@ -333,7 +340,6 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 	return err
 
 }
-
 func (db *DB) createPortInfoTable(ctx context.Context) error {
 
 	if err := db.Conn.Exec(ctx, `--sql

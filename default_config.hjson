@@ -1,7 +1,5 @@
 {
     update_check_enabled: true,
-    log_level: 1,
-    logging_enabled: true,
     threat_intel: {
         // Configuration for custom threat intel feeds
         // Allowed format for the contents of both online feeds and custom file feeds is one IP or domain per line

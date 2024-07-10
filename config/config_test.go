@@ -136,8 +136,6 @@ func TestParseJSON(t *testing.T) {
 					c2_over_dns_direct_conn_score_increase: 0.9,
 					mime_type_mismatch_score_increase: 0.6
 				},
-				log_level: 3,
-				logging_enabled: false,
 			}
 			`),
 			expectedConfig: Config{
@@ -240,8 +238,6 @@ func TestParseJSON(t *testing.T) {
 					OnlineFeeds:          []string{"https://example.com/feed1", "https://example.com/feed2"},
 					CustomFeedsDirectory: "/path/to/custom/feeds",
 				},
-				LogLevel:       3,
-				LoggingEnabled: false,
 			},
 			expectedError: nil,
 		},
@@ -379,9 +375,6 @@ func TestParseJSON(t *testing.T) {
 			require.InDelta(test.expectedConfig.Modifiers.RareSignatureScoreIncrease, cfg.Modifiers.RareSignatureScoreIncrease, 0.00001, "RareSignatureScoreIncrease should match expected value")
 			require.InDelta(test.expectedConfig.Modifiers.C2OverDNSDirectConnScoreIncrease, cfg.Modifiers.C2OverDNSDirectConnScoreIncrease, 0.00001, "C2OverDNSDirectConnScoreIncrease should match expected value")
 			require.InDelta(test.expectedConfig.Modifiers.MIMETypeMismatchScoreIncrease, cfg.Modifiers.MIMETypeMismatchScoreIncrease, 0.00001, "MIMETypeMismatchScoreIncrease should match expected value")
-
-			require.Equal(test.expectedConfig.LogLevel, cfg.LogLevel, "LogLevel should match expected value")
-			require.Equal(test.expectedConfig.LoggingEnabled, cfg.LoggingEnabled, "LoggingEnabled should match expected value")
 		})
 	}
 }
@@ -655,8 +648,6 @@ func TestGetDefaultConfig(t *testing.T) {
 	require.Equal(origConfigVar.Scoring, cfg.Scoring, "config scoring should match expected value")
 	require.Equal(origConfigVar.Modifiers, cfg.Modifiers, "config modifiers should match expected value")
 	require.Equal(origConfigVar.ThreatIntel, cfg.ThreatIntel, "config threat intel should match expected value")
-	require.Equal(origConfigVar.LogLevel, cfg.LogLevel, "config log level should match expected value")
-	require.Equal(origConfigVar.LoggingEnabled, cfg.LoggingEnabled, "config logging enabled should match expected value")
 
 	// match the whole object just in case
 	require.Equal(origConfigVar, cfg, "config should match expected value")

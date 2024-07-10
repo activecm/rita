@@ -18,34 +18,34 @@ import (
 )
 
 type MixtapeResult struct {
-	Src                      net.IP    `ch:"src" json:"src"`
-	Dst                      net.IP    `ch:"dst" json:"dst"`
-	FQDN                     string    `ch:"fqdn"`
-	FinalScore               float32   `ch:"final_score"`
-	Count                    uint64    `ch:"count"`
-	ProxyCount               uint64    `ch:"proxy_count"`
-	BeaconScore              float32   `ch:"beacon_score"`
-	StrobeScore              float32   `ch:"strobe_score"`
-	BeaconThreatScore        float32   `ch:"beacon_threat_score"`
-	TotalDuration            float32   `ch:"total_duration"`
-	LongConnScore            float32   `ch:"long_conn_score"`
-	FirstSeen                time.Time `ch:"first_seen_historical"`
-	FirstSeenScore           float32   `ch:"first_seen_score"`
-	Prevalence               float32   `ch:"prevalence"`
-	PrevalenceScore          float32   `ch:"prevalence_score"`
-	Subdomains               uint64    `ch:"subdomains"`
-	PortProtoService         []string  `ch:"port_proto_service"`
-	C2OverDNSScore           float32   `ch:"c2_over_dns_score"`
-	C2OverDNSDirectConnScore float32   `ch:"c2_over_dns_direct_conn_score"`
-	ThreatIntelScore         float32   `ch:"threat_intel_score"`
-	ThreatIntelDataSizeScore float32   `ch:"threat_intel_data_size_score"`
-	TotalBytes               uint64    `ch:"total_bytes"`
-	TotalBytesFormatted      string    `ch:"total_bytes_formatted"`
-	MissingHostHeaderScore   float32   `ch:"missing_host_header_score"`
-	MissingHostCount         uint64    `ch:"missing_host_count"`
-	ProxyIPs                 []net.IP  `ch:"proxy_ips"`
-
-	TotalModifierScore float32 `ch:"total_modifier_score"`
+	Src                      net.IP              `ch:"src" json:"src"`
+	Dst                      net.IP              `ch:"dst" json:"dst"`
+	FQDN                     string              `ch:"fqdn"`
+	FinalScore               float32             `ch:"final_score"`
+	Count                    uint64              `ch:"count"`
+	ProxyCount               uint64              `ch:"proxy_count"`
+	BeaconScore              float32             `ch:"beacon_score"`
+	StrobeScore              float32             `ch:"strobe_score"`
+	BeaconThreatScore        float32             `ch:"beacon_threat_score"`
+	TotalDuration            float32             `ch:"total_duration"`
+	LongConnScore            float32             `ch:"long_conn_score"`
+	FirstSeen                time.Time           `ch:"first_seen_historical"`
+	FirstSeenScore           float32             `ch:"first_seen_score"`
+	Prevalence               float32             `ch:"prevalence"`
+	PrevalenceScore          float32             `ch:"prevalence_score"`
+	Subdomains               uint64              `ch:"subdomains"`
+	PortProtoService         []string            `ch:"port_proto_service"`
+	C2OverDNSScore           float32             `ch:"c2_over_dns_score"`
+	C2OverDNSDirectConnScore float32             `ch:"c2_over_dns_direct_conn_score"`
+	ThreatIntelScore         float32             `ch:"threat_intel_score"`
+	ThreatIntelDataSizeScore float32             `ch:"threat_intel_data_size_score"`
+	TotalBytes               uint64              `ch:"total_bytes"`
+	TotalBytesFormatted      string              `ch:"total_bytes_formatted"`
+	MissingHostHeaderScore   float32             `ch:"missing_host_header_score"`
+	MissingHostCount         uint64              `ch:"missing_host_count"`
+	ProxyIPs                 []net.IP            `ch:"proxy_ips"`
+	Modifiers                []map[string]string `ch:"modifiers"`
+	TotalModifierScore       float32             `ch:"total_modifier_score"`
 }
 
 type Item MixtapeResult
@@ -210,6 +210,7 @@ func BuildResultsQuery(filter Filter, currentPage, pageSize int, minTimestamp ti
 		missing_host_count,
 		missing_host_header_score,
 		c2_over_dns_direct_conn_score,
+		modifiers,
 		total_modifier_score,
 		toFloat32(base_score + total_modifier_score + prevalence_score + first_seen_score + missing_host_header_score + threat_intel_data_size_score + c2_over_dns_direct_conn_score) as final_score
 		-- base_score
@@ -239,6 +240,7 @@ func BuildResultsQuery(filter Filter, currentPage, pageSize int, minTimestamp ti
 			sum(missing_host_count) as missing_host_count,
 			toFloat32(sum(missing_host_header_score)) as missing_host_header_score,
 			toFloat32(sum(c2_over_dns_direct_conn_score)) as c2_over_dns_direct_conn_score,
+			arraySort(groupUniqArrayIf(map('modifier_name', modifier_name, 'modifier_value', modifier_value), modifier_name != '')) as modifiers,
 			toFloat32(sum(modifier_score)) as total_modifier_score,
 			greatest(beacon_threat_score, long_conn_score, strobe_score, c2_over_dns_score, threat_intel_score) as base_score
 		FROM threat_mixtape t
