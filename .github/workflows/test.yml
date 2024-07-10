@@ -5,12 +5,12 @@ on:
   push:
     branches: 'main'
 
+# Temporarily splitting out tests into separate jobs for improving workflow execution time 
 jobs:
-  test:
-    name: 'Run Tests'
+  unit_test:
+    name: 'Run Unit Tests'
     runs-on: 
       labels: ubuntu-latest-m
-
     steps:
       - uses: actions/checkout@v4
       - name: Setup Go
@@ -25,15 +25,106 @@ jobs:
         run: go install github.com/mfridman/tparse@latest
       - name: Unit Tests
         run: go test --cover $(go list ./... | grep -v /integration | grep -v /database | grep -v /cmd | grep -v /viewer ) -json 2>&1 | tee unit.out && tparse -all --file=unit.out
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: media
+          path: unit.out
+
+  integration_test:
+    name: 'Run Integration Tests'
+    runs-on: 
+      labels: ubuntu-latest-m
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
       - name: Integration Tests
         shell: 'script -q -e -c "bash {0}"'
         run: go test ./integration/... -json -timeout 1800s 2>&1 | tee integration.out && tparse -all --file=integration.out
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: media
+          path: integration.out
+
+  database_test:
+    name: 'Run Database Tests'
+    runs-on: 
+      labels: ubuntu-latest-m
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
       - name: Database Tests
         shell: 'script -q -e -c "bash {0}"'
         run: go test ./database/... -json -timeout 1800s 2>&1 | tee database.out && tparse -all --file=database.out
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: media
+          path: database.out
+  cmd_test:
+    name: 'Run Cmd Tests'
+    runs-on: 
+      labels: ubuntu-latest-m
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
       - name: Cmd Tests
         shell: 'script -q -e -c "bash {0}"'
         run: go test ./cmd/... -json -timeout 1800s 2>&1 | tee cmd.out && tparse -all --file=cmd.out
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: media
+          path: cmd.out
+
+  viewer_test:
+    name: 'Run Viewer Tests'
+    runs-on: 
+      labels: ubuntu-latest-m
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install dependencies
+        run: go get .
+      - name: Build
+        run: go build -v ./...
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
       - name: Viewer Tests
         shell: 'script -q -e -c "bash {0}"'
         run: go test ./viewer/... -json -timeout 1800s 2>&1 | tee viewer.out && tparse -all --file=viewer.out
@@ -42,10 +133,6 @@ jobs:
         if: ${{ failure() }}
         with:
           name: media
-          path: |
-            integration.out
-            unit.out
-            database.out
-            cmd.out
-            viewer.out
+          path: viewer.out
+   
       
