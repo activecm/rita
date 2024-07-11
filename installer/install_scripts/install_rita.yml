@@ -33,8 +33,8 @@
 #Known distribution?
     - name: "RITA Install: Checking Linux distribution."
       ansible.builtin.fail:
-        msg: "Distribution name: {{  ansible_distribution  }}  does not appear to be recognized - please contact ACM"
-      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' )
+        msg: "Distribution name: {{  ansible_distribution  }} does not appear to be recognized - please contact ACM"
+      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' )
       # and ansible_distribution != 'RedHat'
       tags:
         - linux
@@ -42,7 +42,7 @@
     - name: "RITA Install: Checking Linux distribution version."
       ansible.builtin.fail:
         msg: "Warning: Linux distribution {{  ansible_distribution  }} {{  ansible_distribution_major_version  }} may not have been tested - please contact ACM and report whether the install worked or not"
-      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '24') ) )
+      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) )
       #or ( ansible_distribution != 'RedHat' and (ansible_distribution_major_version == '9') ) 
       ignore_errors: True		#We print a warning but do not abort if this is an unknown combination of distribution and major version.
       tags:
@@ -109,7 +109,7 @@
         state: latest
         update_cache: true
         cache_valid_time: 3600
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu' )		#While Kali is based on Debian, it does not include the aptitude package.
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )		#While Kali is based on Debian, it does not include the aptitude package.
       tags:
         - packages
         - linux
@@ -194,7 +194,7 @@
             - packages
             - linux
             - linuxdeb
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu' )
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
 
 
     - name: "RITA Install: Install packages on Debian and Ubuntu."
@@ -211,7 +211,7 @@
         - packages
         - linux
         - linuxdeb
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu' )
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
 
     - name: "RITA Install: Install packages on Kali."
       apt:
@@ -244,7 +244,7 @@
       apt_key:
         url: https://download.docker.com/linux/debian/gpg
         state: present
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' )
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Zorin OS' )
       tags:
         - packages
         - linux
@@ -266,6 +266,28 @@
         state: present
       when: ( ansible_distribution == 'Kali' and ansible_distribution_major_version == '2024' )
       #Debian bookworm appears to be the right one to use according to https://www.kali.org/docs/containers/installing-docker-on-kali/
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Add Docker Repository to PopOS."
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu jammy stable
+        state: present
+      when: ( ansible_distribution == 'Pop!_OS' and ansible_distribution_major_version == '22' )
+      #Ubuntu jammy appears to be the right one to use.
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Install: Add Docker Repository to Zorin."
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+      when: ( ansible_distribution == 'Zorin OS' and ansible_distribution_major_version == '16' )
+      #Ubuntu focal appears to be the right one to use.
       tags:
         - packages
         - linux
@@ -365,7 +387,7 @@
             - docker
             - linux
             - linuxdeb
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu')
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
 
 
     - name: "RITA Install: Install docker on rpm-based distributions."
@@ -482,8 +504,8 @@
       ansible.builtin.file:
         path: "{{  item  }}"
         state: directory
-        owner: root		#FIXME - check
-        group: root		#FIXME - check
+        owner: root
+        group: root
         mode: 0755
       loop:
         - /etc/rita/
@@ -585,7 +607,7 @@
       stat:
         path: /var/run/reboot-required
         get_checksum: no
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu' )
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
       tags:
         - packages
         - linux
@@ -594,10 +616,11 @@
     - name: "RITA Install: Rebooting system if needed."
       reboot:
         reboot_timeout: 120
-      when: ( ansible_connection != 'local' and ( ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Ubuntu' ) and ( reboot_required_file.stat.exists ) ) or ( ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' ) and ( reboot_result.rc == 1 ) ) )
+      when: ( ansible_connection != 'local' and ( ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' ) and ( reboot_required_file.stat.exists ) ) or ( ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' ) and ( reboot_result.rc == 1 ) ) )
       register: reboot_status
       async: 1
       poll: 0
+      ignore_errors: True		#If unable to reboot (as ansible refuses to do if installing to localhost) we leave the error at the end of the output but don't treat it as a failure.
       tags:
         - packages
         - linux
