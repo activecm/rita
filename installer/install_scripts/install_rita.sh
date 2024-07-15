@@ -4,7 +4,14 @@ RITA_VERSION="REPLACE_ME"
 
 set -e 
 
-install_target="$1"
+if [ -n "$1" ]; then
+	install_target="$1"
+else
+	echo "Please add the name of the system on which you want rita installed as a command line option.  If you want to install rita on this computer, use    127.0.0.1    ." >&2
+	echo "The final command will look like:" >&2
+	echo "$0 the_computer_name_or_ip_on_which_to_install_rita" >&2
+	exit 1
+fi
 
 # change working directory to directory of this script
 pushd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" > /dev/null

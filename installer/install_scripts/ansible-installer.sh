@@ -17,14 +17,10 @@ source ./helper.sh
 #the original idea and multiple improvements.
 
 
-#Tested on:
-#FIXME
-
-ansible_installer_version="0.3.6"
+ansible_installer_version="0.3.7"
 
 #Uncomment one of the following lines to set the default program to download and install
 data_needed="rita"
-#data_needed="achunter"
 
 
 
@@ -73,13 +69,13 @@ enable_repositories() {
 	else
 		. /etc/os-release
 		case "$ID/$VERSION_ID" in
-		alma/8*|rocky/8*)
-			dnf config-manager --set-enabled powertools
-			dnf install epel-release
+		alma/8*|almalinux/8*|rocky/8*)
+			$SUDO dnf config-manager --set-enabled powertools
+			$SUDO dnf install -y epel-release
 			;;
-		alma/9*|rocky/9*)
-			dnf config-manager --set-enabled crb
-			dnf install epel-release
+		alma/9*|almalinux/9*|rocky/9*)
+			$SUDO dnf config-manager --set-enabled crb
+			$SUDO dnf install -y epel-release
 			;;
 		centos/7)
 			yum install epel-release
@@ -91,6 +87,17 @@ enable_repositories() {
 		centos/9)
 			dnf config-manager --set-enabled crb
 			dnf install epel-release epel-next-release
+			;;
+		debian/12|zorin/16)
+			:	#Does not appear that any extra repositories are needed
+			;;
+		kali/*)
+			sudo apt update
+			sudo apt install software-properties-common || sudo apt install python-software-properties
+			sudo add-apt-repository --yes --update ppa:ansible/ansible
+			;;
+		ol/*)											#Oracle linux, which is also the base for security onion 2470
+			:
 			;;
 		rhel/7)
 			subscription-manager repos --enable rhel-*-optional-rpms --enable rhel-*-extras-rpms --enable rhel-ha-for-rhel-*-server-rpms
@@ -106,6 +113,9 @@ enable_repositories() {
 			;;
 		fedora/*)
 			:										#It does not appear that fedora needs any extra repositories
+			;;
+		pop/*)
+			:										#popos does not appear to need any extra repositories
 			;;
 		ubuntu/*)
 			sudo apt update
@@ -125,10 +135,12 @@ patch_system() {
 
 	status "Patching system"		#================
 	if [ -x /usr/bin/apt-get -a -x /usr/bin/dpkg-query ]; then
-		while ! $SUDO sudo add-apt-repository universe ; do
-			echo "Error subscribing to universe repository, perhaps because a system update is running; will wait 60 seconds and try again." >&2
-			sleep 60
-		done
+		if [ -s /etc/os-release ] && egrep -iq '(^ID=ubuntu|^ID=pop|^ID=Zorin OS)' /etc/os-release ; then	#The "universe" repository is only available on Ubuntu (and, in theory, popos and Zorin)  Kali DOES NOT have universe
+			while ! $SUDO add-apt-repository universe ; do
+				echo "Error subscribing to universe repository, perhaps because a system update is running; will wait 60 seconds and try again." >&2
+				sleep 60
+			done
+		fi
 		while ! $SUDO apt-get -q -y update >/dev/null ; do
 			echo "Error updating package metadata, perhaps because a system update is running; will wait 60 seconds and try again." >&2
 			sleep 60
@@ -209,21 +221,26 @@ install_tool() {
 
 echo "ansible_installer version $ansible_installer_version" >&2
 
-if [ -n "$1" ]; then
-	if [ "$1" = "rita" ]; then
-		data_needed="rita"
-	elif [ "$1" = "achunter" ]; then
-		data_needed="achunter"
-	else
-		echo "I do not recognize the command line parameter you specified - please put   rita   or   achunter   as the first command line parameter to say which program you need installed, followed by the host on which you want rita installed.  Exiting."
-		exit 1
-	fi
-fi
-if [ -n "$2" ]; then
-	install_target="$2"
-else
-	install_target="localhost"
-fi
+#FIXME We no longer need these choices, remove the following block
+#if [ -n "$1" ]; then
+#	if [ "$1" = "rita" ]; then
+#		data_needed="rita"
+#		shift
+#	elif [ "$1" = "achunter" ]; then
+#		data_needed="achunter"
+#		shift
+#	else
+#		install_target="$1"
+#		shift
+#	fi
+#fi
+#if [ -n "$1" ]; then
+#	install_target="$1"
+#fi
+#
+#if [ -z "$install_target" ]; then
+#	install_target="localhost"
+#fi
 
 require_sudo
 
@@ -254,7 +271,7 @@ else
 
 	status "Installing needed tools"		#================
 	install_tool python3 "python3"
-	install_tool pip3 "python3-pip"
+	install_tool pip3 "python3-pip"			#Note, oracle linux does not come with pip at all.  The "python3-pip-wheel" package does not include pip.
 	python3 -m pip -V ; retcode="$?"
 	if [ "$retcode" != 0 ]; then
 		fail "Unable to run python3's pip, exiting."
@@ -292,53 +309,7 @@ if ! echo "$PATH" | grep -q '/usr/local/bin' ; then
 	fi
 fi
 
-#ansible-galaxy install community.docker		#FIXME Removeme
 ansible-galaxy collection install community.docker --force
-
-
-# if [ "$data_needed" = "rita" ]; then
-	#This may not be needed with ansible-playbook's "-i" param followed by a comma separated list of hosts that ends in a comma
-	##FIXME - this won't support a comma separated list of hosts, forcing us to install to one remote target at a time.
-	#if [ -d "/opt/local/etc/ansible/" ]; then
-	#	ans_hosts="/opt/local/etc/ansible/hosts"
-	#elif [ -d "/etc/ansible" ]; then
-	#	ans_hosts="/etc/ansible/hosts"
-	#else
-	#	echo "Unable to locate ansible configuration directory to manage the hosts file, exiting."
-	#	exit 1
-	#fi
-	#if ! grep -q '^'"$install_target"'$' "$ans_hosts"
-	#	#There's no entry for this host in the ansible hosts file, we must add it.
-	#	echo "" >>"$ans_hosts"
-	#	echo "#Added by the rita installer" >>"$ans_hosts"
-	#	echo '['"${install_target}-group"']' >>"$ans_hosts"
-	#	echo "$install_target" >>"$ans_hosts"
-	#	echo "" >>"$ans_hosts"
-	#fi
-
-	# status "Installing rita via ansible on $install_target"		#================
-	# if [ "$install_target" = "localhost" -o "$install_target" = "127.0.0.1" -o "$install_target" = "::1" ]; then
-	# 	ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," ~/.ansible/playbooks/install_rita.yml
-	# else
-	# 	status "Setting up future ssh connections to $install_target .  You may be asked to provide your ssh password to $install_target ."		#================
-	# 	sshprep "$install_target"
-	# 	ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," ~/.ansible/playbooks/install_rita.yml
-	# fi
-
-# elif [ "$data_needed" = "achunter" ]; then
-# 	echo 'Not implemented yet, exiting.' >&2
-# else
-# 	echo 'I do not know what program to install, skipping.' >&2
-# fi
-
-# echo "Unless you see warnings above that an install failed, you should have RITA installed." >&2
-# echo '!!!!!!!!!!!!You must log out and log back in to make sure your PATH is set correctly!!!!!!!!!!!!' >&2
-
-
-
-
-
-
 
 
 
