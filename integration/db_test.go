@@ -42,7 +42,7 @@ func (it *ValidDatasetTestSuite) TestPrimaryKeySize() {
 		"openssl_tmp":      {NumParts: 2, TotalMarks: 20, AvgMarks: 20, TotalPrimaryKeySize: 2000, CompressionRatio: 0.7},
 		"pdns":             {NumParts: 2, TotalMarks: 10, AvgMarks: 10, TotalPrimaryKeySize: 1000, CompressionRatio: 0.8},
 		"pdns_raw":         {NumParts: 2, TotalMarks: 30, AvgMarks: 30, TotalPrimaryKeySize: 4000, CompressionRatio: 0.8},
-		"port_info":        {NumParts: 2, TotalMarks: 20, AvgMarks: 20, TotalPrimaryKeySize: 400, CompressionRatio: 0.5},
+		"port_info":        {NumParts: 2, TotalMarks: 20, AvgMarks: 20, TotalPrimaryKeySize: 500, CompressionRatio: 0.5},
 		"rare_signatures":  {NumParts: 4, TotalMarks: 10, AvgMarks: 5, TotalPrimaryKeySize: 400, CompressionRatio: 0.35},
 		"sniconn_tmp":      {NumParts: 2, TotalMarks: 40, AvgMarks: 40, TotalPrimaryKeySize: 600, CompressionRatio: 0.4},
 		"opensniconn_tmp":  {NumParts: 2, TotalMarks: 40, AvgMarks: 40, TotalPrimaryKeySize: 600, CompressionRatio: 0.4},

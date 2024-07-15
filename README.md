@@ -72,7 +72,9 @@ rita import --database=mydatabase --logs=~/mylogs
 
 `logs` is the path to the Zeek logs you wish to import
 
-For datasets that should accumulate data over time, such as importing new logs from the current Zeek sensor on a cron job, use the `--rolling` flag during creation and each subsequent import into the dataset.
+For datasets that should accumulate data over time, with the logs containing network info that is current (less than 24 hours old), use the `--rolling` flag during creation and each subsequent import into the dataset. The most common use case for this is importing logs from the a Zeek sensor on a cron job each hour.
+
+Note: For datasets that contain over 24 hours of logs, but are over 24 hours old, simply import the top-level directory of the set of logs **without** the `--rolling` flag. Importing these logs with the `--rolling` flag may result in incorrect results.
 
 To destroy and recreate a dataset, use the `--rebuild` flag.
 

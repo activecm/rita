@@ -65,24 +65,23 @@ type SSLEntry struct {
 }
 
 // parseSSL listens on a channel of raw ssl/openssl log records, formats them and sends them to be linked with conn/openconn records and written to the database
-// func parseSSL(ssl <-chan zeektypes.SSL, zeekUIDMap cmap.ConcurrentMap[string, *ZeekUIDRecord], uSSLMap cmap.ConcurrentMap[string, *UniqueFQDN], output chan database.Data, numSSL *uint64) {
-func parseSSL(ssl <-chan zeektypes.SSL, output chan database.Data, importTime time.Time, numSSL *uint64) {
-	// logger := zlog.GetLogger()
+func parseSSL(cfg *config.Config, ssl <-chan zeektypes.SSL, output chan database.Data, importTime time.Time, numSSL *uint64) {
+	logger := logger.GetLogger()
 
 	// loop over raw ssl/openssl channel
 	for s := range ssl {
 
 		// parse raw record record as an ssl/openssl entry
-		entry, err := formatSSLRecord(&s, importTime)
+		entry, err := formatSSLRecord(cfg, &s, importTime)
 		if err != nil {
-			// logger.Warn().Err(err).
-			// 	Str("log_path", s.LogPath).
-			// 	Str("zeek_uid", s.UID).
-			// 	Str("timestamp", (time.Unix(int64(s.TimeStamp), 0)).String()).
-			// 	Str("src", s.Source).
-			// 	Str("dst", s.Destination).
-			// 	Str("sni", s.ServerName).
-			// 	Send()
+			logger.Debug().Err(err).
+				Str("log_path", s.LogPath).
+				Str("zeek_uid", s.UID).
+				Str("timestamp", (time.Unix(int64(s.TimeStamp), 0)).String()).
+				Str("src", s.Source).
+				Str("dst", s.Destination).
+				Str("sni", s.ServerName).
+				Send()
 			continue
 		}
 
@@ -98,12 +97,7 @@ func parseSSL(ssl <-chan zeektypes.SSL, output chan database.Data, importTime ti
 }
 
 // formatSSLRecord takes a raw ssl record and formats it into the structure needed by the database
-func formatSSLRecord(parseSSL *zeektypes.SSL, importTime time.Time) (*SSLEntry, error) {
-	// logger := zerolog.GetLogger()
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
+func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime time.Time) (*SSLEntry, error) {
 
 	// get source destination pair
 	src := parseSSL.Source
@@ -122,14 +116,6 @@ func formatSSLRecord(parseSSL *zeektypes.SSL, importTime time.Time) (*SSLEntry, 
 	sni := parseSSL.ServerName
 
 	if sni == "" {
-		// logger.Debug().
-		// 	Str("log_path", parseSSL.LogPath).
-		// 	Str("zeek_uid", parseSSL.UID).
-		// 	Str("timestamp", (time.Unix(int64(parseSSL.TimeStamp), 0)).String()).
-		// 	Str("src", parseSSL.Source).
-		// 	Str("dst", parseSSL.Destination).
-		// 	Str("sni", parseSSL.ServerName).
-		// 	Msg("sni field is empty")
 		return nil, fmt.Errorf("could not parse SSL connection %s -> %s: %w", src, dst, errServerNameEmpty)
 	}
 
@@ -185,7 +171,7 @@ func formatSSLRecord(parseSSL *zeektypes.SSL, importTime time.Time) (*SSLEntry, 
 	return entry, nil
 }
 
-func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Program, barID int, sslWriter *database.BulkWriter, open bool) error { //httpWriter chan database.Data, connWriter chan database.Data
+func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Program, barID int, sslWriter *database.BulkWriter, open bool) error {
 	logger := logger.GetLogger()
 
 	var totalSSL uint64

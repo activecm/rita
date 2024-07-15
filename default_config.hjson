@@ -80,7 +80,6 @@
                 high: 100
             }
         },
-        long_connection_minimum_duration: 3600,
         long_connection_score_thresholds: {
             // duration, in seconds
             base: 3600, // 1 hour
@@ -88,7 +87,6 @@
             medium: 28800, // 8 hours
             high: 43200 // 12 hours
         },
-        c2_subdomain_threshold: 100,
         c2_score_thresholds: {
             // number of subdomains
             base: 100,
@@ -110,6 +108,8 @@
         prevalence_increase_threshold: 0.02,
         prevalence_score_decrease: 0.15, // score -15% if prevalence >= 50%
         prevalence_decrease_threshold: 0.5, // must be greater than the increase threshold
+        // first seen scoring only applies to rolling datasets
+        // ** a dataset should be imported as rolling only if the logs are current (within the past 24 hours) i.e: coming from a live zeek sensor **
         first_seen_score_increase: 0.15, // score +15% if first seen <= 7 days ago
         first_seen_increase_threshold: 7,
         first_seen_score_decrease: 0.15, // score -15% if first seen >= 30 days ago

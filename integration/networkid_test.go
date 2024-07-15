@@ -25,12 +25,10 @@ func TestNetworkID(t *testing.T) {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	cfg.Filter.FilterExternalToInternal = false
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err)
 
 	cfg.DBConnection = dockerInfo.clickhouseConnection
 	require.NoError(t, err, "updating config should not return an error")

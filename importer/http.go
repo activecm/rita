@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"net"
-	"sync"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -67,17 +67,16 @@ type HTTPEntry struct {
 }
 
 // parseHTTP listens on a channel of raw http/openhttp log records, formats them and sends them to be linked with conn/openconn records and written to the database
-// func parseHTTP(http <-chan zeektypes.HTTP, zeekUIDMap cmap.ConcurrentMap[string, *ZeekUIDRecord], uHTTPMap cmap.ConcurrentMap[string, *UniqueFQDN], output chan database.Data, trackUIDLock *sync.Mutex, numHTTP *uint64) {
-func parseHTTP(http <-chan zeektypes.HTTP, output chan database.Data, connOutput chan database.Data, importID util.FixedString, trackUIDLock *sync.Mutex, importTime time.Time, numHTTP *uint64, numConn *uint64) {
+func parseHTTP(cfg *config.Config, http <-chan zeektypes.HTTP, output chan database.Data, importTime time.Time, numHTTP *uint64, numConn *uint64) {
 	logger := logger.GetLogger()
 
 	// loop over raw http/openhttp channel
 	for h := range http {
 
 		// parse raw record as an http/open http entry
-		entry, err := formatHTTPRecord(&h, importTime)
+		entry, err := formatHTTPRecord(cfg, &h, importTime)
 		if err != nil {
-			logger.Warn().Err(err).
+			logger.Debug().Err(err).
 				Str("log_path", h.LogPath).
 				Str("zeek_uid", h.UID).
 				Str("timestamp", (time.Unix(int64(h.TimeStamp), 0)).String()).
@@ -106,11 +105,8 @@ func parseHTTP(http <-chan zeektypes.HTTP, output chan database.Data, connOutput
 }
 
 // formatHTTPRecord takes a raw http record and formats it into the structure needed by the database
-func formatHTTPRecord(parseHTTP *zeektypes.HTTP, importTime time.Time) (*HTTPEntry, error) {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
+func formatHTTPRecord(cfg *config.Config, parseHTTP *zeektypes.HTTP, importTime time.Time) (*HTTPEntry, error) {
+
 	// get source destination pair for connection record
 	src := parseHTTP.Source
 	dst := parseHTTP.Destination
@@ -128,7 +124,7 @@ func formatHTTPRecord(parseHTTP *zeektypes.HTTP, importTime time.Time) (*HTTPEnt
 	fqdn := parseHTTP.Host
 
 	// check if destination is a proxy server based on HTTP method
-	dstIsProxy := (parseHTTP.Method == "CONNECT")
+	dstIsProxy := (parseHTTP.Method == http.MethodConnect)
 
 	// if the HTTP method is CONNECT, then the srcIP is communicating
 	// to an FQDN through the dstIP proxy. We need to handle that
@@ -217,10 +213,6 @@ func formatHTTPRecord(parseHTTP *zeektypes.HTTP, importTime time.Time) (*HTTPEnt
 
 func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Program, barID int, httpWriter, connWriter *database.BulkWriter, open bool) error { //httpWriter chan database.Data, connWriter chan database.Data
 	logger := logger.GetLogger()
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return err
-	}
 
 	tmpTable := "http_tmp"
 	tableB := "conn_tmp"
@@ -235,7 +227,7 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 	})
 
 	var totalHTTP uint64
-	err = importer.Database.Conn.QueryRow(chCtx, `
+	err := importer.Database.Conn.QueryRow(chCtx, `
 		SELECT count() FROM {tmp_table:Identifier}
 	`).Scan(&totalHTTP)
 	if err != nil {
@@ -307,7 +299,7 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 
 			switch {
 			case entry.Host == "":
-				ignore := cfg.Filter.FilterConnPair(entry.Src, entry.Dst)
+				ignore := importer.Cfg.Filter.FilterConnPair(entry.Src, entry.Dst)
 				if ignore {
 					continue
 				}

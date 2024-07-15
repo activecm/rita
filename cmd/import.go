@@ -90,7 +90,7 @@ var ImportCommand = &cli.Command{
 		afs := afero.NewOsFs()
 
 		// load config file
-		cfg, err := config.LoadConfig(afs, cCtx.String("config"))
+		cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
 		if err != nil {
 			return err
 		}

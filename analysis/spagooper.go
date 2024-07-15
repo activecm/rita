@@ -600,7 +600,7 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, progress *tea.Program) e
 	}), clickhouse.WithParameters(clickhouse.Parameters{
 		// use minTS (not minTSBeacon) because DNS logs don't get correlated with conn logs
 		"min_ts":              fmt.Sprintf("%d", analyzer.minTS.UTC().Unix()),
-		"subdomain_threshold": fmt.Sprint(analyzer.Config.Scoring.C2SubdomainThreshold),
+		"subdomain_threshold": fmt.Sprint(analyzer.Config.Scoring.C2ScoreThresholds.Base),
 		"rolling":             strconv.FormatBool(analyzer.Database.Rolling),
 		"network_size":        fmt.Sprint(analyzer.networkSize),
 	}))

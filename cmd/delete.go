@@ -85,7 +85,7 @@ func runDeleteCmd(afs afero.Fs, configPath string, entry string, trimmedName str
 	}
 
 	// load config file
-	cfg, err := config.LoadConfig(afs, configPath)
+	cfg, err := config.ReadFileConfig(afs, configPath)
 	if err != nil {
 		return err
 	}

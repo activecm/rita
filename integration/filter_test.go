@@ -33,7 +33,7 @@ func TestFilters(t *testing.T) {
 func (it *FilterTestSuite) SetupSuite() {
 	t := it.T()
 	afs := afero.NewOsFs()
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 	it.cfg = cfg
 }
@@ -71,12 +71,9 @@ func (it *FilterTestSuite) TestNeverIncludeSubnets() {
 	`), 0755)
 	require.NoError(t, err)
 
-	cfg, err := config.LoadConfig(afs, "testsuite_config.hjson")
+	cfg, err := config.ReadFileConfig(afs, "testsuite_config.hjson")
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 	it.cfg = cfg
 	require.Contains(t, cfg.Filter.NeverIncludedSubnets, &net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}})
 
@@ -165,13 +162,10 @@ func (it *FilterTestSuite) TestNeverIncludeDomains() {
 	`), 0755)
 	require.NoError(t, err)
 
-	cfg, err := config.LoadConfig(afs, "testsuite_config2.hjson")
+	cfg, err := config.ReadFileConfig(afs, "testsuite_config2.hjson")
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-
-	err = config.UpdateConfig(cfg)
 	it.cfg = cfg
-	require.NoError(t, err, "updating config should not return an error")
 
 	require.Contains(t, cfg.Filter.NeverIncludedDomains, "*.microsoft.com")
 	require.Contains(t, cfg.Filter.NeverIncludedDomains, "businessinsider.com")
@@ -276,13 +270,10 @@ func (it *FilterTestSuite) TestAlwaysIncludeSubnets() {
 	`), 0755)
 	require.NoError(t, err)
 
-	cfg, err := config.LoadConfig(afs, "testsuite_config3.hjson")
+	cfg, err := config.ReadFileConfig(afs, "testsuite_config3.hjson")
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-
-	err = config.UpdateConfig(cfg)
 	it.cfg = cfg
-	require.NoError(t, err, "updating config should not return an error")
 
 	require.Contains(t, cfg.Filter.NeverIncludedSubnets, &net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}, "never included subnets should contain 10.0.0.0/8")
 	require.Contains(t, cfg.Filter.AlwaysIncludedSubnets, &net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}, "always included subnets should contain 10.55.100.0/24")
@@ -376,13 +367,10 @@ func (it *FilterTestSuite) TestAlwaysIncludeDomains() {
 	`), 0755)
 	require.NoError(t, err)
 
-	cfg, err := config.LoadConfig(afs, "testsuite_config4.hjson")
+	cfg, err := config.ReadFileConfig(afs, "testsuite_config4.hjson")
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-
-	err = config.UpdateConfig(cfg)
 	it.cfg = cfg
-	require.NoError(t, err, "updating config should not return an error")
 
 	require.Contains(t, cfg.Filter.NeverIncludedDomains, "*.microsoft.com")
 	require.Contains(t, cfg.Filter.NeverIncludedDomains, "businessinsider.com")
@@ -492,11 +480,10 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
 	cfg.Filter.FilterExternalToInternal = false
-	err = config.UpdateConfig(cfg)
 	it.cfg = cfg
 	require.NoError(t, err, "updating config should not return an error")
 

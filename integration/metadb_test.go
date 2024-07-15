@@ -88,13 +88,11 @@ func TestImportTracking(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	// load config
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not produce an error")
 
 	// ROLLING IMPORT
 	// new import
@@ -163,17 +161,12 @@ func TestMinMaxTimestamps(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	// load config
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
-	err = cfg.ResetConfig()
-	require.NoError(t, err)
-	cfg, err = config.LoadConfig(afs, ConfigPath)
-	require.NoError(t, err)
+
 	// update config with clickhouse connection
 	cfg.DBConnection = dockerInfo.clickhouseConnection
 	require.True(t, cfg.Filter.FilterExternalToInternal)
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not produce an error")
 
 	// connect to clickhouse server
 	server, err := database.ConnectToServer(context.Background(), cfg)
@@ -306,12 +299,10 @@ func TestMetaDatabase(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	// load config
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not produce an error")
 
 	// import a dataset
 	dbName := "test_metadb"

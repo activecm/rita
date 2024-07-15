@@ -642,6 +642,7 @@ func generateDNS(src string, dst string, fqdn string, srcPort, dstPort int, conn
 }
 
 func generateSSL(t *testing.T, src string, dst string, fqdn string, srcPort, dstPort int, conns []Conn) []SSL {
+	t.Helper()
 	var ips []SSL
 	for _, conn := range conns {
 		ja3, err := util.NewFixedStringHash(src, dst, fmt.Sprint(srcPort), fmt.Sprint(dstPort), fqdn)

@@ -10,6 +10,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
+	"github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/google/uuid"
@@ -60,23 +61,23 @@ type UniqueFQDN struct {
 }
 
 // parseDNS listens on a channel of raw dns log records, formats them into dns and pdns entries and and sends them to be written to the database
-func parseDNS(dns <-chan zeektypes.DNS, dnsOutput, pdnsOutput chan<- database.Data, numDNS, numPDNSRaw *uint64, importTime time.Time) {
-	// logger := zlog.GetLogger()
+func parseDNS(cfg *config.Config, dns <-chan zeektypes.DNS, dnsOutput, pdnsOutput chan<- database.Data, numDNS, numPDNSRaw *uint64, importTime time.Time) {
+	logger := logger.GetLogger()
 
 	// loop over raw dns channel
 	for d := range dns {
 
 		// parse raw record as a dns entry
-		entry, err := formatDNSRecord(&d, importTime)
+		entry, err := formatDNSRecord(cfg, &d, importTime)
 		if err != nil {
-			// logger.Warn().Err(err).
-			// 	Str("log_path", d.LogPath).
-			// 	Str("zeek_uid", d.UID).
-			// 	Str("timestamp", (time.Unix(int64(d.TimeStamp), 0)).String()).
-			// 	Str("src", d.Source).
-			// 	Str("dst", d.Destination).
-			// 	Str("query", d.Query).
-			// 	Send()
+			logger.Debug().Err(err).
+				Str("log_path", d.LogPath).
+				Str("zeek_uid", d.UID).
+				Str("timestamp", (time.Unix(int64(d.TimeStamp), 0)).String()).
+				Str("src", d.Source).
+				Str("dst", d.Destination).
+				Str("query", d.Query).
+				Send()
 			continue
 		}
 
@@ -97,11 +98,7 @@ func parseDNS(dns <-chan zeektypes.DNS, dnsOutput, pdnsOutput chan<- database.Da
 }
 
 // formatDNSRecord takes a raw dns record and formats it into the structure needed by the database
-func formatDNSRecord(parseDNS *zeektypes.DNS, importTime time.Time) (*DNSEntry, error) {
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
+func formatDNSRecord(cfg *config.Config, parseDNS *zeektypes.DNS, importTime time.Time) (*DNSEntry, error) {
 
 	// get source destination pair
 	src := parseDNS.Source

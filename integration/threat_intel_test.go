@@ -26,7 +26,7 @@ func TestThreatIntel(t *testing.T) {
 // Reset config after each test since these tests load the config from a file
 func (it *ThreatIntelSuite) SetupSuite() {
 	afs := afero.NewOsFs()
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	it.Require().NoError(err)
 	it.cfg = cfg
 }
@@ -63,11 +63,9 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 	`), 0755)
 	require.NoError(t, err)
 
-	cfg, err := config.LoadConfig(afs, "threat_intel_config.hjson")
+	cfg, err := config.ReadFileConfig(afs, "threat_intel_config.hjson")
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 	it.cfg = cfg
 
 	fs := afero.NewOsFs()
@@ -114,13 +112,10 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	err = afero.WriteFile(afs, "threat_intel_config.hjson", []byte(fmt.Sprintf(configStr, feedURL)), 0755)
 	require.NoError(t, err)
 
-	cfg, err := config.LoadConfig(afs, "threat_intel_config.hjson")
+	cfg, err := config.ReadFileConfig(afs, "threat_intel_config.hjson")
 	require.NoError(t, err)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-
 	require.Contains(t, cfg.ThreatIntel.OnlineFeeds, feedURL)
-	require.NoError(t, err, "updating config should not return an error")
 	it.cfg = cfg
 
 	fs := afero.NewOsFs()

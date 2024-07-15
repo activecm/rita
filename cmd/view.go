@@ -95,7 +95,7 @@ func runViewCmd(afs afero.Fs, configPath string, dbName string, stdout bool, sea
 	fmt.Printf("Viewing database: %s\n", dbName)
 
 	// load config file
-	cfg, err := config.LoadConfig(afs, configPath)
+	cfg, err := config.ReadFileConfig(afs, configPath)
 	if err != nil {
 		return err
 	}

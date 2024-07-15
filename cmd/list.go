@@ -50,7 +50,7 @@ var ListCommand = &cli.Command{
 
 func runListCmd(afs afero.Fs, configPath string) error {
 
-	cfg, err := config.LoadConfig(afs, configPath)
+	cfg, err := config.ReadFileConfig(afs, configPath)
 	if err != nil {
 		return err
 	}

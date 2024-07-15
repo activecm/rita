@@ -30,17 +30,12 @@ func TestLoadConfig(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	// load the default config file
-	cfg, err := LoadConfig(afs, defaultConfigPath)
+	cfg, err := ReadFileConfig(afs, defaultConfigPath)
 	require.NoError(t, err, "should be able to load the default config file")
 
+	// validate the loaded config
 	err = cfg.Validate()
 	require.NoError(t, err, "the loaded default config file should be valid")
-
-	cfg, err = GetConfig()
-	require.NoError(t, err, "should be able to get the config file after it has been loaded")
-
-	err = cfg.Validate()
-	require.NoError(t, err, "the config returned from GetConfig should be valid")
 }
 
 func TestReadFile(t *testing.T) {
@@ -99,14 +94,12 @@ func TestParseJSON(t *testing.T) {
 							high: 3
 						},
 					},
-					long_connection_minimum_duration: 10,
 					long_connection_score_thresholds: {
 						base: 0,
 						low: 1,
 						medium: 2,
 						high: 3
 					},
-					c2_subdomain_threshold: 10,
 					c2_score_thresholds: {
 						base: 0,
 						low: 1,
@@ -152,7 +145,7 @@ func TestParseJSON(t *testing.T) {
 						{IP: net.IP{160, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
 					},
 					// mandatoryNeverIncludeSubnets are always apended to any neverIncludedSubnet entries
-					NeverIncludedSubnetsJSON: append([]string{"12.0.0.0/8", "150.140.150.160/8"}, getMandatoryNeverIncludeSubnets()...),
+					NeverIncludedSubnetsJSON: append([]string{"12.0.0.0/8", "150.140.150.160/8"}, GetMandatoryNeverIncludeSubnets()...),
 					NeverIncludedSubnets: []*net.IPNet{
 						{IP: net.IP{12, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
 						{IP: net.IP{150, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
@@ -195,14 +188,12 @@ func TestParseJSON(t *testing.T) {
 							High: 3,
 						},
 					},
-					LongConnectionMinimumDuration: 10,
 					LongConnectionScoreThresholds: ScoreThresholds{
 						Base: 0,
 						Low:  1,
 						Med:  2,
 						High: 3,
 					},
-					C2SubdomainThreshold: 10,
 					C2ScoreThresholds: ScoreThresholds{
 						Base: 0,
 						Low:  1,
@@ -248,47 +239,11 @@ func TestParseJSON(t *testing.T) {
 			require := require.New(t)
 
 			// set up default config
-			cfg, err := getDefaultConfig()
+			cfg, err := GetDefaultConfig()
 			require.NoError(err, "loading default config should not produce an error")
 
 			// parse JSON
 			err = cfg.parseJSON(test.config)
-
-			// if err == nil && !test.expectedError {
-			// 	expectedVal := reflect.ValueOf(test.expectedConfig)
-			// 	actualVal := reflect.ValueOf(cfg)
-			// 	for i := 0; i < expectedVal.NumField(); i++ {
-			// 		expectedField := expectedVal.Field(i)
-			// 		actualField := actualVal.Field(i)
-			// 		fmt.Println("expectedField: ", expectedField.Interface(), "actualField: ", actualField.Interface())
-			// if !reflect.DeepEqual(expectedField.Interface(), actualField.Interface()) {
-			// 	t.Errorf("Field mismatch in %s: expected %v, got %v",
-			// 		expectedVal.Type().Field(i).Name,
-			// 		expectedField.Interface(),
-			// 		actualField.Interface())
-			// }
-			// 	}
-			// }
-
-			// if test.expectedError {
-			// 	require.Error(err, "parseJSON should have produced an error")
-			// } else {
-			// 	require.NoError(err, "parseJSON should not produce an error")
-			// // Compare all fields using reflection
-			// if !reflect.DeepEqual(cfg, test.expectedConfig) {
-			// 	t.Errorf("Config fields do not match. Got %+v, expected %+v", cfg, test.expectedConfig)
-			// }
-			// elemCfg := reflect.ValueOf(cfg)
-			// elemExpected := reflect.ValueOf(test.expectedConfig)
-			// for i := 0; i < elemCfg.NumField(); i++ {
-			// 	cfgField := elemCfg.Field(i)
-			// 	expectedField := elemExpected.Field(i)
-
-			// 	if !reflect.DeepEqual(cfgField.Interface(), expectedField.Interface()) {
-			// 		t.Errorf("Field '%s' mismatch: got %+v, want %+v", elemCfg.Type().Field(i).Name, cfgField.Interface(), expectedField.Interface())
-			// 	}
-			// }
-			// }
 
 			// check if an error was expected
 			require.Equal(test.expectedError, err, "error should match expected value")
@@ -343,13 +298,11 @@ func TestParseJSON(t *testing.T) {
 			require.Equal(test.expectedConfig.Scoring.Beacon.ScoreThresholds.Med, cfg.Scoring.Beacon.ScoreThresholds.Med, "BeaconScoreThresholds.Med should match expected value")
 			require.Equal(test.expectedConfig.Scoring.Beacon.ScoreThresholds.High, cfg.Scoring.Beacon.ScoreThresholds.High, "BeaconScoreThresholds.High should match expected value")
 
-			require.Equal(test.expectedConfig.Scoring.LongConnectionMinimumDuration, cfg.Scoring.LongConnectionMinimumDuration, "LongConnectionMinimumDuration should match expected value")
 			require.Equal(test.expectedConfig.Scoring.LongConnectionScoreThresholds.Base, cfg.Scoring.LongConnectionScoreThresholds.Base, "LongConnectionScoreThresholds.Base should match expected value")
 			require.Equal(test.expectedConfig.Scoring.LongConnectionScoreThresholds.Low, cfg.Scoring.LongConnectionScoreThresholds.Low, "LongConnectionScoreThresholds.Low should match expected value")
 			require.Equal(test.expectedConfig.Scoring.LongConnectionScoreThresholds.Med, cfg.Scoring.LongConnectionScoreThresholds.Med, "LongConnectionScoreThresholds.Med should match expected value")
 			require.Equal(test.expectedConfig.Scoring.LongConnectionScoreThresholds.High, cfg.Scoring.LongConnectionScoreThresholds.High, "LongConnectionScoreThresholds.High should match expected value")
 
-			require.Equal(test.expectedConfig.Scoring.C2SubdomainThreshold, cfg.Scoring.C2SubdomainThreshold, "C2SubdomainThreshold should match expected value")
 			require.Equal(test.expectedConfig.Scoring.C2ScoreThresholds.Base, cfg.Scoring.C2ScoreThresholds.Base, "C2ScoreThresholds.Base should match expected value")
 			require.Equal(test.expectedConfig.Scoring.C2ScoreThresholds.Low, cfg.Scoring.C2ScoreThresholds.Low, "C2ScoreThresholds.Low should match expected value")
 			require.Equal(test.expectedConfig.Scoring.C2ScoreThresholds.Med, cfg.Scoring.C2ScoreThresholds.Med, "C2ScoreThresholds.Med should match expected value")
@@ -428,7 +381,7 @@ func TestReadFileConfig(t *testing.T) {
 					// mandatoryNeverIncludeSubnets are always apended to any neverIncludedSubnet entries
 					// in this case we are including one of the mandatoryNeverIncludeSubnets in the neverIncludedSubnets list
 					// to test that the mandatory entries are not duplicated when they are appended
-					NeverIncludedSubnetsJSON: util.EnsureSliceContainsAll([]string{"::1/128", "12.0.0.0/8", "150.140.150.160/8"}, getMandatoryNeverIncludeSubnets()),
+					NeverIncludedSubnetsJSON: util.EnsureSliceContainsAll([]string{"::1/128", "12.0.0.0/8", "150.140.150.160/8"}, GetMandatoryNeverIncludeSubnets()),
 					NeverIncludedSubnets: []*net.IPNet{
 						{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)}, // would normally be appended with mandatory values at the end of config entries
 						{IP: net.IP{12, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
@@ -544,7 +497,7 @@ func TestReadFileConfig(t *testing.T) {
 func TestVerifyBeaconConfig(t *testing.T) {
 	require := require.New(t)
 	// get default config
-	cfg, err := getDefaultConfig()
+	cfg, err := GetDefaultConfig()
 	require.NoError(err, "getDefaultConfig should not produce an error")
 
 	// verify the default config
@@ -566,7 +519,7 @@ func TestResetConfig(t *testing.T) {
 	require := require.New(t)
 
 	// get default config
-	origConfig, err := getDefaultConfig()
+	origConfig, err := GetDefaultConfig()
 	require.NoError(err, "Expected no error when getting default config, got err=%v", err)
 
 	// create a copy of the config
@@ -609,7 +562,7 @@ func TestResetConfig(t *testing.T) {
 
 func TestGetDefaultConfig(t *testing.T) {
 	require := require.New(t)
-	cfg, err := getDefaultConfig()
+	cfg, err := GetDefaultConfig()
 	require.NoError(err, "getDefaultConfig should not produce an error")
 
 	// get default config variable
@@ -628,7 +581,7 @@ func TestGetDefaultConfig(t *testing.T) {
 	origConfigVar.Filter.InternalSubnets = internalSubnetList
 
 	// parse never included subnets
-	origConfigVar.Filter.NeverIncludedSubnetsJSON = getMandatoryNeverIncludeSubnets()
+	origConfigVar.Filter.NeverIncludedSubnetsJSON = GetMandatoryNeverIncludeSubnets()
 	neverIncludedSubnetList, err := util.ParseSubnets(origConfigVar.Filter.NeverIncludedSubnetsJSON)
 	require.NoError(err, "parseSubnets should not produce an error")
 	origConfigVar.Filter.NeverIncludedSubnets = neverIncludedSubnetList
@@ -781,7 +734,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.parseImpactCategoryScores()
+		err := cfg.ParseImpactCategoryScores()
 		require.NoError(t, err)
 		require.InDelta(t, float32(HIGH_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
 		require.InDelta(t, float32(LOW_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
@@ -799,7 +752,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.parseImpactCategoryScores()
+		err := cfg.ParseImpactCategoryScores()
 		require.NoError(t, err)
 		require.InDelta(t, float32(MEDIUM_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
 		require.InDelta(t, float32(NONE_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
@@ -817,7 +770,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.parseImpactCategoryScores()
+		err := cfg.ParseImpactCategoryScores()
 		require.Error(t, err)
 	})
 
@@ -833,7 +786,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.parseImpactCategoryScores()
+		err := cfg.ParseImpactCategoryScores()
 		require.Error(t, err)
 	})
 }

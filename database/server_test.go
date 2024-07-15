@@ -51,7 +51,7 @@ func (d *DatabaseTestSuite) SetupSuite() {
 	t := d.T()
 
 	// load the config file
-	cfg, err := config.LoadConfig(afero.NewOsFs(), ConfigPath)
+	cfg, err := config.ReadFileConfig(afero.NewOsFs(), ConfigPath)
 	require.NoError(t, err, "config should load without error")
 
 	// start clickhouse container
@@ -59,9 +59,6 @@ func (d *DatabaseTestSuite) SetupSuite() {
 
 	// update the config to use the clickhouse container connection
 	cfg.DBConnection = d.clickhouseConnection
-
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "config should update without error")
 	d.cfg = cfg
 
 	// connect to clickhouse server

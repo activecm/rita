@@ -11,7 +11,6 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/util"
 
-	"github.com/spf13/afero"
 	"golang.org/x/time/rate"
 )
 
@@ -40,7 +39,7 @@ func (server *ServerConn) createValidMIMETypeTable() error {
 
 }
 
-func (server *ServerConn) importValidMIMETypes(afs afero.Fs, cfg *config.Config) error {
+func (server *ServerConn) importValidMIMETypes(cfg *config.Config) error {
 	// create a rate limiter to control the rate of writing to the database
 	limiter := rate.NewLimiter(5, 5)
 

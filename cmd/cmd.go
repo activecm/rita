@@ -44,7 +44,7 @@ func CheckForUpdate(cCtx *cli.Context, afs afero.Fs) error {
 	currentVersion := config.Version
 
 	// load config file
-	cfg, err := config.LoadConfig(afs, cCtx.String("config"))
+	cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
 	if err != nil {
 		return fmt.Errorf("error loading config file: %w", err)
 	}

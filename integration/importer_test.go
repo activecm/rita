@@ -25,13 +25,11 @@ func TestValidTSV(t *testing.T) {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	// validTSVSuite.SetupClickHouse(t)
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 
 	// connect to clickhouse server
 	server, err := database.ConnectToServer(context.Background(), cfg)
@@ -62,12 +60,10 @@ func TestValidJSON(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	validJSONSuite := new(ValidDatasetTestSuite)
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 
 	// // import data
 	results, err := cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_json", "dnscat2_ja3_strobe_json", false, false)
@@ -611,14 +607,12 @@ func TestTSVLogFieldParsing(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	// get config
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
 	cfg.DBConnection = dockerInfo.clickhouseConnection
 	cfg.Filter.FilterExternalToInternal = false
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/open_conns/open", "test_tsv_field_parsing", false, false)
@@ -645,13 +639,11 @@ func TestJSONLogFieldParsing(t *testing.T) {
 	afs := afero.NewOsFs()
 
 	// load config
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/json_with_all_fields", "json_with_all_fields", false, false)

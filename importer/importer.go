@@ -35,6 +35,7 @@ type zeekRecord interface {
 }
 
 type Importer struct {
+	Cfg                      *config.Config
 	Database                 *database.DB
 	ImportID                 util.FixedString
 	LogDirectory             string
@@ -183,6 +184,7 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 	// return the importer object
 	return &Importer{
 		Database: db,
+		Cfg:      cfg,
 		ImportID: importID,
 		// LogDirectory:             directory,
 		FileMap:                  make(map[string][]string),
@@ -347,41 +349,37 @@ func (importer *Importer) startParseRoutines() {
 	for i := 0; i < importer.NumParsers; i++ {
 		go func(_ int) {
 			// parseConn(importer.EntryChannels.Conn, importer.Writers.Conn.WriteChannel, importer.UniqueMaps.Uconn, importer.UniqueMaps.ZeekUIDs, importer.ImportID, &importer.ResultCounts.Conn)
-			parseConn(importer.EntryChannels.Conn, importer.Writers.ConnTmp.WriteChannel, importer.ImportID, importer.Database.ImportStartedAt, &importer.ResultCounts.Conn)
+			parseConn(importer.Cfg, importer.EntryChannels.Conn, importer.Writers.ConnTmp.WriteChannel, importer.ImportID, importer.Database.ImportStartedAt, &importer.ResultCounts.Conn)
 			importer.wg.Conn.Done()
 		}(i)
 		go func(_ int) {
 			// parseConn(importer.EntryChannels.OpenConn, importer.Writers.OpenConn.WriteChannel, importer.UniqueMaps.OpenConn, importer.UniqueMaps.OpenZeekUIDs, importer.ImportID, &importer.ResultCounts.OpenConn)
-			parseConn(importer.EntryChannels.OpenConn, importer.Writers.OpenConnTmp.WriteChannel, importer.ImportID, importer.Database.ImportStartedAt, &importer.ResultCounts.OpenConn)
+			parseConn(importer.Cfg, importer.EntryChannels.OpenConn, importer.Writers.OpenConnTmp.WriteChannel, importer.ImportID, importer.Database.ImportStartedAt, &importer.ResultCounts.OpenConn)
 			importer.wg.OpenConn.Done()
 		}(i)
 
 		go func(_ int) {
-			parseDNS(importer.EntryChannels.DNS, importer.Writers.DNS.WriteChannel, importer.Writers.PDNS.WriteChannel, &importer.ResultCounts.DNS, &importer.ResultCounts.PDNSRaw, importer.Database.ImportStartedAt)
+			parseDNS(importer.Cfg, importer.EntryChannels.DNS, importer.Writers.DNS.WriteChannel, importer.Writers.PDNS.WriteChannel, &importer.ResultCounts.DNS, &importer.ResultCounts.PDNSRaw, importer.Database.ImportStartedAt)
 			importer.wg.DNS.Done()
 		}(i)
 
 		go func(_ int) {
-			// parseHTTP(importer.EntryChannels.HTTP, importer.UniqueMaps.ZeekUIDs, importer.UniqueMaps.UHTTP, importer.Writers.HTTP.WriteChannel, &importer.HTTPLinkMutex, &importer.ResultCounts.HTTP)
-			parseHTTP(importer.EntryChannels.HTTP, importer.Writers.HTTPTmp.WriteChannel, importer.Writers.ConnTmp.WriteChannel, importer.ImportID, &importer.HTTPLinkMutex, importer.Database.ImportStartedAt, &importer.ResultCounts.HTTP, &importer.ResultCounts.Conn)
+			parseHTTP(importer.Cfg, importer.EntryChannels.HTTP, importer.Writers.HTTPTmp.WriteChannel, importer.Database.ImportStartedAt, &importer.ResultCounts.HTTP, &importer.ResultCounts.Conn)
 			importer.wg.HTTP.Done()
 		}(i)
 
 		go func(_ int) {
-			// parseHTTP(importer.EntryChannels.OpenHTTP, importer.UniqueMaps.OpenZeekUIDs, importer.UniqueMaps.UOpenHTTP, importer.Writers.OpenHTTP.WriteChannel, &importer.OpenHTTPLinkMutex, &importer.ResultCounts.OpenHTTP)
-			parseHTTP(importer.EntryChannels.OpenHTTP, importer.Writers.OpenHTTPTmp.WriteChannel, importer.Writers.OpenConnTmp.WriteChannel, importer.ImportID, &importer.OpenHTTPLinkMutex, importer.Database.ImportStartedAt, &importer.ResultCounts.OpenHTTP, &importer.ResultCounts.OpenConn)
+			parseHTTP(importer.Cfg, importer.EntryChannels.OpenHTTP, importer.Writers.OpenHTTPTmp.WriteChannel, importer.Database.ImportStartedAt, &importer.ResultCounts.OpenHTTP, &importer.ResultCounts.OpenConn)
 			importer.wg.OpenHTTP.Done()
 		}(i)
 
 		go func(_ int) {
-			// parseSSL(importer.EntryChannels.SSL, importer.UniqueMaps.ZeekUIDs, importer.UniqueMaps.USSL, importer.Writers.SSL.WriteChannel, &importer.ResultCounts.SSL)
-			parseSSL(importer.EntryChannels.SSL, importer.Writers.SSLTmp.WriteChannel, importer.Database.ImportStartedAt, &importer.ResultCounts.SSL)
+			parseSSL(importer.Cfg, importer.EntryChannels.SSL, importer.Writers.SSLTmp.WriteChannel, importer.Database.ImportStartedAt, &importer.ResultCounts.SSL)
 			importer.wg.SSL.Done()
 		}(i)
 
 		go func(_ int) {
-			// parseSSL(importer.EntryChannels.OpenSSL, importer.UniqueMaps.OpenZeekUIDs, importer.UniqueMaps.UOpenSSL, importer.Writers.OpenSSL.WriteChannel, &importer.ResultCounts.OpenSSL)
-			parseSSL(importer.EntryChannels.OpenSSL, importer.Writers.OpenSSLTmp.WriteChannel, importer.Database.ImportStartedAt, &importer.ResultCounts.OpenSSL)
+			parseSSL(importer.Cfg, importer.EntryChannels.OpenSSL, importer.Writers.OpenSSLTmp.WriteChannel, importer.Database.ImportStartedAt, &importer.ResultCounts.OpenSSL)
 			importer.wg.OpenSSL.Done()
 		}(i)
 	}
@@ -538,19 +536,15 @@ func (writer *writers) closeWriters() {
 // season links the http & ssl logs with the conn logs and adds data to those connections
 func (importer *Importer) season() error {
 	logger := zerolog.GetLogger()
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return err
-	}
 
 	limiter := rate.NewLimiter(5, 5)
 	writerWorkers := 2
-	sslWriter := database.NewBulkWriter(importer.Database, cfg, writerWorkers, importer.Database.GetSelectedDB(), "ssl", "INSERT INTO {database:Identifier}.ssl", limiter, false)
-	openSSLWriter := database.NewBulkWriter(importer.Database, cfg, writerWorkers, importer.Database.GetSelectedDB(), "openssl", "INSERT INTO {database:Identifier}.openssl", limiter, false)
-	httpWriter := database.NewBulkWriter(importer.Database, cfg, writerWorkers, importer.Database.GetSelectedDB(), "http", "INSERT INTO {database:Identifier}.http", limiter, false)
-	connWriter := database.NewBulkWriter(importer.Database, cfg, writerWorkers, importer.Database.GetSelectedDB(), "conn", "INSERT INTO {database:Identifier}.conn", limiter, false)
-	openHTTPWriter := database.NewBulkWriter(importer.Database, cfg, writerWorkers, importer.Database.GetSelectedDB(), "openhttp", "INSERT INTO {database:Identifier}.openhttp", limiter, false)
-	openConnWriter := database.NewBulkWriter(importer.Database, cfg, writerWorkers, importer.Database.GetSelectedDB(), "openconn", "INSERT INTO {database:Identifier}.openconn", limiter, false)
+	sslWriter := database.NewBulkWriter(importer.Database, importer.Cfg, writerWorkers, importer.Database.GetSelectedDB(), "ssl", "INSERT INTO {database:Identifier}.ssl", limiter, false)
+	openSSLWriter := database.NewBulkWriter(importer.Database, importer.Cfg, writerWorkers, importer.Database.GetSelectedDB(), "openssl", "INSERT INTO {database:Identifier}.openssl", limiter, false)
+	httpWriter := database.NewBulkWriter(importer.Database, importer.Cfg, writerWorkers, importer.Database.GetSelectedDB(), "http", "INSERT INTO {database:Identifier}.http", limiter, false)
+	connWriter := database.NewBulkWriter(importer.Database, importer.Cfg, writerWorkers, importer.Database.GetSelectedDB(), "conn", "INSERT INTO {database:Identifier}.conn", limiter, false)
+	openHTTPWriter := database.NewBulkWriter(importer.Database, importer.Cfg, writerWorkers, importer.Database.GetSelectedDB(), "openhttp", "INSERT INTO {database:Identifier}.openhttp", limiter, false)
+	openConnWriter := database.NewBulkWriter(importer.Database, importer.Cfg, writerWorkers, importer.Database.GetSelectedDB(), "openconn", "INSERT INTO {database:Identifier}.openconn", limiter, false)
 
 	for i := 0; i < writerWorkers; i++ {
 		sslWriter.Start(i)

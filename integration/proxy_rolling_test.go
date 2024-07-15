@@ -24,15 +24,10 @@ func TestProxyRolling(t *testing.T) {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
-	err = cfg.ResetConfig()
-	require.NoError(t, err)
-	cfg, err = config.LoadConfig(afs, ConfigPath)
-	require.NoError(t, err)
+
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not produce an error")
 
 	require.True(t, cfg.Filter.FilterExternalToInternal)
 

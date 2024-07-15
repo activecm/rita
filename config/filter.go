@@ -24,7 +24,7 @@ type Filter struct {
 	FilterExternalToInternal bool `json:"filter_external_to_internal"`
 }
 
-func getMandatoryNeverIncludeSubnets() []string {
+func GetMandatoryNeverIncludeSubnets() []string {
 	// s2 := make([]string, len(mandatoryNeverIncludeSubnets))
 
 	// _ = copy(s2, mandatoryNeverIncludeSubnets) // s2 is now an independent copy of s
@@ -43,7 +43,7 @@ func getMandatoryNeverIncludeSubnets() []string {
 	}
 }
 
-func (cfg *Config) parseFilter() error {
+func (cfg *Config) ParseFilter() error {
 	// parse internal subnets
 	internalSubnetList, err := util.ParseSubnets(cfg.Filter.InternalSubnetsJSON)
 	if err != nil {
@@ -59,7 +59,7 @@ func (cfg *Config) parseFilter() error {
 	cfg.Filter.AlwaysIncludedSubnets = alwaysIncludedSubnetList
 
 	// validate that all mandatory never include subnets are present
-	cfg.Filter.NeverIncludedSubnetsJSON = util.EnsureSliceContainsAll(cfg.Filter.NeverIncludedSubnetsJSON, getMandatoryNeverIncludeSubnets())
+	cfg.Filter.NeverIncludedSubnetsJSON = util.EnsureSliceContainsAll(cfg.Filter.NeverIncludedSubnetsJSON, GetMandatoryNeverIncludeSubnets())
 
 	// parse never included subnets
 	neverIncludedSubnetList, err := util.ParseSubnets(cfg.Filter.NeverIncludedSubnetsJSON)

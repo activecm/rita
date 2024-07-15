@@ -57,7 +57,7 @@ func (c *CmdTestSuite) SetupSuite() {
 	afs := afero.NewOsFs()
 
 	// load the config file
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err, "config should load without error")
 
 	// start clickhouse container
@@ -66,8 +66,6 @@ func (c *CmdTestSuite) SetupSuite() {
 	// update the config to use the clickhouse container connection
 	cfg.DBConnection = c.clickhouseConnection
 	cfg.UpdateCheckEnabled = false
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "config should update without error")
 	c.cfg = cfg
 
 	// connect to clickhouse server

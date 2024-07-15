@@ -91,7 +91,7 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 		return nil, err
 	}
 
-	err = server.importValidMIMETypes(afs, cfg)
+	err = server.importValidMIMETypes(cfg)
 	if err != nil {
 		return nil, err
 	}

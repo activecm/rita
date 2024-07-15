@@ -205,12 +205,10 @@ func TestProxyBeacons(t *testing.T) {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err, "loading config should not return an error")
 
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "updating config should not return an error")
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/proxy", "test_proxy_beacons", false, false)

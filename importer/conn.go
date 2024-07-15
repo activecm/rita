@@ -84,14 +84,14 @@ type ZeekUIDRecord struct {
 
 // parseConn listens on a channel of raw conn/openconn log records, formats them and sends them to be written to the database
 // func parseConn(conn <-chan zeektypes.Conn, output chan<- database.Data, uconnMap cmap.ConcurrentMap[string, *UniqueConn], zeekUIDMap cmap.ConcurrentMap[string, *ZeekUIDRecord], importID util.FixedString, numConns *uint64) {
-func parseConn(conn <-chan zeektypes.Conn, output chan<- database.Data, importID util.FixedString, importTime time.Time, numConns *uint64) {
+func parseConn(cfg *config.Config, conn <-chan zeektypes.Conn, output chan<- database.Data, importID util.FixedString, importTime time.Time, numConns *uint64) {
 	logger := zerolog.GetLogger()
 
 	// loop over raw conn/openconn channel
 	for c := range conn {
 
 		// parse raw record as a conn/openconn entry
-		entry, err := formatConnRecord(&c, importID, importTime)
+		entry, err := formatConnRecord(cfg, &c, importID, importTime)
 		if err != nil {
 			logger.Warn().Err(err).
 				Str("log_path", c.LogPath).
@@ -118,11 +118,7 @@ func parseConn(conn <-chan zeektypes.Conn, output chan<- database.Data, importID
 }
 
 // formatConnRecord takes a raw conn record and formats it into the structure needed by the database
-func formatConnRecord(parseConn *zeektypes.Conn, importID util.FixedString, importTime time.Time) (*ConnEntry, error) { // filter filter
-	cfg, err := config.GetConfig()
-	if err != nil {
-		return nil, err
-	}
+func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID util.FixedString, importTime time.Time) (*ConnEntry, error) { // filter filter
 
 	// get source destination pair for connection record
 	src := parseConn.Source

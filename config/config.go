@@ -63,11 +63,9 @@ type (
 	Scoring struct {
 		Beacon Beacon `json:"beacon"`
 
-		LongConnectionMinimumDuration int             `json:"long_connection_minimum_duration"`
 		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds"`
 
-		C2SubdomainThreshold int             `json:"c2_subdomain_threshold"`
-		C2ScoreThresholds    ScoreThresholds `json:"c2_score_thresholds"`
+		C2ScoreThresholds ScoreThresholds `json:"c2_score_thresholds"`
 
 		StrobeImpact ScoreImpact `json:"strobe_impact"`
 
@@ -133,75 +131,42 @@ type (
 	}
 )
 
-// LoadConfig loads the config file from the specified path and returns a valid Config if successful
-func LoadConfig(afs afero.Fs, path string) (*Config, error) {
-	var err error
-	// once.Do(func() {
-	if !loadedConfig {
-		if path == "" {
-			path = DefaultConfigPath
-		}
-		cfg, errRead := ReadFileConfig(afs, path)
-		appConfig = &cfg
-		err = errRead
-		if Version == "" {
-			Version = "devel"
-		}
-		loadedConfig = true
-	}
-	// })
-	return appConfig, err
-}
-
-// GetConfig returns a global Config that must be previously loaded using LoadConfig, returns an error if not loaded
-func GetConfig() (*Config, error) {
-	if !loadedConfig {
-		return appConfig, fmt.Errorf("tried reading from config, but it has not been loaded yet")
-	}
-	return appConfig, nil
-}
-
-// UpdateConfig updates the global config by overriding the existing config with the passed in config. This should only be used for tests.
-func UpdateConfig(cfg *Config) error {
-	if !loadedConfig {
-		return fmt.Errorf("tried reading from config, but it has not been loaded yet")
-	}
-	appConfig = cfg
-	return nil
-}
-
 // ReadFileConfig attempts to read the config file at the specified path and
 // returns a config object, using the default config if the file was unable to be read.
-func ReadFileConfig(afs afero.Fs, path string) (Config, error) {
+func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
+	if Version == "" {
+		Version = "dev"
+	}
+
 	// get the default cfg
-	cfg, err := getDefaultConfig()
+	cfg, err := GetDefaultConfig()
 	if err != nil {
-		return cfg, err
+		return &cfg, err
 	}
 
 	// read the config file
 	contents, err := readFile(afs, path)
 	if err != nil {
-		return cfg, err
+		return &cfg, err
 	}
 
 	// parse file contents
 	err = cfg.parseJSON(contents)
 	if err != nil {
-		return cfg, err
+		return &cfg, err
 	}
 
 	// validate values
 	err = cfg.Validate()
 	if err != nil {
-		return cfg, err
+		return &cfg, err
 	}
 
-	return cfg, nil
+	return &cfg, nil
 }
 
-// getDefaultConfig returns a Config object with default values
-func getDefaultConfig() (Config, error) {
+// GetDefaultConfig returns a Config object with default values
+func GetDefaultConfig() (Config, error) {
 	// set default config values
 	// cfg := defaultConfig
 	cfg := defaultConfig()
@@ -215,7 +180,7 @@ func getDefaultConfig() (Config, error) {
 
 	// set up the filter based on default values
 	// (must be done to convert strings in the default config variable to net.IPNet)
-	err := cfg.parseFilter()
+	err := cfg.ParseFilter()
 	if err != nil {
 		return cfg, err
 	}
@@ -247,12 +212,12 @@ func (cfg *Config) parseJSON(configFile []byte) error {
 	}
 
 	// parse the new subnet filter values
-	if err := cfg.parseFilter(); err != nil {
+	if err := cfg.ParseFilter(); err != nil {
 		return err
 	}
 
 	// parse impact category scores
-	if err := cfg.parseImpactCategoryScores(); err != nil {
+	if err := cfg.ParseImpactCategoryScores(); err != nil {
 		return err
 	}
 
@@ -261,7 +226,7 @@ func (cfg *Config) parseJSON(configFile []byte) error {
 
 // ResetConfig resets the config values to default
 func (cfg *Config) ResetConfig() error {
-	newConfig, err := getDefaultConfig()
+	newConfig, err := GetDefaultConfig()
 	if err != nil {
 		return err
 	}
@@ -365,10 +330,9 @@ func (cfg *Config) verifyConfig() error {
 		return err
 	}
 
-	// TODO: i'm pretty sure this and the c2 subdomain min thresh can be replaced with the threshold.base value?
 	// validate the configured long connection minimum duration
-	if cfg.Scoring.LongConnectionMinimumDuration <= 0 {
-		return fmt.Errorf("the long connection minimum duration must be at least greater than 0, got %v", cfg.Scoring.LongConnectionMinimumDuration)
+	if cfg.Scoring.LongConnectionScoreThresholds.Base <= 0 {
+		return fmt.Errorf("the long connection minimum duration must be at least greater than 0, got %v", cfg.Scoring.LongConnectionScoreThresholds.Base)
 	}
 
 	// validate the configured long connection score thresholds ( between 0 and 24 hours )
@@ -377,8 +341,8 @@ func (cfg *Config) verifyConfig() error {
 	}
 
 	// validate the configured C2 subdomain threshold
-	if cfg.Scoring.C2SubdomainThreshold <= 0 {
-		return fmt.Errorf("the C2 subdomain threshold must be at least greater than 0, got %v", cfg.Scoring.C2SubdomainThreshold)
+	if cfg.Scoring.C2ScoreThresholds.Base <= 0 {
+		return fmt.Errorf("the C2 subdomain threshold must be at least greater than 0, got %v", cfg.Scoring.C2ScoreThresholds.Base)
 	}
 
 	// validate the configured C2 score thresholds ( no max limit )
@@ -493,8 +457,8 @@ func validateScoreThresholds(s ScoreThresholds, min int, max int) error {
 	return nil
 }
 
-// parseImpactCategoryScores sets the corresponding scores for the binary indicators
-func (cfg *Config) parseImpactCategoryScores() error {
+// ParseImpactCategoryScores sets the corresponding scores for the binary indicators
+func (cfg *Config) ParseImpactCategoryScores() error {
 
 	strobeScore, err := GetScoreFromImpactCategory(cfg.Scoring.StrobeImpact.Category)
 	if err != nil {
@@ -567,7 +531,7 @@ func defaultConfig() Config {
 		Filter: Filter{
 			InternalSubnetsJSON:       []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"},
 			AlwaysIncludedSubnetsJSON: []string{},
-			NeverIncludedSubnetsJSON:  getMandatoryNeverIncludeSubnets(),
+			NeverIncludedSubnetsJSON:  GetMandatoryNeverIncludeSubnets(),
 			AlwaysIncludedDomains:     []string{},
 			NeverIncludedDomains:      []string{},
 			FilterExternalToInternal:  true,
@@ -596,15 +560,13 @@ func defaultConfig() Config {
 				},
 			},
 
-			LongConnectionMinimumDuration: 1 * 3600, // 1 hour (in seconds)
 			LongConnectionScoreThresholds: ScoreThresholds{
-				Base: 3600,
+				Base: 1 * 3600, // 1 hour (in seconds),
 				Low:  4 * 3600,
 				Med:  8 * 3600,
 				High: 12 * 3600,
 			},
 
-			C2SubdomainThreshold: 100,
 			C2ScoreThresholds: ScoreThresholds{
 				Base: 100,
 				Low:  500,

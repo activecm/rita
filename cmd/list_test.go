@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/activecm/rita/v5/cmd"
-	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 
 	"github.com/spf13/afero"
@@ -23,12 +22,13 @@ func (c *CmdTestSuite) TestFormatListTable() {
 	_, err = cmd.RunImportCmd(time.Now(), c.cfg, afero.NewOsFs(), "../test_data/proxy", "proxy", false, true)
 	require.NoError(err, "importing proxy data should not produce an error")
 
+	// get droplet subnet
 	_, dropletSubnet, err := net.ParseCIDR("64.225.56.201/32")
 	require.NoError(err)
+
+	// update config to include droplet subnet
 	c.cfg.Filter.InternalSubnets = append(c.cfg.Filter.InternalSubnets, dropletSubnet)
 	c.cfg.Filter.FilterExternalToInternal = false
-	err = config.UpdateConfig(c.cfg)
-	require.NoError(err, "config should update without error")
 
 	_, err = cmd.RunImportCmd(time.Now(), c.cfg, afero.NewOsFs(), "../test_data/missing_host/2024-04-19", "fake_rolling", true, true)
 	require.NoError(err, "importing fake_rolling data should not produce an error")

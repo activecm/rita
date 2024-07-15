@@ -49,17 +49,14 @@ func TestMissingHost(t *testing.T) {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	_, dropletSubnet, err := net.ParseCIDR("64.225.56.201/32")
 	require.NoError(t, err)
 	cfg.Filter.InternalSubnets = append(cfg.Filter.InternalSubnets, dropletSubnet)
 	cfg.Filter.FilterExternalToInternal = false
-	err = config.UpdateConfig(cfg)
-
 	cfg.DBConnection = dockerInfo.clickhouseConnection
-	require.NoError(t, err, "updating config should not return an error")
 
 	require.Contains(t, cfg.Filter.InternalSubnets, &net.IPNet{IP: net.IP{64, 225, 56, 201}, Mask: net.IPMask{255, 255, 255, 255}})
 	require.False(t, cfg.Filter.FilterExternalToInternal)

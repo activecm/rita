@@ -56,7 +56,7 @@ func RunValidateConfigCommand(afs afero.Fs, configPath string) error {
 	}
 
 	// load config path
-	_, err := config.LoadConfig(afs, configPath)
+	_, err := config.ReadFileConfig(afs, configPath)
 	if err != nil {
 		return err
 	}

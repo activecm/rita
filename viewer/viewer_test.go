@@ -45,15 +45,12 @@ func (s *ViewerTestSuite) SetupSuite() {
 	// set up file system interface
 	afs := afero.NewOsFs()
 
-	cfg, err := config.LoadConfig(afs, ConfigPath)
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
 	s.SetupClickHouse(t)
 
 	cfg.DBConnection = s.clickhouseConnection
-
-	err = config.UpdateConfig(cfg)
-	require.NoError(t, err, "config should update without error")
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "dnscat2_ja3_strobe", false, true)

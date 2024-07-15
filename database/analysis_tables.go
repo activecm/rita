@@ -363,7 +363,7 @@ func (db *DB) createPortInfoTable(ctx context.Context) error {
 			bytes_received AggregateFunction(sum, Int64)
 		)
 		ENGINE = AggregatingMergeTree()
-		PRIMARY KEY (hour, hash, dst_port, proto, service, icmp_type, icmp_code)
+		PRIMARY KEY (hour, hash, dst_port, proto, service, conn_state, icmp_type, icmp_code)
 	`); err != nil {
 		return err
 	}

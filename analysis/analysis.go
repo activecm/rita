@@ -216,7 +216,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 			}
 			mixtape.Hash = hash
 			mixtape.FQDN = entry.TLD
-			if entry.SubdomainCount >= uint64(analyzer.Config.Scoring.C2SubdomainThreshold) {
+			if entry.SubdomainCount >= uint64(analyzer.Config.Scoring.C2ScoreThresholds.Base) {
 				hasThreatIndicator = true
 				mixtape.C2OverDNSScore = c2OverDNSScore
 				// run c2 over dns direct connection analysis
@@ -245,7 +245,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 			}
 
 			// run long connection analysis on entry if the total duration is greater than the minimum duration threshold
-			if entry.TotalDuration >= float64(analyzer.Config.Scoring.LongConnectionMinimumDuration) {
+			if entry.TotalDuration >= float64(analyzer.Config.Scoring.LongConnectionScoreThresholds.Base) {
 				longConnScore := calculateBucketedScore(entry.TotalDuration, analyzer.Config.Scoring.LongConnectionScoreThresholds)
 				hasThreatIndicator = true
 				mixtape.LongConnScore = longConnScore
