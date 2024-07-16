@@ -18,7 +18,7 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 )
 
-var DebugMode bool
+var DebugMode bool // set true by rita if debug flag is passed in
 var mainStyle = lipgloss.NewStyle().Margin(0, 0)
 
 type Model struct {
@@ -57,6 +57,9 @@ type column struct {
 	width int
 }
 
+type FinishedLoadingResults string
+type StillLoadingResults string
+
 // CreateUI creates the terminal UI
 func CreateUI(_ *config.Config, db *database.DB, useCurrentTime bool, maxTimestamp time.Time, minTimestamp time.Time) error {
 	// create model
@@ -76,6 +79,7 @@ func CreateUI(_ *config.Config, db *database.DB, useCurrentTime bool, maxTimesta
 	return nil
 }
 
+// NewModel creates a new model
 func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *database.DB) (*Model, error) {
 	pageSize := 100
 	// get results from database
@@ -101,11 +105,14 @@ func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *dat
 	sideBar := NewSidebarModel(maxTimestamp, useCurrentTime, &Item{})
 	if len(dataList.Rows.Items()) > 0 {
 		// set sidebar data to whichever item is selected in the list
-		data, ok := dataList.Rows.Items()[dataList.Rows.Index()].(Item)
+		tmp := dataList.Rows.Items()[dataList.Rows.Index()]
+		data, ok := tmp.(*Item)
+		fmt.Println(data, tmp)
+
 		if !ok {
 			return nil, fmt.Errorf("error setting sidebar data")
 		}
-		sideBar.Data = &data
+		sideBar.Data = data
 
 	}
 
@@ -134,6 +141,7 @@ func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *dat
 	return m, nil
 }
 
+// Init initializes the model
 func (m *Model) Init() tea.Cmd {
 
 	// set title
@@ -178,6 +186,7 @@ func (m *Model) Init() tea.Cmd {
 	return m.Footer.spinner.Tick
 }
 
+// Update updates the model
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	var cmd tea.Cmd
@@ -185,12 +194,14 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		// make the footer the entire width of the terminal
 		m.Footer.width = msg.Width
-
+		height := msg.Height - int(math.Max(float64(lipgloss.Height(m.SearchBar.View())), float64(lipgloss.Height(m.title)))) - lipgloss.Height(m.dbFooterBar)
 		// make the list fill the extra vertical space
-		m.List.SetHeight(msg.Height - int(math.Max(float64(lipgloss.Height(m.SearchBar.View())), float64(lipgloss.Height(m.title)))) - lipgloss.Height(m.dbFooterBar))
+		m.List.SetHeight(height)
 
 		// make the sidebar the same height as the list
 		m.SideBar.Viewport.Height = m.List.totalHeight
+		m.SideBar.Height = m.List.totalHeight
+		// m.SideBar.Viewport.Height = lipgloss.Height(m.List.View())
 
 		// make sidebar fill the extra horizontal space
 		m.SideBar.Viewport.Width = msg.Width - lipgloss.Width(m.List.View()) - 4
@@ -258,11 +269,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.List.Rows.Select(index)
 		}
 
-		if data, ok := m.List.Rows.Items()[m.List.Rows.Index()].(Item); ok {
-			m.SideBar.Data = &data
+		// set sidebar data to the selected item
+		if data, ok := m.List.Rows.Items()[m.List.Rows.Index()].(*Item); ok {
+			m.SideBar.Data = data
 		}
 
 	} else {
+		// if there are no items to display, set the sidebar data to an empty item
 		m.SideBar.Data = &Item{}
 	}
 
@@ -280,9 +293,10 @@ func (m *Model) View() string {
 	case m.ViewHelp:
 		mainContent = helpPanel(m.SideBar.Viewport.Height, m.List.width, mainHelpText())
 	default:
+		resultList := mainStyle.Render(m.List.View())
 		mainContent = lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			mainStyle.Render(m.List.View()),
+			resultList,
 			mainStyle.Render(m.SideBar.View()),
 		)
 	}
@@ -294,9 +308,6 @@ func (m *Model) View() string {
 		m.Footer.View(),
 	)
 }
-
-type FinishedLoadingResults string
-type StillLoadingResults string
 
 // handleFiltering handles key presses on the search bar
 func (m *Model) handleFiltering(msg tea.KeyMsg) tea.Cmd {
@@ -594,12 +605,14 @@ func mainHelpText() string {
 
 }
 
+// helpPanel returns a help panel with the given height, width, and contents
 func helpPanel(height int, width int, contents string) string {
 	return mainStyle.Height(height).Width(width).
 		Border(lipgloss.RoundedBorder()).BorderForeground(surface0).
 		Render(contents)
 }
 
+// getTableWidth returns the total width of the table
 func getTableWidth(columns []column) int {
 	width := 0
 	for _, column := range columns {

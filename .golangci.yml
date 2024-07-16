@@ -34,7 +34,7 @@ linters-settings:
         sizeThreshold: 512 # Default: 512
         skipTestFuncs: true
       rangeValCopy:
-        sizeThreshold: 200  # Default: 128
+        sizeThreshold: 200 # Default: 128
         skipTestFuncs: true
       hugeParam:
         sizeThreshold: 100 # Default: 80
@@ -74,23 +74,23 @@ linters-settings:
     # Enable to require nolint directives to mention the specific linter being suppressed.
     # Default: false
     require-specific: true
-  
+
   revive:
-    enable-all-rules: true 
+    enable-all-rules: true
     # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
     rules:
       - name: add-constant
         disabled: true
       - name: argument-limit
         arguments: [10]
-      - name: cognitive-complexity # enable in future cleanup
+      - name: cognitive-complexity
         disabled: true
       - name: confusing-results
         disabled: true
-      - name: cyclomatic # enable in future cleanup
+      - name: cyclomatic
         disabled: true
       - name: deep-exit
-        disabled: true # enable in future cleanup
+        disabled: true
       - name: empty-lines
         disabled: true
       - name: exported
@@ -113,16 +113,23 @@ linters-settings:
         arguments: [8]
       - name: var-naming
         arguments:
-          - [ ] # allowlist
-          - [ ] # blocklist
-          - [ { "upperCaseConst": true, "skipPackageNameChecks": true } ]
+          - [] # allowlist
+          - [] # blocklist
+          - [{ "upperCaseConst": true, "skipPackageNameChecks": true }]
       - name: unexported-return
         disabled: true
       - name: unhandled-error
-        arguments: [ "fmt.Printf", "fmt.Fprintf", "fmt.Println", "io.Closer.Close", "os.File.Close" ]
+        arguments:
+          [
+            "fmt.Printf",
+            "fmt.Fprintf",
+            "fmt.Println",
+            "io.Closer.Close",
+            "os.File.Close",
+          ]
       - name: unused-receiver
         disabled: true
-  
+
   goconst:
     # Minimum occurrences of constant string count to trigger issue.
     # Default: 3
@@ -130,7 +137,7 @@ linters-settings:
     # Ignore test files.
     # Default: false
     ignore-tests: true
-  
+
   stylecheck:
     checks: ["all", "-ST1003"]
 
@@ -155,7 +162,7 @@ linters:
     - durationcheck
 
     # Forces to not skip error check.
-    - errcheck 
+    - errcheck
 
     # Checks `Err-` prefix for var and `-Error` suffix for error type.
     - errname
@@ -178,7 +185,7 @@ linters:
     # Checks standard formatting (whitespace, indentation, etc.)
     - gofmt
 
-    # Checks 
+    # Checks
     - goimports
 
     # Allow or ban replace directives in go.mod or force explanation for retract directives.
@@ -264,25 +271,25 @@ issues:
   #   - "var-naming: don't use an underscore in package name"
   exclude-rules:
     # ignore shadowing of err and ctx
-    - linters: [ govet ]
+    - linters: [govet]
       text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
 
     # tolerate long functions in tests
-    - linters: [ revive ]
+    - linters: [revive]
       path: "(.+)_test.go"
       text: "function-length: .*"
 
     # tolerate long lines in tests
-    - linters: [ revive ]
+    - linters: [revive]
       path: "(.+)_test.go"
       text: "line-length-limit: .*"
 
     # tolerate deep-exit in tests
-    - linters: [ revive ]
+    - linters: [revive]
       path: "(.+)_test.go"
       text: "deep-exit: .*"
 
     # tolerate import shadowing in tests
-    - linters: [ revive ]
+    - linters: [revive]
       path: "(.+)_test.go"
       text: "import-shadowing: The name ('require') shadows an import name"

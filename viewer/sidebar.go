@@ -23,6 +23,7 @@ type modifier struct {
 type sidebarModel struct {
 	Viewport       viewport.Model
 	Data           *Item
+	Height         int
 	maxTimestamp   time.Time
 	useCurrentTime bool
 	ScrollEnabled  bool
@@ -41,27 +42,42 @@ func (m *sidebarModel) Init() tea.Cmd {
 	m.Viewport.SetContent(m.getSidebarContents())
 	return nil
 }
-func (m *sidebarModel) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
-	return m, nil
+func (m *sidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds []tea.Cmd
+	switch msg.(type) {
+	case tea.KeyMsg:
+		// if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
+		// 	return m, tea.Quit
+		// }
+
+	case tea.WindowSizeMsg:
+		cmds = append(cmds, viewport.Sync(m.Viewport))
+
+		// return m, nil
+	}
+	return m, tea.Batch(cmds...)
 }
 
 func (m *sidebarModel) View() string {
 	m.Viewport.SetContent(m.getSidebarContents())
+	m.Viewport.Height = m.Height
 	borderColor := mauve
 	if m.ScrollEnabled {
 		borderColor = green
 	}
 	style := sideBarStyle.
-		// .Width(m.width).Height(m.height).
+		// .Width(m.width)
+		// Height(m.Viewport.Height).
 		Padding(0, 1).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor)
-
-	return style.Render(m.Viewport.View())
+	hi := style.Render(m.Viewport.View())
+	return lipgloss.NewStyle().Render(hi)
+	// Border(lipgloss.NormalBorder())
 }
 
+// getSidebarContents gets and formats the data to be displayed in the sidebar
 func (m *sidebarModel) getSidebarContents() string {
-
 	// get header
 	var target string
 	headerPadding := 2
@@ -74,8 +90,8 @@ func (m *sidebarModel) getSidebarContents() string {
 		// dstStyle := lipgloss.NewStyle().Width(m.viewport.Width - (headerPadding * 2))
 		fqdnLabel := "FQDN"
 		dstStyle := lipgloss.NewStyle().Width(m.Viewport.Width - len(fqdnLabel) - (headerPadding * 4))
-
-		target = lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(fqdnLabel), headerValueStyle.Render(Truncate(m.Data.GetDst(), &dstStyle)))
+		valueStyle := headerValueStyle.Render(Truncate(m.Data.GetDst(), &dstStyle))
+		target = lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(fqdnLabel), valueStyle)
 		target = lipgloss.NewStyle().MarginBottom(2).Render(target)
 	} else {
 		// handle connection pair, ip -> ip or ip -> fqdn
@@ -83,15 +99,14 @@ func (m *sidebarModel) getSidebarContents() string {
 		srcStyle := lipgloss.NewStyle().Width(m.Viewport.Width - len(srcLabel) - (headerPadding * 4))
 		dstLabel := "DST"
 		dstStyle := lipgloss.NewStyle().Width(m.Viewport.Width - len(dstLabel) - (headerPadding * 4))
-		// - 6 - len(m.data.GetSrc())
-		// dstStyle := lipgloss.NewStyle().Width(dstWidth)
-		src := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(srcLabel), headerValueStyle.Render(Truncate(m.Data.GetSrc(), &srcStyle)))
-		dst := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(dstLabel), headerValueStyle.Render(Truncate(m.Data.GetDst(), &dstStyle)))
+		srcValueStyle := headerValueStyle.Render(Truncate(m.Data.GetSrc(), &srcStyle))
+		dstValueStyle := headerValueStyle.Render(Truncate(m.Data.GetDst(), &dstStyle))
+
+		src := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(srcLabel), srcValueStyle)
+		dst := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(dstLabel), dstValueStyle)
 		target = lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().MarginBottom(1).Render(src), dst)
 	}
-	heading := lipgloss.NewStyle().
-		// PaddingLeft(headerPadding).
-		MarginBottom(1).Render(target)
+	heading := lipgloss.NewStyle().MarginBottom(1).Render(target)
 
 	// get modifiers
 	sectionStyle := lipgloss.NewStyle().
@@ -130,8 +145,8 @@ func (m *sidebarModel) getSidebarContents() string {
 
 		// render header
 		portsHeader := portsHeaderStyle.Render("Port : Proto : Service")
-		ports = lipgloss.JoinVertical(lipgloss.Top, portsHeader, strings.Join(portProtoService, "\n"))
-
+		ports = lipgloss.JoinVertical(lipgloss.Top, portsHeader, strings.Join(portProtoService, ","))
+		// strings.Join(portProtoService, "\n")
 		// calculate the number of lines available for port data
 		// remainingLines := m.viewport.Height - (lipgloss.Height(heading) + lipgloss.Height(modifiers) + lipgloss.Height(modifierLabel) + lipgloss.Height(connInfoLabel) + lipgloss.Height(bytes) + lipgloss.Height(connCount))
 		// ports = renderPorts(portProtoService, m.viewport.Width, remainingLines)
@@ -142,61 +157,48 @@ func (m *sidebarModel) getSidebarContents() string {
 	return lipgloss.JoinVertical(lipgloss.Top, heading, modifierLabel, modifiers, connInfoLabel, connCount, bytes, ports)
 }
 
+// renderModifiers aggregates and formats the modifiers for the currently selected item
+// for rendering in the sidebar
 func (m *sidebarModel) renderModifiers() string {
 	modifierList := m.getModifiers()
-	// panic(modifierList)
 
 	var modifiers string
 	var renderedModifiers []string
 	for _, modifier := range modifierList {
 		renderedModifier := renderModifier(modifier)
-		// if i > 0 {
-		// 	renderedModifier = lipgloss.NewStyle().MarginLeft(1).Render(renderedModifier)
-		// }
 		renderedModifiers = append(renderedModifiers, renderedModifier)
 	}
 	newlineStyle := lipgloss.NewStyle().PaddingRight(1).BorderForeground(overlay2).Border(lipgloss.NormalBorder(), false, true, false, false)
 	linebreakStyle := lipgloss.NewStyle().MarginBottom(1)
-	// if len(renderedModifiers) > 2 {
 
 	var modifierLines []string
-	// lastUsedIndex := 0
 	var currentModifiers string
 	for i, mod := range renderedModifiers {
 		if i == 0 {
 			currentModifiers = newlineStyle.Render(mod)
 		} else {
-			// modifier = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), false, true, false, false).Padding(0, 2, 0, 0).Render(modifier)
 
 			newMod := lipgloss.JoinHorizontal(lipgloss.Left, currentModifiers, lipgloss.NewStyle().Padding(0, 1).BorderForeground(overlay2).Border(lipgloss.NormalBorder(), false, true, false, false).Render(mod))
-			// panic(newMod)
 
 			width := lipgloss.Width(newMod)
 			if m.Viewport.Width <= width {
 				modifierLines = append(modifierLines, lipgloss.JoinHorizontal(lipgloss.Left, linebreakStyle.Render(currentModifiers)))
-				// lastUsedIndex = i
 				currentModifiers = mod
 				if i != len(renderedModifiers)-1 {
 					currentModifiers = newlineStyle.Render(mod)
 				}
 			} else {
 				currentModifiers = newMod
-				// if i != len(renderedModifiers)-1 {
-				// 	currentModifiers = newlineStyle.Render(newMod)
-				// }
 			}
 		}
-		// modifiers += mod
 	}
 	modifierLines = append(modifierLines, linebreakStyle.Render(currentModifiers))
-	// panic(modifierLines)
 	modifiers = lipgloss.JoinVertical(lipgloss.Top, modifierLines...)
-	// modifiers = lipgloss.NewStyle().MarginBottom(1).PaddingBottom(1).Border(lipgloss.NormalBorder(), false, false, true, false).BorderForeground(surface0).Render(modifiers)
 
-	// }
 	return modifiers
 }
 
+// getModifiers gets all the modifiers for the currently selected item
 func (m *sidebarModel) getModifiers() []modifier {
 	var modifiers []modifier
 
@@ -245,6 +247,7 @@ func (m *sidebarModel) getModifiers() []modifier {
 	return modifiers
 }
 
+// renderModifier formats and styles a single modifier for rendering
 func renderModifier(mod modifier) string {
 	var color lipgloss.AdaptiveColor
 	switch {

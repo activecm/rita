@@ -64,7 +64,6 @@ func (i *Item) GetDst() string {
 	return i.Dst.String()
 }
 
-// func (i *Item) FQDN() string           { return i.fqdn }
 func (i *Item) GetBeacon() string {
 	// if connection is a strobe, set beacon score to 100%
 	if i.StrobeScore > 0 {
@@ -72,6 +71,7 @@ func (i *Item) GetBeacon() string {
 	}
 	return renderIndicator(i.BeaconThreatScore, fmt.Sprintf("%1.2f%%", i.BeaconScore*100))
 }
+
 func (i *Item) GetFirstSeen(relativeTimestamp time.Time) string {
 	timeAgo := relativeTimestamp.Sub(i.FirstSeen)
 	switch {
@@ -130,8 +130,11 @@ func (i *Item) GetThreatIntel() string {
 	return ""
 }
 
-// no-op
-func (i Item) FilterValue() string { return i.GetSrc() } //nolint:gocritic // filtervalue cannot be a pointer method
+//nolint:gocritic // filtervalue cannot be a pointer method
+func (i Item) FilterValue() string { return i.GetSrc() } // no-op, bubble tea requires this method to be implemented but it is unused
+
+// GetSeverity returns the severity of the mixtape result based on the final score and
+// adds a color based on the severity level if color is set to true
 func (i *Item) GetSeverity(color bool) string {
 	caser := cases.Title(language.English)
 
@@ -157,6 +160,7 @@ func (i *Item) GetSeverity(color bool) string {
 	return caser.String(string(severity))
 }
 
+// GetResults queries the database for mixtape results based on the filter and pagination parameters
 func GetResults(db *database.DB, filter *Filter, currentPage, pageSize int, minTimestamp time.Time) ([]list.Item, bool, error) {
 	// build query
 	query, params, appliedFilter := BuildResultsQuery(filter, currentPage, pageSize, minTimestamp)
@@ -184,6 +188,7 @@ func GetResults(db *database.DB, filter *Filter, currentPage, pageSize int, minT
 	return items, appliedFilter, nil
 }
 
+// BuildResultsQuery builds a query for fetching mixtape results based on the filter and pagination parameters
 func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp time.Time) (string, clickhouse.Parameters, bool) {
 	params := clickhouse.Parameters{}
 	query := `--sql
@@ -254,25 +259,27 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 
 	// set where conditions for src and dst filters
 	whereConditions := []string{}
-	if filter.Src != "" {
-		whereConditions = append(whereConditions, "src={src:String}")
-		params["src"] = filter.Src
-	}
-	if filter.Dst != "" {
-		whereConditions = append(whereConditions, "dst={dst:String}")
-		params["dst"] = filter.Dst
-	}
-	if filter.Fqdn != "" {
-		whereConditions = append(whereConditions, "fqdn={fqdn:String}")
-		params["fqdn"] = filter.Fqdn
-	}
-	if filter.ThreatIntel != "" {
-		whereConditions = append(whereConditions, "threat_intel={threat_intel:Bool}")
-		params["threat_intel"] = filter.ThreatIntel
-	}
-	if !filter.LastSeen.IsZero() {
-		whereConditions = append(whereConditions, "toStartOfHour(last_seen) >= {last_seen:Int64}")
-		params["last_seen"] = fmt.Sprintf("%d", filter.LastSeen.UTC().Unix())
+	if filter != nil {
+		if filter.Src != "" {
+			whereConditions = append(whereConditions, "src={src:String}")
+			params["src"] = filter.Src
+		}
+		if filter.Dst != "" {
+			whereConditions = append(whereConditions, "dst={dst:String}")
+			params["dst"] = filter.Dst
+		}
+		if filter.Fqdn != "" {
+			whereConditions = append(whereConditions, "fqdn={fqdn:String}")
+			params["fqdn"] = filter.Fqdn
+		}
+		if filter.ThreatIntel != "" {
+			whereConditions = append(whereConditions, "threat_intel={threat_intel:Bool}")
+			params["threat_intel"] = filter.ThreatIntel
+		}
+		if !filter.LastSeen.IsZero() {
+			whereConditions = append(whereConditions, "toStartOfHour(last_seen) >= {last_seen:Int64}")
+			params["last_seen"] = fmt.Sprintf("%d", filter.LastSeen.UTC().Unix())
+		}
 	}
 
 	// set where conditions for src and dst filters to query if any were specified
@@ -287,29 +294,31 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 
 	// set having conditions for numerical filters
 	havingConditions := []string{}
-	if filter.Count.Value != "" && filter.Count.Operator != "" {
-		havingConditions = append(havingConditions, "count "+filter.Count.Operator+" {count:Int64}")
-		params["count"] = filter.Count.Value
-	}
-
-	if filter.Beacon.Value != "" && filter.Beacon.Operator != "" {
-		havingConditions = append(havingConditions, "beacon_score "+filter.Beacon.Operator+" {beacon:Float32}")
-		params["beacon"] = filter.Beacon.Value
-	}
-
-	if filter.Subdomains.Value != "" && filter.Subdomains.Operator != "" {
-		havingConditions = append(havingConditions, "subdomain_count "+filter.Subdomains.Operator+" {subdomains:Int64}")
-		params["subdomains"] = filter.Subdomains.Value
-	}
-
-	if filter.Duration.Value != "" && filter.Duration.Operator != "" {
-		if filter.Duration.Operator == "=" {
-			// round column down to the nearest integer if the operator is equ
-			havingConditions = append(havingConditions, "floor(total_duration) "+filter.Duration.Operator+" {duration:Float64}")
-		} else {
-			havingConditions = append(havingConditions, "total_duration "+filter.Duration.Operator+" {duration:Float64}")
+	if filter != nil {
+		if filter.Count.Value != "" && filter.Count.Operator != "" {
+			havingConditions = append(havingConditions, "count "+filter.Count.Operator+" {count:Int64}")
+			params["count"] = filter.Count.Value
 		}
-		params["duration"] = filter.Duration.Value
+
+		if filter.Beacon.Value != "" && filter.Beacon.Operator != "" {
+			havingConditions = append(havingConditions, "beacon_score "+filter.Beacon.Operator+" {beacon:Float32}")
+			params["beacon"] = filter.Beacon.Value
+		}
+
+		if filter.Subdomains.Value != "" && filter.Subdomains.Operator != "" {
+			havingConditions = append(havingConditions, "subdomain_count "+filter.Subdomains.Operator+" {subdomains:Int64}")
+			params["subdomains"] = filter.Subdomains.Value
+		}
+
+		if filter.Duration.Value != "" && filter.Duration.Operator != "" {
+			if filter.Duration.Operator == "=" {
+				// round column down to the nearest integer if the operator is equ
+				havingConditions = append(havingConditions, "floor(total_duration) "+filter.Duration.Operator+" {duration:Float64}")
+			} else {
+				havingConditions = append(havingConditions, "total_duration "+filter.Duration.Operator+" {duration:Float64}")
+			}
+			params["duration"] = filter.Duration.Value
+		}
 	}
 
 	// add having conditions to query if any were specified
@@ -323,29 +332,33 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 
 	// add where conditions to the outer part of the query if any were specified
 	outerWhereConditions := []string{}
-	// add conditions for severity filter to query
-	if len(filter.Severity) > 0 {
-		for i, op := range filter.Severity {
-			paramName := fmt.Sprintf("final_score_%d", i)
-			outerWhereConditions = append(outerWhereConditions, "final_score "+op.Operator+fmt.Sprintf("{%s:Float32}", paramName))
-			params[paramName] = op.Value
+	if filter != nil {
+		// add conditions for severity filter to query
+		if len(filter.Severity) > 0 {
+			for i, op := range filter.Severity {
+				paramName := fmt.Sprintf("final_score_%d", i)
+				outerWhereConditions = append(outerWhereConditions, "final_score "+op.Operator+fmt.Sprintf("{%s:Float32}", paramName))
+				params[paramName] = op.Value
+			}
+			query += "WHERE " + strings.Join(outerWhereConditions, " AND ")
 		}
-		query += "WHERE " + strings.Join(outerWhereConditions, " AND ")
 	}
 
 	// set sorting conditions if any were specified
 	sortingConditions := []string{}
-	if filter.SortSeverity != "" {
-		sortingConditions = append(sortingConditions, "final_score "+filter.SortSeverity)
-	}
-	if filter.SortBeacon != "" {
-		sortingConditions = append(sortingConditions, "beacon_score "+filter.SortBeacon)
-	}
-	if filter.SortDuration != "" {
-		sortingConditions = append(sortingConditions, "total_duration "+filter.SortDuration)
-	}
-	if filter.SortSubdomains != "" {
-		sortingConditions = append(sortingConditions, "subdomains "+filter.SortSubdomains)
+	if filter != nil {
+		if filter.SortSeverity != "" {
+			sortingConditions = append(sortingConditions, "final_score "+filter.SortSeverity)
+		}
+		if filter.SortBeacon != "" {
+			sortingConditions = append(sortingConditions, "beacon_score "+filter.SortBeacon)
+		}
+		if filter.SortDuration != "" {
+			sortingConditions = append(sortingConditions, "total_duration "+filter.SortDuration)
+		}
+		if filter.SortSubdomains != "" {
+			sortingConditions = append(sortingConditions, "subdomains "+filter.SortSubdomains)
+		}
 	}
 
 	// add sorting conditions to query if any were specified
@@ -357,8 +370,8 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 		`
 	}
 
-	offset := currentPage * pageSize
 	// set offset ; fetch if the offset is greater than 0, otherwise set limit
+	offset := currentPage * pageSize
 	if offset > 0 {
 		query += `--sql
 			OFFSET {skip:Int32} ROWS FETCH NEXT {page_size:Int32} ROWS ONLY

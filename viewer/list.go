@@ -51,10 +51,11 @@ const (
 )
 
 type listModel struct {
-	Rows        list.Model
-	width       int
-	totalHeight int
-	columns     []column
+	Rows         list.Model
+	width        int
+	totalHeight  int
+	headerHeight int
+	columns      []column
 }
 
 func MakeList(items []list.Item, columns []column, width int, height int) listModel {
@@ -95,6 +96,7 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *listModel) SetHeight(height int) {
 	_, v := listStyle.GetFrameSize()
 	header := lipgloss.Height(renderColumnHeader(m.columns, m.width))
+	m.headerHeight = header
 	h := (height - header - v)
 	m.totalHeight = header + v + h
 	m.Rows.SetSize(m.width, h)
