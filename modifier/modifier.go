@@ -9,7 +9,7 @@ import (
 	"github.com/activecm/rita/v5/analysis"
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -20,7 +20,6 @@ import (
 
 const RARE_SIGNATURE_MODIFIER_NAME = "rare_signature"
 const MIME_TYPE_MISMATCH_MODIFIER_NAME = "mime_type_mismatch"
-const C2_OVER_DNS_DIRECT_CONNECTIONS_MODIFIER_NAME = "c2_over_dns_direct_conns"
 
 // we must batch if we want all of the modifiers pre-scored in one row
 // we don't need to if we don't need them all in the same row
@@ -49,7 +48,7 @@ type ThreatModifier struct {
 	ModifierScore float32          `ch:"modifier_score"`
 }
 
-func NewModifier(db *database.DB, cfg *config.Config, importID util.FixedString, minTS time.Time, maxTS time.Time) (*Modifier, error) {
+func NewModifier(db *database.DB, cfg *config.Config, importID util.FixedString, minTS time.Time) (*Modifier, error) {
 	// create a rate limiter to control the rate of writing to the database
 	limiter := rate.NewLimiter(5, 5)
 
@@ -59,12 +58,14 @@ func NewModifier(db *database.DB, cfg *config.Config, importID util.FixedString,
 		Config:          cfg,
 		ModifierWorkers: 1,
 		minTS:           minTS,
-		writer:          database.NewBulkWriter(db, cfg, 1, db.GetSelectedDB(), "threat_mixtape", "INSERT INTO {database:Identifier}.threat_mixtape", limiter, false),
+		writer: database.NewBulkWriter(
+			db, cfg, 1, db.GetSelectedDB(), "threat_mixtape", "INSERT INTO {database:Identifier}.threat_mixtape", limiter, false,
+		),
 	}, nil
 }
 
 func (modifier *Modifier) Modify() error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// log the start time of the modifier detection
 	start := time.Now()
@@ -101,7 +102,7 @@ func (modifier *Modifier) Modify() error {
 }
 
 func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 	logger.Debug().Msg("Starting detection of rare signatures...")
 	chCtx := modifier.Database.QueryParameters(clickhouse.Parameters{
 		"min_ts":    fmt.Sprintf("%d", modifier.minTS.UTC().Unix()),
@@ -110,7 +111,10 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 
 	rows, err := modifier.Database.Conn.Query(chCtx, `--sql
 	WITH rare_sig_modifiers AS (
-		SELECT src, src_nuid, dst, dst_nuid, fqdn, signature as modifier_value, x.times_used_dst as times_used_dst, x.times_used_fqdn as times_used_fqdn
+		SELECT src, src_nuid, dst, dst_nuid, fqdn, 
+			   signature as modifier_value, 
+			   x.times_used_dst as times_used_dst, 
+			   x.times_used_fqdn as times_used_fqdn
 		FROM rare_signatures rs 
 		SEMI JOIN (
 			SELECT src, src_nuid, signature, uniqExactMerge(times_used_dst) as times_used_dst, uniqExactMerge(times_used_fqdn) as times_used_fqdn 
@@ -121,7 +125,11 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 		) x ON rs.src = x.src AND rs.src_nuid = x.src_nuid AND rs.signature = x.signature
 		WHERE if(fqdn != '', times_used_fqdn = 1, times_used_dst = 1)
 	)
-	SELECT hash, src, src_nuid, dst, dst_nuid, fqdn, r.modifier_value as modifier_value, last_seen, toFloat32(if(length(fqdn) > 0, times_used_fqdn, times_used_dst)) as modifier_score
+	SELECT hash, src, src_nuid, dst, dst_nuid, fqdn, 
+		   r.modifier_value as modifier_value, 
+		   last_seen, 
+		   toFloat32(if(length(fqdn) > 0, 
+		   times_used_fqdn, times_used_dst)) as modifier_score
 	FROM threat_mixtape t 
 	SEMI JOIN rare_sig_modifiers r USING src, src_nuid, dst, dst_nuid, fqdn
 	WHERE modifier_name = '' -- join only on non-modifier rows to avoid duplicating results
@@ -167,7 +175,7 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 }
 
 func (modifier *Modifier) detectMIMETypeMismatch(ctx context.Context) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 	logger.Debug().Msg("Starting detection of MIME type/URI mismatch...")
 	chCtx := modifier.Database.QueryParameters(clickhouse.Parameters{
 		"min_ts":    fmt.Sprintf("%d", modifier.minTS.UTC().Unix()),

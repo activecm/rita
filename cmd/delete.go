@@ -64,8 +64,15 @@ var DeleteCommand = &cli.Command{
 		if cCtx.Bool("non-interactive") {
 			prompt = false
 		}
+
+		// load config file
+		cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
+		if err != nil {
+			return err
+		}
+
 		// run the delete command
-		if err := runDeleteCmd(afs, cCtx.String("config"), input, trimmedName, prompt); err != nil {
+		if err := RunDeleteCmd(cfg, input, trimmedName, prompt); err != nil {
 			return err
 		}
 
@@ -78,16 +85,11 @@ var DeleteCommand = &cli.Command{
 	},
 }
 
-func runDeleteCmd(afs afero.Fs, configPath string, entry string, trimmedName string, ask bool) error {
+func RunDeleteCmd(cfg *config.Config, entry string, trimmedName string, ask bool) error {
+
 	// validate the trimmed name
 	if len(trimmedName) == 0 {
 		return ErrTrimmedNameEmpty
-	}
-
-	// load config file
-	cfg, err := config.ReadFileConfig(afs, configPath)
-	if err != nil {
-		return err
 	}
 
 	// connect to server
@@ -96,6 +98,7 @@ func runDeleteCmd(afs afero.Fs, configPath string, entry string, trimmedName str
 		return err
 	}
 
+	// set uo prompt for confirmation
 	prompt := promptui.Prompt{
 		Label:     "Delete Dataset",
 		IsConfirm: true,
@@ -147,7 +150,6 @@ func runDeleteCmd(afs afero.Fs, configPath string, entry string, trimmedName str
 		}
 
 		fmt.Println("Successfully deleted dataset if it existed.")
-
 	}
 
 	return nil

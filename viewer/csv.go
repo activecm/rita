@@ -68,7 +68,7 @@ func FormatToCSV(items []list.Item, relativeTimestamp time.Time) (string, error)
 	var data []string
 	for _, row := range items {
 		// get current row
-		item, ok := row.(Item)
+		item, ok := row.(*Item)
 		if !ok {
 			return "", fmt.Errorf("error casting item to Item")
 		}

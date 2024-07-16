@@ -611,7 +611,8 @@ func (it *ValidDatasetTestSuite) TestUSNI() {
 		ProxyBoolCount    uint64   `ch:"proxy_bool_count"`
 	}
 
-	for _, test := range testCases {
+	for i := range testCases {
+		test := testCases[i]
 		it.Run(test.src+"-"+test.fqdn, func() {
 			t := it.T()
 

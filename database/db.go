@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
-	driver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 var ErrInvalidDatabaseConnection = fmt.Errorf("database connection is nil")
@@ -59,7 +59,7 @@ func (db *DB) GetBeaconMinMaxTimestamps() (time.Time, time.Time, bool, error) {
 		return time.Unix(0, 0), time.Unix(0, 0), notFromConn, ErrInvalidDatabaseConnection
 	}
 
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	ctx := db.QueryParameters(clickhouse.Parameters{
 		"database": db.selected,
@@ -93,7 +93,7 @@ func (db *DB) GetBeaconMinMaxTimestamps() (time.Time, time.Time, bool, error) {
 }
 
 func (db *DB) GetTrueMinMaxTimestamps() (time.Time, time.Time, bool, bool, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	var minTS, maxTS time.Time
 	var notFromConn bool
@@ -149,7 +149,7 @@ func (db *DB) GetTrueMinMaxTimestamps() (time.Time, time.Time, bool, bool, error
 
 // GetNetworkSize returns the number of distinct internal hosts for the past 24 hours, which is used to determine prevalence
 func (db *DB) GetNetworkSize(minTS time.Time) (uint64, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	var networkSize uint64
 

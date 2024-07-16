@@ -20,13 +20,6 @@ import (
 var (
 	operatorRegex = regexp.MustCompile(`^(?P<operator>[><]=?)?(?P<value>(\d|[A-Za-z.])+)$`)
 
-	validSeverities = map[string]bool{
-		string(config.CriticalThreat): true,
-		string(config.HighThreat):     true,
-		string(config.MediumThreat):   true,
-		string(config.LowThreat):      true,
-	}
-
 	allowedSortColumns = []string{"severity", "beacon", "duration", "subdomains"}
 
 	numericalColumns = []string{"count", "beacon", "subdomains"}
@@ -73,16 +66,11 @@ type searchModel struct {
 }
 
 func NewSearchModel(initialValue string, width int) searchModel {
-	// prompt := fmt.Sprintf(" is:%s ", sectionType)
-	// prompt := "hello world"
-	// prompt := "Search:"
 	ti := textinput.New()
 	ti.Placeholder = ""
 	ti.Focus()
-	// ti.Width = getInputWidth(width, prompt)
-	ti.PromptStyle = ti.PromptStyle.Copy().Foreground(mauve)
-	// ti.Prompt = prompt
-	ti.TextStyle = ti.TextStyle.Copy().Faint(true)
+	ti.PromptStyle = ti.PromptStyle.Foreground(mauve)
+	ti.TextStyle = ti.TextStyle.Faint(true)
 	ti.Blur()
 	ti.SetValue(initialValue)
 	ti.CursorStart()
@@ -91,21 +79,20 @@ func NewSearchModel(initialValue string, width int) searchModel {
 		TextInput:    ti,
 		initialValue: initialValue,
 		width:        width,
-		// sectionType:  sectionType,
 	}
 }
 
-func (m searchModel) Init() tea.Cmd {
+func (m *searchModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m searchModel) Update(msg tea.Msg) (searchModel, tea.Cmd) {
+func (m *searchModel) Update(msg tea.Msg) (*searchModel, tea.Cmd) {
 	var cmd tea.Cmd
 	m.TextInput, cmd = m.TextInput.Update(msg)
 	return m, cmd
 }
 
-func (m searchModel) View() string {
+func (m *searchModel) View() string {
 	helpStyle := lipgloss.NewStyle().Foreground(overlay0)
 	subduedHelpStyle := lipgloss.NewStyle().Foreground(surface0)
 	var label string
@@ -174,17 +161,17 @@ func (m searchModel) View() string {
 }
 
 func (m *searchModel) Focus() {
-	m.TextInput.TextStyle = m.TextInput.TextStyle.Copy().Faint(false)
+	m.TextInput.TextStyle = m.TextInput.TextStyle.Faint(false)
 	m.TextInput.CursorEnd()
 	m.TextInput.Focus()
 }
 
 func (m *searchModel) Blur() {
-	m.TextInput.TextStyle = m.TextInput.TextStyle.Copy().Faint(true)
+	m.TextInput.TextStyle = m.TextInput.TextStyle.Faint(true)
 	m.TextInput.Blur()
 }
 
-func (m searchModel) HasError() bool {
+func (m *searchModel) HasError() bool {
 	return m.searchErr != ""
 }
 
@@ -216,7 +203,7 @@ func (m *searchModel) ValidateSearchInput() {
 	}
 }
 
-func (m *searchModel) Filter() Filter {
+func (m *searchModel) Filter() *Filter {
 	filter, err := ParseSearchInput(m.TextInput.Value())
 	if err != "" {
 		m.searchErr = err
@@ -225,18 +212,18 @@ func (m *searchModel) Filter() Filter {
 }
 
 // ParseSearchInput parses the search input and returns a filter  struct
-func ParseSearchInput(input string) (Filter, string) {
+func ParseSearchInput(input string) (*Filter, string) {
 	// create a new filter struct
-	criteria := Filter{}
+	var criteria Filter
 
 	// return an empty filter if input is empty
 	if input == "" {
-		return Filter{}, ""
+		return nil, ""
 	}
 
 	// check for commas in the input
 	if strings.Contains(input, ",") {
-		return Filter{}, "commas are not supported"
+		return nil, "commas are not supported"
 	}
 
 	// split input into field-value pairs
@@ -250,7 +237,7 @@ func ParseSearchInput(input string) (Filter, string) {
 
 		// verify the search uses the proper colon-separated syntax
 		if !strings.Contains(input, ":") {
-			return Filter{}, "column name and value must be separated by a colon"
+			return nil, "column name and value must be separated by a colon"
 		}
 
 		// split the input into field and value
@@ -266,20 +253,20 @@ func ParseSearchInput(input string) (Filter, string) {
 			// parse operator and value from input
 			operator, number, parseErr := parseSearchOperator(field, value)
 			if parseErr != "" {
-				return Filter{}, parseErr
+				return nil, parseErr
 			}
 
 			// validate number is a true number
 			numberInt, err := strconv.Atoi(number)
 			if err != nil {
-				return Filter{}, field + " must be a valid number"
+				return nil, field + " must be a valid number"
 			}
 
 			// validate and format number to percentage (float from 0-1) for percentage columns
 			if slices.Contains(percentageColumns, field) {
 				// don't allow values over 100%
 				if numberInt > 100 {
-					return Filter{}, field + " can't be greater than 100"
+					return nil, field + " can't be greater than 100"
 				}
 				percentage := float32(numberInt) / 100
 				// divide value by 100 to convert to decimal, must be formatted to two places
@@ -314,7 +301,7 @@ func ParseSearchInput(input string) (Filter, string) {
 			// parse operator and time string from value
 			operator, input, parseErr := parseSearchOperator(field, value)
 			if parseErr != "" {
-				return Filter{}, parseErr
+				return nil, parseErr
 			}
 
 			fmt.Println("operator:", operator, "input", input, "parseErr", parseErr)
@@ -323,7 +310,7 @@ func ParseSearchInput(input string) (Filter, string) {
 			duration, err := time.ParseDuration(input)
 			if err != nil {
 				parseErr = field + " must be a valid time in the format '10s', '1.5h', '2h45m', etc. Valid units are 's', 'm', 'h'"
-				return Filter{}, parseErr
+				return nil, parseErr
 			}
 
 			// assign operator to criteria
@@ -343,7 +330,7 @@ func ParseSearchInput(input string) (Filter, string) {
 			case "src":
 				// validate string is IP address
 				if _, err := netip.ParseAddr(value); err != nil {
-					return Filter{}, "src must be a valid IP address"
+					return nil, "src must be a valid IP address"
 				}
 				criteria.Src = value
 
@@ -351,18 +338,19 @@ func ParseSearchInput(input string) (Filter, string) {
 				// validate if string is IP address
 				if _, err := netip.ParseAddr(value); err != nil {
 					// if value is not an IP, check for valid FQDN
-					if util.ValidFQDN(value) {
-						criteria.Fqdn = value
-					} else {
-						return Filter{}, "dst must be a valid IP address or FQDN"
+					if !util.ValidFQDN(value) {
+						return nil, "dst must be a valid IP address or FQDN"
+
 					}
+					criteria.Fqdn = value
+
 				} else {
 					criteria.Dst = value
 				}
 			case "threat_intel":
 				filter, err := strconv.ParseBool(value)
 				if err != nil {
-					return Filter{}, "threat_intel must be true or false"
+					return nil, "threat_intel must be true or false"
 				}
 				if filter {
 					criteria.ThreatIntel = "true"
@@ -373,7 +361,7 @@ func ParseSearchInput(input string) (Filter, string) {
 				// split the column from the sort direction
 				sortSplit := strings.Split(value, "-")
 				if len(sortSplit) != 2 {
-					return Filter{}, "sort value must contain one hyphen, in the format sort:<column>-<direction>"
+					return nil, "sort value must contain one hyphen, in the format sort:<column>-<direction>"
 				}
 
 				// validate sort column and direction
@@ -382,12 +370,12 @@ func ParseSearchInput(input string) (Filter, string) {
 
 				// make sure this column has sorting enabled
 				if !slices.Contains(allowedSortColumns, column) {
-					return Filter{}, "invalid sort column"
+					return nil, "invalid sort column"
 				}
 
 				// validate sort direction
 				if direction != "asc" && direction != "desc" {
-					return Filter{}, "sort direction must be either asc or desc"
+					return nil, "sort direction must be either asc or desc"
 				}
 
 				// assign sort column and direction to criteria
@@ -413,7 +401,7 @@ func ParseSearchInput(input string) (Filter, string) {
 				// via modifiers, so users aren't able to set assign threat categories in the config to critical
 				// We also do not want to allow users to filter by the None category
 				if err != nil && category != config.CriticalThreat || category == config.NoneThreat {
-					return Filter{}, "invalid category, must be 'critical', 'high', 'medium', or 'low'"
+					return nil, "invalid category, must be 'critical', 'high', 'medium', or 'low'"
 				}
 
 				// assign severity to criteria and set the needed operators for querying
@@ -427,8 +415,7 @@ func ParseSearchInput(input string) (Filter, string) {
 					criteria.Severity = append(criteria.Severity, OperatorFilter{
 						Operator: "<=",
 						Value:    fmt.Sprint(config.HIGH_CATEGORY_SCORE),
-					})
-					criteria.Severity = append(criteria.Severity, OperatorFilter{
+					}, OperatorFilter{
 						Operator: ">=",
 						Value:    fmt.Sprint(config.MEDIUM_CATEGORY_SCORE),
 					})
@@ -436,8 +423,7 @@ func ParseSearchInput(input string) (Filter, string) {
 					criteria.Severity = append(criteria.Severity, OperatorFilter{
 						Operator: "<",
 						Value:    fmt.Sprint(config.MEDIUM_CATEGORY_SCORE),
-					})
-					criteria.Severity = append(criteria.Severity, OperatorFilter{
+					}, OperatorFilter{
 						Operator: ">=",
 						Value:    fmt.Sprint(config.LOW_CATEGORY_SCORE),
 					})
@@ -445,8 +431,7 @@ func ParseSearchInput(input string) (Filter, string) {
 					criteria.Severity = append(criteria.Severity, OperatorFilter{
 						Operator: "<",
 						Value:    fmt.Sprint(config.LOW_CATEGORY_SCORE),
-					})
-					criteria.Severity = append(criteria.Severity, OperatorFilter{
+					}, OperatorFilter{
 						Operator: ">=",
 						Value:    fmt.Sprint(config.NONE_CATEGORY_SCORE),
 					})
@@ -454,13 +439,12 @@ func ParseSearchInput(input string) (Filter, string) {
 
 			}
 		default:
-			return Filter{}, "please reference a valid search column"
+			return nil, "please reference a valid search column"
 		}
 
 	}
-	// panic(fmt.Sprintf("end of function criteria: %+v", criteria))
 
-	return criteria, ""
+	return &criteria, ""
 }
 
 func parseSearchOperator(field string, value string) (string, string, string) {

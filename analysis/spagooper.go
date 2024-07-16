@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strconv"
 	"time"
 
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
@@ -61,7 +60,7 @@ type AnalysisResult struct {
 }
 
 func (analyzer *Analyzer) Spagoop(ctx context.Context) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// record start time
 	start := time.Now()
@@ -117,8 +116,7 @@ func (analyzer *Analyzer) Spagoop(ctx context.Context) error {
 	queryGroup.Go(func() error {
 		_, err := bars.Run()
 		if err != nil {
-			fmt.Println("error running program:", err)
-			os.Exit(1)
+			logger.Error().Err(err).Msg("error running program")
 		}
 		return err
 	})
@@ -139,8 +137,8 @@ func (analyzer *Analyzer) Spagoop(ctx context.Context) error {
 	return nil
 }
 
-func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, progress *tea.Program) error {
-	logger := logger.GetLogger()
+func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) error {
+	logger := zlog.GetLogger()
 
 	// initialize progress bar variables
 	var totalSNI uint64
@@ -353,18 +351,18 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, progress *tea.Progr
 			// send the unique sni connections to the uconn analysis channel
 			analyzer.UconnChan <- res
 			if i%1000 == 0 {
-				progress.Send(progressbar.ProgressMsg{ID: 1, Percent: float64(i / totalSNI)})
+				bars.Send(progressbar.ProgressMsg{ID: 1, Percent: float64(i / totalSNI)})
 			}
 			i++
 		}
 	}
 	rows.Close()
-	progress.Send(progressbar.ProgressMsg{ID: 1, Percent: 1})
+	bars.Send(progressbar.ProgressMsg{ID: 1, Percent: 1})
 	return nil
 }
 
-func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, progress *tea.Program) error {
-	logger := logger.GetLogger()
+func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) error {
+	logger := zlog.GetLogger()
 
 	totalRows := uint64(0)
 	hasSetTotal := false
@@ -373,15 +371,15 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, progress *tea.Progra
 		if !hasSetTotal {
 			totalRows = p.Rows
 			if totalRows == 0 {
-				progress.Send(progressbar.ProgressMsg{ID: 2, Percent: 1})
+				bars.Send(progressbar.ProgressMsg{ID: 2, Percent: 1})
 			}
 			hasSetTotal = true
 		} else {
 			// update the progress bar
 			if totalRows > 0 {
-				progress.Send(progressbar.ProgressMsg{ID: 2, Percent: float64((totalRows - p.Rows) / totalRows)})
+				bars.Send(progressbar.ProgressMsg{ID: 2, Percent: float64((totalRows - p.Rows) / totalRows)})
 			}
-			progress.Send(progressbar.ProgressMsg{ID: 2, Percent: 1})
+			bars.Send(progressbar.ProgressMsg{ID: 2, Percent: 1})
 		}
 	}), clickhouse.WithParameters(clickhouse.Parameters{
 		// use minTSBeacon because all entries in conn are used in beaconing and openconn data is not limited by the hour since the tables are truncated before each import
@@ -574,8 +572,8 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, progress *tea.Progra
 	return nil
 }
 
-func (analyzer *Analyzer) ScoopDNS(ctx context.Context, progress *tea.Program) error {
-	logger := logger.GetLogger()
+func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error {
+	logger := zlog.GetLogger()
 
 	totalRows := uint64(0)
 	hasSetTotal := false
@@ -586,15 +584,15 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, progress *tea.Program) e
 		if !hasSetTotal {
 			totalRows = p.Rows
 			if totalRows == 0 {
-				progress.Send(progressbar.ProgressMsg{ID: 3, Percent: 1})
+				bars.Send(progressbar.ProgressMsg{ID: 3, Percent: 1})
 			}
 			hasSetTotal = true
 		} else {
 			// update the progress bar
 			if totalRows > 0 {
-				progress.Send(progressbar.ProgressMsg{ID: 3, Percent: float64((totalRows - p.Rows) / totalRows)})
+				bars.Send(progressbar.ProgressMsg{ID: 3, Percent: float64((totalRows - p.Rows) / totalRows)})
 			}
-			progress.Send(progressbar.ProgressMsg{ID: 3, Percent: 1})
+			bars.Send(progressbar.ProgressMsg{ID: 3, Percent: 1})
 		}
 
 	}), clickhouse.WithParameters(clickhouse.Parameters{

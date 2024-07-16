@@ -79,11 +79,13 @@ func (c *Conn) SetLogPath(path string) { c.LogPath = path }
 
 // Unmarshals JSON timestamps
 func (ts *Timestamp) UnmarshalJSON(data []byte) error {
-	var t interface{}
+	// unmarshal the data into a generic interface
+	var t any
 	if err := jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &t); err != nil {
 		return err
 	}
 
+	// switch on the type of the data
 	switch input := t.(type) {
 	// all number types are assumed to be in unix format, possibly with fractional seconds
 	case int:
@@ -128,9 +130,7 @@ func (ts *Timestamp) UnmarshalJSON(data []byte) error {
 			}
 			*ts = Timestamp(tsVal)
 		}
-		var unix Timestamp
-		unix = Timestamp(t.UTC().Unix())
-		*ts = unix
+		*ts = Timestamp(t.UTC().Unix())
 	default:
 		return ErrInvalidZeekTimestamp
 	}

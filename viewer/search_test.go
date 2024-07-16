@@ -171,72 +171,72 @@ func (s *ViewerTestSuite) TestSearchResults() {
 	type testCase struct {
 		name         string
 		filter       viewer.Filter
-		valid        func(viewer.Item) bool
-		sorted       func(float64, viewer.Item) (float64, bool) // return whether or not the next item follows the right sort order
-		field        func(viewer.Item) float64                  // returns the field of the column being sorted
+		valid        func(*viewer.Item) bool
+		sorted       func(float64, *viewer.Item) (float64, bool) // return whether or not the next item follows the right sort order
+		field        func(*viewer.Item) float64                  // returns the field of the column being sorted
 		checkSorting bool
 	}
 
 	cases := []testCase{
-		{name: "Filter by src IP", filter: viewer.Filter{Src: "10.55.100.100"}, valid: func(i viewer.Item) bool { return i.Src.String() == "10.55.100.100" }},
-		{name: "Filter by dst IP", filter: viewer.Filter{Dst: "165.227.88.15"}, valid: func(i viewer.Item) bool { return i.Dst.String() == "165.227.88.15" }},
-		{name: "Filter by FQDN", filter: viewer.Filter{Fqdn: "www.alexa.com"}, valid: func(i viewer.Item) bool { return i.FQDN == "www.alexa.com" }},
+		{name: "Filter by src IP", filter: viewer.Filter{Src: "10.55.100.100"}, valid: func(i *viewer.Item) bool { return i.Src.String() == "10.55.100.100" }},
+		{name: "Filter by dst IP", filter: viewer.Filter{Dst: "165.227.88.15"}, valid: func(i *viewer.Item) bool { return i.Dst.String() == "165.227.88.15" }},
+		{name: "Filter by FQDN", filter: viewer.Filter{Fqdn: "www.alexa.com"}, valid: func(i *viewer.Item) bool { return i.FQDN == "www.alexa.com" }},
 		// beacon
-		{name: "Filter by beacon score", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "=", Value: "1"}}, valid: func(i viewer.Item) bool { return i.BeaconScore == 1 }},
-		{name: "Filter by beacon score, greater than", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: ">", Value: "0.98"}, SortBeacon: "asc"}, valid: func(i viewer.Item) bool { return i.BeaconScore > 0.98 }},
-		{name: "Filter by beacon score, greater than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: ">=", Value: "0.98"}}, valid: func(i viewer.Item) bool { return i.BeaconScore >= 0.98 }},
-		{name: "Filter by beacon score, greater than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: ">=", Value: "0.98"}}, valid: func(i viewer.Item) bool { return i.BeaconScore >= 0.98 }},
-		{name: "Filter by beacon score, less than", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "<", Value: "0.70"}}, valid: func(i viewer.Item) bool { return i.BeaconScore < 0.7 }},
-		{name: "Filter by beacon score, less than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "<=", Value: "0.70"}}, valid: func(i viewer.Item) bool { return i.BeaconScore <= 0.7 }},
+		{name: "Filter by beacon score", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "=", Value: "1"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore == 1 }},
+		{name: "Filter by beacon score, greater than", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: ">", Value: "0.98"}, SortBeacon: "asc"}, valid: func(i *viewer.Item) bool { return i.BeaconScore > 0.98 }},
+		{name: "Filter by beacon score, greater than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: ">=", Value: "0.98"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore >= 0.98 }},
+		{name: "Filter by beacon score, greater than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: ">=", Value: "0.98"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore >= 0.98 }},
+		{name: "Filter by beacon score, less than", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "<", Value: "0.70"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore < 0.7 }},
+		{name: "Filter by beacon score, less than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "<=", Value: "0.70"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore <= 0.7 }},
 		// duration
-		{name: "Filter by duration", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "=", Value: "2584"}}, valid: func(i viewer.Item) bool { return math.Floor(float64(i.TotalDuration)) == 2584 }},
-		{name: "Filter by duration, greater than", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: ">", Value: "21600"}}, valid: func(i viewer.Item) bool { return i.TotalDuration > 21600 }},
-		{name: "Filter by duration, greater than or equal", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: ">=", Value: "21600"}}, valid: func(i viewer.Item) bool { return i.TotalDuration >= 21600 }},
-		{name: "Filter by duration, less than", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "<", Value: "3600"}}, valid: func(i viewer.Item) bool { return i.TotalDuration < 3600 }},
-		{name: "Filter by duration, less than or equal", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "<=", Value: "3600"}}, valid: func(i viewer.Item) bool { return i.TotalDuration <= 3600 }},
+		{name: "Filter by duration", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "=", Value: "2584"}}, valid: func(i *viewer.Item) bool { return math.Floor(float64(i.TotalDuration)) == 2584 }},
+		{name: "Filter by duration, greater than", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: ">", Value: "21600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration > 21600 }},
+		{name: "Filter by duration, greater than or equal", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: ">=", Value: "21600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration >= 21600 }},
+		{name: "Filter by duration, less than", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "<", Value: "3600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration < 3600 }},
+		{name: "Filter by duration, less than or equal", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "<=", Value: "3600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration <= 3600 }},
 		// subdomains
-		{name: "Filter by subdomains", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: "=", Value: "62468"}}, valid: func(i viewer.Item) bool { return i.Subdomains == 62468 }},
-		{name: "Filter by subdomains, greater than", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: ">", Value: "50"}}, valid: func(i viewer.Item) bool { return i.Subdomains > 50 }},
-		{name: "Filter by subdomains, greater than or equal", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: ">=", Value: "50"}}, valid: func(i viewer.Item) bool { return i.Subdomains >= 50 }},
-		{name: "Filter by subdomains, less than", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: "<", Value: "100"}}, valid: func(i viewer.Item) bool { return i.Subdomains < 100 }},
-		{name: "Filter by subdomains, less than or equal", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: "<=", Value: "100"}}, valid: func(i viewer.Item) bool { return i.Subdomains <= 100 }},
+		{name: "Filter by subdomains", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: "=", Value: "62468"}}, valid: func(i *viewer.Item) bool { return i.Subdomains == 62468 }},
+		{name: "Filter by subdomains, greater than", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: ">", Value: "50"}}, valid: func(i *viewer.Item) bool { return i.Subdomains > 50 }},
+		{name: "Filter by subdomains, greater than or equal", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: ">=", Value: "50"}}, valid: func(i *viewer.Item) bool { return i.Subdomains >= 50 }},
+		{name: "Filter by subdomains, less than", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: "<", Value: "100"}}, valid: func(i *viewer.Item) bool { return i.Subdomains < 100 }},
+		{name: "Filter by subdomains, less than or equal", filter: viewer.Filter{Subdomains: viewer.OperatorFilter{Operator: "<=", Value: "100"}}, valid: func(i *viewer.Item) bool { return i.Subdomains <= 100 }},
 		// threat intel
-		// {name: "Filter by threat intel, true", filter: viewer.Filter{ThreatIntel: "true"}, valid: func(i viewer.Item) bool { return i.ThreatIntelScore > 0 }},
-		{name: "Filter by threat intel, false", filter: viewer.Filter{ThreatIntel: "false"}, valid: func(i viewer.Item) bool { return i.ThreatIntelScore == 0 }},
+		// {name: "Filter by threat intel, true", filter: viewer.Filter{ThreatIntel: "true"}, valid: func(i *viewer.Item) bool { return i.ThreatIntelScore > 0 }},
+		{name: "Filter by threat intel, false", filter: viewer.Filter{ThreatIntel: "false"}, valid: func(i *viewer.Item) bool { return i.ThreatIntelScore == 0 }},
 		// severity
-		{name: "Filter by severity, critical", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: ">", Value: fmt.Sprint(config.HIGH_CATEGORY_SCORE)}}}, valid: func(i viewer.Item) bool { return i.FinalScore > config.HIGH_CATEGORY_SCORE }},
-		{name: "Filter by severity, high", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: "<=", Value: fmt.Sprint(config.HIGH_CATEGORY_SCORE)}, {Operator: ">=", Value: fmt.Sprint(config.MEDIUM_CATEGORY_SCORE)}}}, valid: func(i viewer.Item) bool {
+		{name: "Filter by severity, critical", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: ">", Value: fmt.Sprint(config.HIGH_CATEGORY_SCORE)}}}, valid: func(i *viewer.Item) bool { return i.FinalScore > config.HIGH_CATEGORY_SCORE }},
+		{name: "Filter by severity, high", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: "<=", Value: fmt.Sprint(config.HIGH_CATEGORY_SCORE)}, {Operator: ">=", Value: fmt.Sprint(config.MEDIUM_CATEGORY_SCORE)}}}, valid: func(i *viewer.Item) bool {
 			return i.FinalScore <= config.HIGH_CATEGORY_SCORE && i.FinalScore >= config.MEDIUM_CATEGORY_SCORE
 		}},
-		{name: "Filter by severity, medium", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: "<", Value: fmt.Sprint(config.MEDIUM_CATEGORY_SCORE)}, {Operator: ">=", Value: fmt.Sprint(config.LOW_CATEGORY_SCORE)}}}, valid: func(i viewer.Item) bool {
+		{name: "Filter by severity, medium", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: "<", Value: fmt.Sprint(config.MEDIUM_CATEGORY_SCORE)}, {Operator: ">=", Value: fmt.Sprint(config.LOW_CATEGORY_SCORE)}}}, valid: func(i *viewer.Item) bool {
 			return i.FinalScore < config.MEDIUM_CATEGORY_SCORE && i.FinalScore >= config.LOW_CATEGORY_SCORE
 		}},
-		{name: "Filter by severity, low", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: "<", Value: fmt.Sprint(config.LOW_CATEGORY_SCORE)}, {Operator: ">=", Value: fmt.Sprint(config.NONE_CATEGORY_SCORE)}}}, valid: func(i viewer.Item) bool {
+		{name: "Filter by severity, low", filter: viewer.Filter{Severity: []viewer.OperatorFilter{{Operator: "<", Value: fmt.Sprint(config.LOW_CATEGORY_SCORE)}, {Operator: ">=", Value: fmt.Sprint(config.NONE_CATEGORY_SCORE)}}}, valid: func(i *viewer.Item) bool {
 			return i.FinalScore < config.LOW_CATEGORY_SCORE && i.FinalScore >= config.NONE_CATEGORY_SCORE
 		}},
 		// sorting
-		{name: "Sort by beacon, desc", filter: viewer.Filter{SortBeacon: "desc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.BeaconScore) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by beacon, desc", filter: viewer.Filter{SortBeacon: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.BeaconScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.BeaconScore), newItem.BeaconScore <= float32(currentVal)
 		}},
-		{name: "Sort by beacon, asc", filter: viewer.Filter{SortBeacon: "asc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.BeaconScore) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by beacon, asc", filter: viewer.Filter{SortBeacon: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.BeaconScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.BeaconScore), newItem.BeaconScore >= float32(currentVal)
 		}},
-		{name: "Sort by duration, desc", filter: viewer.Filter{SortDuration: "desc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.TotalDuration) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by duration, desc", filter: viewer.Filter{SortDuration: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.TotalDuration) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.TotalDuration), newItem.TotalDuration <= float32(currentVal)
 		}},
-		{name: "Sort by duration, asc", filter: viewer.Filter{SortDuration: "asc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.TotalDuration) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by duration, asc", filter: viewer.Filter{SortDuration: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.TotalDuration) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.TotalDuration), newItem.TotalDuration >= float32(currentVal)
 		}},
-		{name: "Sort by severity, desc", filter: viewer.Filter{SortSeverity: "desc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.FinalScore) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by severity, desc", filter: viewer.Filter{SortSeverity: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.FinalScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.FinalScore), newItem.FinalScore <= float32(currentVal)
 		}},
-		{name: "Sort by severity, asc", filter: viewer.Filter{SortSeverity: "asc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.FinalScore) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by severity, asc", filter: viewer.Filter{SortSeverity: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.FinalScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.FinalScore), newItem.FinalScore >= float32(currentVal)
 		}},
-		{name: "Sort by subdomains, desc", filter: viewer.Filter{SortSubdomains: "desc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.Subdomains) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by subdomains, desc", filter: viewer.Filter{SortSubdomains: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.Subdomains) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.Subdomains), float64(newItem.Subdomains) <= currentVal
 		}},
-		{name: "Sort by subdomains, asc", filter: viewer.Filter{SortSubdomains: "asc"}, checkSorting: true, field: func(item viewer.Item) float64 { return float64(item.Subdomains) }, sorted: func(currentVal float64, newItem viewer.Item) (float64, bool) {
+		{name: "Sort by subdomains, asc", filter: viewer.Filter{SortSubdomains: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.Subdomains) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.Subdomains), float64(newItem.Subdomains) >= currentVal
 		}},
 	}
@@ -244,7 +244,7 @@ func (s *ViewerTestSuite) TestSearchResults() {
 		test := cases[i]
 		s.Run(test.name, func() {
 			// get filter from search bar
-			res, appliedFilter, err := viewer.GetResults(s.db, test.filter, 0, 20, s.minTimestamp)
+			res, appliedFilter, err := viewer.GetResults(s.db, &test.filter, 0, 20, s.minTimestamp)
 			require.NoError(t, err)
 			require.True(t, appliedFilter, "filter criteria must be applied")
 			require.NotEmpty(t, res, "results should not be empty")
@@ -256,7 +256,7 @@ func (s *ViewerTestSuite) TestSearchResults() {
 				// check that the results match the search criteria
 				valid := true
 				for _, r := range res {
-					valid = test.valid(r.(viewer.Item))
+					valid = test.valid(r.(*viewer.Item))
 				}
 				require.True(t, valid, "all results should match the search criteria")
 			}
@@ -265,14 +265,14 @@ func (s *ViewerTestSuite) TestSearchResults() {
 }
 
 // validateSorting checks whether or not results are sorted by a particular column
-func validateSorting(items []list.Item, field func(viewer.Item) float64, sorted func(float64, viewer.Item) (float64, bool)) bool {
+func validateSorting(items []list.Item, field func(*viewer.Item) float64, sorted func(float64, *viewer.Item) (float64, bool)) bool {
 	var current float64
 	for i, item := range items {
 		if i == 0 {
 			// set the initial value by getting the right field for the first item
-			current = field(item.(viewer.Item))
+			current = field(item.(*viewer.Item))
 		}
-		res, ok := item.(viewer.Item)
+		res, ok := item.(*viewer.Item)
 		if !ok {
 			return false
 		}

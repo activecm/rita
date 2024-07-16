@@ -294,6 +294,31 @@ func TestGetTimestampScore(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name: "Connection with Bi-Modal Intervals",
+			// timestamps : 1517338924, 1517338924 + 98, 1517338924 + 98 + 300, 1517338924 + 98 + 300 + 98, 1517338924 + 98 + 300 + 98 + 300, 1517338924 + 98 + 300 + 98 + 300 + 98, 1517338924 + 98 + 300 + 98 + 300 + 98 + 300, 1517338924 + 98 + 300 + 98 + 300 + 98 + 300 + 98, 1517338924 + 98 + 300 + 98 + 300 + 98 + 300 + 98 + 300, 1517338924 + 98 + 300 + 98 + 300 + 98 + 300 + 98 + 300 + 98,
+			tsList: []uint32{1517338924, 1517339022, 1517339322, 1517339420, 1517339720, 1517339818, 1517340118, 1517340216, 1517340516, 1517340614, 1517340914},
+			// intervals between timestamps: 98, 300, 98, 300, 98, 300, 98, 300, 98
+			expectedUniqueIntervals:      []int64{98, 300},
+			expectedUniqueIntervalCounts: []int64{5, 5},
+			expectedTSMode:               98,
+			expectedTSModeCount:          5,
+			// Quartiles:  {98 199 300}
+			// q1 = 98, q2 = 199, q3 = 300
+			// numerator = q3 + q1 - 2*q2 = 300 + 98 - 2*199 = 300 + 98 - 398 = 0
+			// IQR = q3 - q1 = 300 - 98 = 202
+			// Bowley Skewness = (Q3+Q1 – 2Q2) / (Q3 – Q1) = numerator / IQR
+			// but if the denominator less than 10 or the median is equal to the lower or upper quartile, the skewness is zero
+			// skewness = 0
+			// skewness score = 1 - skewness = 1 - 0 = 1
+			// median absolute deviation = median(abs(x - median(x))) = median(abs(x - 199)) = median(101, 100, 101, 100, 101, 100, 101, 100, 101) = 101
+			// MAD score = 1 - (mad/median) = 1 - 101/199 = 0.492
+			// score = round(((1 + 0.492)/2)*1000)/1000 = 0.746
+			expectedSkew:  0,
+			expectedMAD:   101,
+			expectedScore: 0.746,
+			expectedError: false,
+		},
+		{
 			name:   "Connection with Random Intervals",
 			tsList: []uint32{1517338924, 1517338925, 1517339224, 1517339249, 1517344224, 1517344314, 1517344316, 1517344358, 1517344858, 1517346358},
 			// intervals between timestamps: 1, 299, 25, 4975, 90, 2, 42, 500, 1500
@@ -463,14 +488,6 @@ func TestGetDataSizeScore(t *testing.T) {
 
 			// run the function
 			score, skew, mad, sizes, sizeCounts, mode, modeCount, err := getDataSizeScore(test.bytesList)
-			// fmt.Println("score: ", score)
-			// fmt.Println("skew: ", skew)
-			// fmt.Println("mad: ", mad)
-			// fmt.Println("sizes: ", sizes)
-			// fmt.Println("sizeCounts: ", sizeCounts)
-			// fmt.Println("mode: ", mode)
-			// fmt.Println("modeCount: ", modeCount)
-			// fmt.Println("err: ", err)
 
 			// check if an error was expected
 			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)

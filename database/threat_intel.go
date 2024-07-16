@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
@@ -80,7 +80,7 @@ func (server *ServerConn) createThreatIntelTables() error {
 
 // syncThreatIntelFeedsFromConfig updates the threat intel feeds in the metadatabase based on the config
 func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *config.Config) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// get the list of threat intel feeds from the config
 	feeds, err := getThreatIntelFeeds(afs, cfg)
@@ -152,7 +152,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			}
 
 		// if feed has has an oudated last modified date, update as custom feed
-		case entry.LastModifiedOnDisk != feeds[entry.Path].LastModified:
+		case !entry.LastModifiedOnDisk.Equal(feeds[entry.Path].LastModified):
 			logger.Info().Str("feed_path", entry.Path).Msg("[THREAT INTEL] Updating custom feed because it has been modified...")
 			// open the feed file
 			feed, err = getCustomFeed(entry.Path)
@@ -167,13 +167,14 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 		}
 
 		// update the feed record in the database
-		if err = server.updateFeed(entry, feeds[entry.Path].LastModified, feed, writer.WriteChannel); err != nil {
+		if err = server.updateFeed(&entry, feeds[entry.Path].LastModified, feed, writer.WriteChannel); err != nil {
 			return err
 		}
 
 	}
 	// iterate over each feed in the config that was not in the database
-	for path, entry := range feeds {
+	for path := range feeds {
+		entry := feeds[path]
 		if !entry.Existing {
 			var feed io.ReadCloser
 			if entry.Online {
@@ -195,7 +196,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			}
 
 			// add the new feed to the database
-			if err = server.addNewFeed(path, entry, feed, writer.WriteChannel); err != nil {
+			if err = server.addNewFeed(path, &entry, feed, writer.WriteChannel); err != nil {
 				return err
 			}
 		}
@@ -222,7 +223,7 @@ func getThreatIntelFeeds(afs afero.Fs, cfg *config.Config) (map[string]threatInt
 // getCustomFeedsList populates the feeds map with the custom feed files contained in a specified directory
 // and their last modified times
 func getCustomFeedsList(afs afero.Fs, feeds map[string]threatIntelFeed, dirPath string) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	feedDir, err := util.ParseRelativePath(dirPath)
 	if err != nil {
@@ -295,7 +296,7 @@ func getCustomFeed(path string) (io.ReadCloser, error) {
 	return file, nil
 }
 
-func (server *ServerConn) updateFeed(entry threatIntelFeedRecord, lastModified time.Time, feed io.ReadCloser, writeChan chan Data) error {
+func (server *ServerConn) updateFeed(entry *threatIntelFeedRecord, lastModified time.Time, feed io.ReadCloser, writeChan chan Data) error {
 	// clear feed from database
 	if err := server.removeFeedEntries(entry.Hash); err != nil {
 		return err
@@ -315,7 +316,7 @@ func (server *ServerConn) updateFeed(entry threatIntelFeedRecord, lastModified t
 	return nil
 }
 
-func (server *ServerConn) addNewFeed(path string, entry threatIntelFeed, feed io.ReadCloser, writeChan chan Data) error {
+func (server *ServerConn) addNewFeed(path string, entry *threatIntelFeed, feed io.ReadCloser, writeChan chan Data) error {
 	// get hash of the feed path
 	hash, err := util.NewFixedStringHash(path)
 	if err != nil {
@@ -323,7 +324,7 @@ func (server *ServerConn) addNewFeed(path string, entry threatIntelFeed, feed io
 	}
 
 	// create a new feed record
-	record := threatIntelFeedRecord{
+	record := &threatIntelFeedRecord{
 		Hash:               hash,
 		Path:               path,
 		Online:             entry.Online,
@@ -358,7 +359,7 @@ func (server *ServerConn) removeFeed(hash util.FixedString) error {
 }
 
 // createFeedRecord adds a feed record to the metadatabase to track a threat intel feed
-func (server *ServerConn) createFeedRecord(record threatIntelFeedRecord) error {
+func (server *ServerConn) createFeedRecord(record *threatIntelFeedRecord) error {
 	record.LastModified = time.Now().UTC()
 
 	err := server.Conn.Exec(server.ctx, `

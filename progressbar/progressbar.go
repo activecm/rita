@@ -47,7 +47,7 @@ type ProgressModel struct {
 	ctx              context.Context
 }
 
-func (m ProgressModel) Init() tea.Cmd {
+func (m *ProgressModel) Init() tea.Cmd {
 	cmds := []tea.Cmd{tickCmd()}
 	for i := range m.Spinners {
 		cmds = append(cmds, m.Spinners[i].spinner.Tick)
@@ -55,6 +55,7 @@ func (m ProgressModel) Init() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
+//nolint:gocritic // bubbletea progress bar models are not pointers
 func NewBar(name string, id int, bar progress.Model) *ProgressBar {
 	return &ProgressBar{name: name, id: id, bar: bar}
 }
@@ -67,11 +68,7 @@ func NewSpinner(name string, id int) Spinner {
 }
 
 func New(ctx context.Context, bars []*ProgressBar, spinners []Spinner) *tea.Program {
-	s := spinner.New()
-	s.Spinner = spinner.Dot
-	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-
-	return tea.NewProgram(ProgressModel{
+	return tea.NewProgram(&ProgressModel{
 		ProgressBars: bars,
 		Spinners:     spinners,
 		ctx:          ctx,
@@ -87,7 +84,7 @@ func tickCmd() tea.Cmd {
 	})
 }
 
-func (m ProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *ProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tickMsg:
 		select {

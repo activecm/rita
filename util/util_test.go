@@ -28,7 +28,7 @@ func TestNewFixedStringHash(t *testing.T) {
 			name: "Single string",
 			args: []string{"hello"},
 			expected: FixedString{
-				//#nosec G401 : this md5 is used for hashing, not for security
+				// #nosec G401 : this md5 is used for hashing, not for security
 				Data: md5.Sum([]byte("hello")),
 			},
 			expectErr: false,

@@ -76,10 +76,7 @@ func (m *footerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, nil
 	case tea.KeyMsg:
-		switch msg.String() {
-		default:
-			return m, nil
-		}
+		return m, nil
 
 	default:
 		var cmd tea.Cmd
@@ -97,17 +94,17 @@ func (m *footerModel) View() string {
 	if m.ErrMsg != "" {
 		msg = m.ErrMsg
 	}
-	dbFooter := mainStyle.Copy().Margin(0, 0, 0, 0).Padding(0, 2).Background(lavender).Foreground(base).AlignVertical(lipgloss.Bottom).Bold(true).Render("Database")
+	dbFooter := mainStyle.Margin(0, 0, 0, 0).Padding(0, 2).Background(lavender).Foreground(base).AlignVertical(lipgloss.Bottom).Bold(true).Render("Database")
 	spinnerWidth := m.width - 12 - 10 - 2 - len(m.dbName) - len(msg) - 1
-	middleBarStyle := mainStyle.Copy().Background(barColor).Foreground(defaultTextColor)
+	middleBarStyle := mainStyle.Background(barColor).Foreground(defaultTextColor)
 	dbFooter += middleBarStyle.PaddingLeft(1).Render(m.dbName)
 	if m.loading {
-		dbFooter += middleBarStyle.Copy().Width(spinnerWidth).AlignHorizontal(lipgloss.Right).Render(m.spinner.View())
+		dbFooter += middleBarStyle.Width(spinnerWidth).AlignHorizontal(lipgloss.Right).Render(m.spinner.View())
 		dbFooter += middleBarStyle.PaddingRight(1).Render(msg)
 	} else {
-		dbFooter += middleBarStyle.Copy().Width(spinnerWidth + len(msg) + 2).Render()
+		dbFooter += middleBarStyle.Width(spinnerWidth + len(msg) + 2).Render()
 	}
-	dbFooter += mainStyle.Copy().Background(overlay2).Padding(0, 2).Render("? help")
+	dbFooter += mainStyle.Background(overlay2).Padding(0, 2).Render("? help")
 	return dbFooter
 
 }

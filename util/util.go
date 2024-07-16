@@ -2,7 +2,7 @@ package util
 
 import (
 	"context"
-	"crypto/md5" //#nosec
+	"crypto/md5" // #nosec
 	"database/sql/driver"
 	"encoding/hex"
 	"errors"
@@ -46,6 +46,7 @@ type FixedString struct {
 }
 
 func init() {
+	// parse private IPs
 	privateIPs, err := ParseSubnets(
 		[]string{
 			// "127.0.0.0/8",    // IPv4 Loopback; handled by ip.IsLoopback
@@ -57,12 +58,12 @@ func init() {
 			"192.168.0.0/16", // RFC1918
 			"fc00::/7",       // IPv6 unique local addr
 		})
-
-	if err == nil {
-		privateIPBlocks = privateIPs
-	} else {
+	if err != nil {
 		panic(fmt.Sprintf("Error defining private IPs: %v", err.Error()))
 	}
+
+	// set privateIPBlocks to the parsed subnets
+	privateIPBlocks = privateIPs
 }
 
 func NewFixedStringHash(args ...string) (FixedString, error) {
@@ -75,7 +76,7 @@ func NewFixedStringHash(args ...string) (FixedString, error) {
 		return FixedString{}, errors.New("joined string is empty")
 	}
 
-	//#nosec
+	// #nosec
 	hash := md5.Sum([]byte(strings.Join(args, "")))
 
 	fs := FixedString{

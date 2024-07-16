@@ -92,7 +92,7 @@ func FormatListTable(dbs []database.ImportDatabase) *table.Table {
 		BorderStyle(re.NewStyle().Foreground(lipgloss.Color("238"))).
 		Headers(headers...).
 		Rows(data...).
-		StyleFunc(func(row, col int) lipgloss.Style {
+		StyleFunc(func(row, _ int) lipgloss.Style {
 			if row == 0 {
 				return headerStyle
 			}

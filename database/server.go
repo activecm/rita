@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
-	driver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/spf13/afero"
 )
 
@@ -32,7 +32,7 @@ var errRollingFlagMissing = errors.New("cannot import non-rolling data to a roll
 
 // SetUpNewImport creates the database requested for this import and returns a new DB struct for connection to said database
 func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag bool, rebuildFlag bool) (*DB, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// validate parameters
 	if cfg == nil {
@@ -141,7 +141,7 @@ func (server *ServerConn) createHistoricalFirstSeenTable() error {
 
 // createSensorDatabase creates a database for the specified sensor and returns a connection to it
 func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string, rolling bool) (*DB, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// create a database named after the specified sensor
 	ctx := clickhouse.Context(context.Background(), clickhouse.WithParameters(clickhouse.Parameters{
@@ -261,11 +261,10 @@ func (server *ServerConn) DropMultipleSensorDatabases(dbName string, wildcardSta
 
 // dropSensorDatabase drops the specified sensor database
 func (server *ServerConn) dropSensorDatabase(dbName string) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 	err := dropDatabase(server.ctx, server.Conn, dbName)
 	if err != nil {
-		logger.Err(err).Str("database", dbName).
-			Msg("failed to drop database")
+		logger.Err(err).Str("database", dbName).Msg("failed to drop database")
 		return err
 	}
 	return nil
@@ -293,7 +292,7 @@ func GetRollingStatus(dbCtx context.Context, conn driver.Conn, dbName string) (b
 	}
 
 	// if import database does not exist, return an error
-	exists, err := SensorDatabaseExists(conn, dbCtx, dbName)
+	exists, err := SensorDatabaseExists(dbCtx, conn, dbName)
 	if err != nil {
 		return false, err
 	}
@@ -318,7 +317,7 @@ func GetRollingStatus(dbCtx context.Context, conn driver.Conn, dbName string) (b
 
 // checkRolling checks the rolling status of a database
 func (server *ServerConn) checkRolling(dbName string, rollingFlag bool, rebuildFlag bool) (bool, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// get the current rolling status of the database from the imports table (if db already exists)
 	rolling, err := GetRollingStatus(server.ctx, server.Conn, dbName)
@@ -359,10 +358,10 @@ type ImportDatabase struct {
 }
 
 func (server *ServerConn) ListImportDatabases() ([]ImportDatabase, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// if metadatabase does not exist, return an empty list
-	exists, err := DatabaseExists(server.Conn, server.ctx, "metadatabase")
+	exists, err := DatabaseExists(server.ctx, server.Conn, "metadatabase")
 	if err != nil {
 		return nil, err
 	}
@@ -389,10 +388,10 @@ func (server *ServerConn) ListImportDatabases() ([]ImportDatabase, error) {
 	return sensorDBs, nil
 }
 
-func SensorDatabaseExists(conn driver.Conn, ctx context.Context, dbName string) (bool, error) {
-	logger := logger.GetLogger()
+func SensorDatabaseExists(ctx context.Context, conn driver.Conn, dbName string) (bool, error) {
+	logger := zlog.GetLogger()
 	// check if database actually exists
-	dbExists, err := DatabaseExists(conn, ctx, dbName)
+	dbExists, err := DatabaseExists(ctx, conn, dbName)
 	if err != nil {
 		logger.Err(err).Str("database", dbName).Msg("failed to check if database exists")
 		return false, err
@@ -413,6 +412,7 @@ func SensorDatabaseExists(conn driver.Conn, ctx context.Context, dbName string) 
 	return exists > 0, nil
 }
 
+// GetFlatDatabaseList returns a list of database names from a list of ImportDatabase structs
 func GetFlatDatabaseList(dbs []ImportDatabase) []string {
 	var dbList []string
 	for _, db := range dbs {
@@ -421,8 +421,8 @@ func GetFlatDatabaseList(dbs []ImportDatabase) []string {
 	return dbList
 }
 
-func DatabaseExists(conn driver.Conn, ctx context.Context, dbName string) (bool, error) {
-	logger := logger.GetLogger()
+func DatabaseExists(ctx context.Context, conn driver.Conn, dbName string) (bool, error) {
+	logger := zlog.GetLogger()
 
 	paramsCtx := clickhouse.Context(ctx, clickhouse.WithParameters(clickhouse.Parameters{"database": dbName}))
 
@@ -438,7 +438,9 @@ func DatabaseExists(conn driver.Conn, ctx context.Context, dbName string) (bool,
 
 // dropDatabase drops the specified database
 func dropDatabase(ctx context.Context, conn driver.Conn, dbName string) error {
-	paramsCtx := clickhouse.Context(ctx, clickhouse.WithParameters(clickhouse.Parameters{"database": dbName}))
+	paramsCtx := clickhouse.Context(ctx, clickhouse.WithParameters(clickhouse.Parameters{
+		"database": dbName,
+	}))
 	err := conn.Exec(paramsCtx, "DROP DATABASE IF EXISTS {database:Identifier}")
 	if err != nil {
 		return err
@@ -448,7 +450,7 @@ func dropDatabase(ctx context.Context, conn driver.Conn, dbName string) error {
 
 // ConnectToServer connects to the clickhouse server as the default user
 func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{cfg.DBConnection}, // read from env instead

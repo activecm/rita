@@ -7,7 +7,7 @@ import (
 
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/viewer"
 
 	"github.com/joho/godotenv"
@@ -44,12 +44,12 @@ func main() {
 		},
 		Before: func(cCtx *cli.Context) error {
 			// set logger mode based on APP_ENV
-			logger.DebugMode = os.Getenv("APP_ENV") == "dev"
+			zlog.DebugMode = os.Getenv("APP_ENV") == "dev"
 
 			// override APP_ENV if the --debug flag is set
 			// *note that global flags must be placed before the subcommand when running in the CLI
 			if cCtx.Bool("debug") {
-				logger.DebugMode = true
+				zlog.DebugMode = true
 				viewer.DebugMode = true
 			}
 
@@ -65,7 +65,7 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		logger := logger.GetLogger()
+		logger := zlog.GetLogger()
 		logger.Fatal().Err(err).Send()
 	}
 

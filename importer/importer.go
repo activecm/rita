@@ -14,7 +14,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
-	zerolog "github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
@@ -126,7 +126,7 @@ type WaitGroups struct {
 
 // NewImporter creates and returns a new Importer object
 func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time, numDigesters int, numParsers int, numWriters int) (*Importer, error) {
-	logger := zerolog.GetLogger()
+	logger := zlog.GetLogger()
 
 	// create channels to hold the network traffic entries
 	entryChannels := EntryChans{
@@ -155,7 +155,7 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 	limiter := rate.NewLimiter(5, 5)
 
 	// create writer objects to write output data to the individual log collections
-	writers := writers{
+	logWriters := writers{
 		ConnTmp:     database.NewBulkWriter(db, cfg, numWriters, db.GetSelectedDB(), "conn_tmp", "INSERT INTO {database:Identifier}.conn_tmp", limiter, false),
 		OpenConnTmp: database.NewBulkWriter(db, cfg, numWriters, db.GetSelectedDB(), "openconn_tmp", "INSERT INTO {database:Identifier}.openconn_tmp", limiter, false),
 		DNS:         database.NewBulkWriter(db, cfg, numWriters, db.GetSelectedDB(), "dns", "INSERT INTO {database:Identifier}.dns", limiter, false),
@@ -166,8 +166,8 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 		OpenSSLTmp:  database.NewBulkWriter(db, cfg, numWriters, db.GetSelectedDB(), "openssl_tmp", "INSERT INTO {database:Identifier}.openssl_tmp", limiter, false),
 	}
 
-	// create progress bar
-	progress := mpb.New(mpb.WithWidth(64))
+	// create progressBar bar
+	progressBar := mpb.New(mpb.WithWidth(64))
 
 	// set the overall db import start time
 	db.ImportStartedAt = importStartedAt
@@ -193,24 +193,24 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 		Paths:                    make(chan string, 10),
 		ErrChannel:               make(chan error, 100),
 		DoneChannels:             doneChannels,
-		Writers:                  writers,
+		Writers:                  logWriters,
 		WriteLimiter:             rate.NewLimiter(5, 5),
-		ProgressBar:              progress,
-		ProgressLogger:           log.New(progress, "", 0),
+		ProgressBar:              progressBar,
+		ProgressLogger:           log.New(progressBar, "", 0),
 		NumParsers:               numParsers,
 		NumDigesters:             numDigesters,
 		NumWriters:               numWriters,
 		ResultCounts:             ResultCounts{},
 		importStartedCallback:    db.AddImportStartRecordToMetaDB,
 		validateLogFilesCallback: db.CheckIfFilesWereAlreadyImported,
-		startWritersCallback:     writers.startWriters,
-		closeWritersCallback:     writers.closeWriters,
+		startWritersCallback:     logWriters.startWriters,
+		closeWritersCallback:     logWriters.closeWriters,
 		markFileImportedCallback: db.MarkFileImportedInMetaDB,
 	}, nil
 }
 
 func (importer *Importer) Import(afs afero.Fs, files map[string][]string) error {
-	logger := zerolog.GetLogger()
+	logger := zlog.GetLogger()
 
 	// record the hourlyImportStart time of this import chunk
 	hourlyImportStart := time.Now()
@@ -466,7 +466,7 @@ func (importer *Importer) feedAndListenForFileCompletion() {
 }
 
 // digester loops over the paths, checks the file prefix, and sends each path to the parser with its corresponding entryChannel until either paths or done is closed.
-func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error, entryChannels EntryChans, metaDBChan chan<- MetaDBFile, database string, importID util.FixedString, progressLogger *log.Logger) {
+func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error, entryChannels EntryChans, metaDBChan chan<- MetaDBFile, dbName string, importID util.FixedString, progressLogger *log.Logger) {
 	// errc := make(chan error)
 
 	// read entries from err channel, handle specific errors if necessary
@@ -482,25 +482,25 @@ func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error
 		progressLogger.Println("[-] Parsing: ", path)
 		switch {
 		case strings.HasPrefix(filepath.Base(path), ConnPrefix):
-			parseFile(afs, path, entryChannels.Conn, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.Conn, errc, metaDBChan, dbName, importID)
 			done.conn <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), OpenConnPrefix):
-			parseFile(afs, path, entryChannels.OpenConn, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.OpenConn, errc, metaDBChan, dbName, importID)
 			done.openconn <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), DNSPrefix):
-			parseFile(afs, path, entryChannels.DNS, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.DNS, errc, metaDBChan, dbName, importID)
 			done.dns <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), HTTPPrefix):
-			parseFile(afs, path, entryChannels.HTTP, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.HTTP, errc, metaDBChan, dbName, importID)
 			done.http <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), OpenHTTPPrefix):
-			parseFile(afs, path, entryChannels.OpenHTTP, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.OpenHTTP, errc, metaDBChan, dbName, importID)
 			done.openhttp <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), SSLPrefix):
-			parseFile(afs, path, entryChannels.SSL, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.SSL, errc, metaDBChan, dbName, importID)
 			done.ssl <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), OpenSSLPrefix):
-			parseFile(afs, path, entryChannels.OpenSSL, errc, metaDBChan, database, importID)
+			parseFile(afs, path, entryChannels.OpenSSL, errc, metaDBChan, dbName, importID)
 			done.openssl <- struct{}{}
 		}
 		done.filesDone <- struct{}{}
@@ -535,7 +535,7 @@ func (writer *writers) closeWriters() {
 
 // season links the http & ssl logs with the conn logs and adds data to those connections
 func (importer *Importer) season() error {
-	logger := zerolog.GetLogger()
+	logger := zlog.GetLogger()
 
 	limiter := rate.NewLimiter(5, 5)
 	writerWorkers := 2
@@ -585,8 +585,9 @@ func (importer *Importer) season() error {
 		}
 	}
 
-	barList = append(barList, progressbar.NewBar(sslBarName, sslID, progress.New(gradient)))
-	barList = append(barList, progressbar.NewBar(httpBarName, httpID, progress.New(gradient)))
+	barList = append(barList,
+		progressbar.NewBar(sslBarName, sslID, progress.New(gradient)),
+		progressbar.NewBar(httpBarName, httpID, progress.New(gradient)))
 	spinners = append(spinners, progressbar.NewSpinner("Sifting IP connections...", connSpinnerID))
 	bars := progressbar.New(ctx, barList, spinners)
 
@@ -664,7 +665,7 @@ func (importer *Importer) season() error {
 
 	// // don't truncate tmp tables in debug mode
 	// // these tables should be truncated before each import
-	if zerolog.DebugMode {
+	if zlog.DebugMode {
 		return nil
 	}
 	return importer.Database.TruncateTmpLinkTables()

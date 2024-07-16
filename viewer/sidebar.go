@@ -22,13 +22,13 @@ type modifier struct {
 
 type sidebarModel struct {
 	Viewport       viewport.Model
-	Data           Item
+	Data           *Item
 	maxTimestamp   time.Time
 	useCurrentTime bool
 	ScrollEnabled  bool
 }
 
-func NewSidebarModel(maxTS time.Time, useCurrentTime bool, initialData Item) sidebarModel {
+func NewSidebarModel(maxTS time.Time, useCurrentTime bool, initialData *Item) sidebarModel {
 	return sidebarModel{
 		Viewport:       viewport.Model{},
 		maxTimestamp:   maxTS,
@@ -41,18 +41,7 @@ func (m *sidebarModel) Init() tea.Cmd {
 	m.Viewport.SetContent(m.getSidebarContents())
 	return nil
 }
-func (m *sidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// switch msg := msg.(type) {
-	// case tea.KeyMsg:
-	// 	switch {
-	// 	// case key.Matches(msg, keys.Keys.PageDown):
-	// 	// 	m.viewport.HalfViewDown()
-
-	// 	// case key.Matches(msg, keys.Keys.PageUp):
-	// 	// 	m.viewport.HalfViewUp()
-	// 	}
-	// }
-
+func (m *sidebarModel) Update(_ tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
@@ -86,7 +75,7 @@ func (m *sidebarModel) getSidebarContents() string {
 		fqdnLabel := "FQDN"
 		dstStyle := lipgloss.NewStyle().Width(m.Viewport.Width - len(fqdnLabel) - (headerPadding * 4))
 
-		target = lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(fqdnLabel), headerValueStyle.Copy().Render(Truncate(m.Data.GetDst(), dstStyle)))
+		target = lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(fqdnLabel), headerValueStyle.Render(Truncate(m.Data.GetDst(), &dstStyle)))
 		target = lipgloss.NewStyle().MarginBottom(2).Render(target)
 	} else {
 		// handle connection pair, ip -> ip or ip -> fqdn
@@ -96,8 +85,8 @@ func (m *sidebarModel) getSidebarContents() string {
 		dstStyle := lipgloss.NewStyle().Width(m.Viewport.Width - len(dstLabel) - (headerPadding * 4))
 		// - 6 - len(m.data.GetSrc())
 		// dstStyle := lipgloss.NewStyle().Width(dstWidth)
-		src := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(srcLabel), headerValueStyle.Copy().Render(Truncate(m.Data.GetSrc(), srcStyle)))
-		dst := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(dstLabel), headerValueStyle.Copy().Render(Truncate(m.Data.GetDst(), dstStyle)))
+		src := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(srcLabel), headerValueStyle.Render(Truncate(m.Data.GetSrc(), &srcStyle)))
+		dst := lipgloss.JoinHorizontal(lipgloss.Left, headerLabelStyle.Render(dstLabel), headerValueStyle.Render(Truncate(m.Data.GetDst(), &dstStyle)))
 		target = lipgloss.JoinVertical(lipgloss.Top, lipgloss.NewStyle().MarginBottom(1).Render(src), dst)
 	}
 	heading := lipgloss.NewStyle().
@@ -271,70 +260,5 @@ func renderModifier(mod modifier) string {
 
 	data := lipgloss.NewStyle().Foreground(defaultTextColor).Render(mod.value)
 	modifier := lipgloss.JoinVertical(lipgloss.Top, header, data)
-	// modifier = lipgloss.NewStyle().Border(lipgloss.NormalBorder(), false, true, false, false).Padding(0, 2, 0, 0).Render(modifier)
 	return modifier
-}
-
-func renderPorts(portProtoService []string, viewportWidth int, remainingLines int) string {
-	if len(portProtoService) == 0 {
-		return ""
-	}
-
-	// create style for header
-	portsHeaderStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2).MarginTop(1)
-
-	// render header
-	portsHeader := portsHeaderStyle.Render("Port : Proto : Service")
-
-	// calculate number of items each column should have
-	itemsPerColumn := remainingLines - lipgloss.Height(portsHeader)
-	if itemsPerColumn < 1 {
-		itemsPerColumn = 1
-	}
-
-	// calculate the number of columns needed
-	numColumns := (len(portProtoService) + itemsPerColumn - 1) / itemsPerColumn
-
-	// determine the maximum width per column
-	estimatedColumnWidth := lipgloss.Width(portProtoService[0]) + 3
-
-	// calculate the number of columns that can be displayed on the screen
-	numDisplayColumns := viewportWidth / estimatedColumnWidth
-
-	// create style for data
-	dataStyle := lipgloss.NewStyle().Width(estimatedColumnWidth)
-
-	// create columns
-	columns := make([][]string, numColumns)
-	for i := range columns {
-		columnStart := i * itemsPerColumn
-		columnEnd := columnStart + itemsPerColumn
-		if columnEnd > len(portProtoService) {
-			columnEnd = len(portProtoService)
-		}
-		columns[i] = portProtoService[columnStart:columnEnd]
-	}
-
-	// render columns
-	columnStrs := make([]string, 0)
-	for i := 0; i < numDisplayColumns && i < numColumns; i++ {
-		// get column
-		col := columns[i]
-
-		// replace last item in column with ellipsis if there are more columns than can be displayed
-		if i == numDisplayColumns-1 && numDisplayColumns < numColumns {
-			col[len(col)-1] = "..."
-		}
-
-		// add column to list of columns to be rendered
-		columnStrs = append(columnStrs, dataStyle.Render(lipgloss.JoinVertical(lipgloss.Left, col...)))
-	}
-
-	// join columns horizontally
-	portsData := lipgloss.JoinHorizontal(lipgloss.Top, columnStrs...)
-
-	// combine the header with data
-	ports := lipgloss.JoinVertical(lipgloss.Top, portsHeader, portsData)
-
-	return ports
 }

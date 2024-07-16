@@ -9,7 +9,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
-	zerolog "github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
@@ -83,9 +83,8 @@ type ZeekUIDRecord struct {
 }
 
 // parseConn listens on a channel of raw conn/openconn log records, formats them and sends them to be written to the database
-// func parseConn(conn <-chan zeektypes.Conn, output chan<- database.Data, uconnMap cmap.ConcurrentMap[string, *UniqueConn], zeekUIDMap cmap.ConcurrentMap[string, *ZeekUIDRecord], importID util.FixedString, numConns *uint64) {
 func parseConn(cfg *config.Config, conn <-chan zeektypes.Conn, output chan<- database.Data, importID util.FixedString, importTime time.Time, numConns *uint64) {
-	logger := zerolog.GetLogger()
+	logger := zlog.GetLogger()
 
 	// loop over raw conn/openconn channel
 	for c := range conn {

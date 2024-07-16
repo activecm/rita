@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -65,8 +64,7 @@ func readValidTextMIMETypeFile(filePath string, writeChan chan Data) error {
 
 	// Checks for the error
 	if err != nil {
-
-		log.Fatal("Error while reading the file", err)
+		fmt.Println("Error while reading the file", err)
 		return err
 	}
 

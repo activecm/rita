@@ -34,10 +34,10 @@ linters-settings:
         sizeThreshold: 512 # Default: 512
         skipTestFuncs: true
       rangeValCopy:
-        sizeThreshold: 1000  # Default: 128
+        sizeThreshold: 200  # Default: 128
         skipTestFuncs: true
       hugeParam:
-        sizeThreshold: 80 # Default: 80
+        sizeThreshold: 100 # Default: 80
 
   # Examines Go source code and reports suspicious constructs. It is roughly the same as 'go vet' and uses its passes.
   govet:
@@ -76,8 +76,51 @@ linters-settings:
     require-specific: true
   
   revive:
+    enable-all-rules: true 
+    # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md
     rules:
+      - name: add-constant
+        disabled: true
+      - name: argument-limit
+        arguments: [10]
+      - name: cognitive-complexity # enable in future cleanup
+        disabled: true
+      - name: confusing-results
+        disabled: true
+      - name: cyclomatic # enable in future cleanup
+        disabled: true
+      - name: deep-exit
+        disabled: true # enable in future cleanup
+      - name: empty-lines
+        disabled: true
+      - name: exported
+        arguments: ["disableStutteringCheck"]
+      - name: flag-parameter
+        disabled: true
+      - name: function-length
+        disabled: true
+      - name: function-result-limit
+        arguments: [8]
+      - name: get-return
+        disabled: true
+      - name: if-return
+        disabled: true
+      - name: line-length-limit
+        arguments: [250]
+      - name: max-control-nesting
+        arguments: [7]
+      - name: max-public-structs
+        arguments: [8]
       - name: var-naming
+        arguments:
+          - [ ] # allowlist
+          - [ ] # blocklist
+          - [ { "upperCaseConst": true, "skipPackageNameChecks": true } ]
+      - name: unexported-return
+        disabled: true
+      - name: unhandled-error
+        arguments: [ "fmt.Printf", "fmt.Fprintf", "fmt.Println", "io.Closer.Close", "os.File.Close" ]
+      - name: unused-receiver
         disabled: true
   
   goconst:
@@ -162,7 +205,6 @@ linters:
 
     # Both require a bit more explicit returns.
     - nilerr
-    - nilnil
 
     # Finds sending HTTP request without context.Context.
     - noctx
@@ -175,9 +217,6 @@ linters:
 
     # Lint your Prometheus metrics name
     - promlinter
-
-    # Checks that package variables are not reassigned.
-    - reassign
 
     # Drop-in replacement of `golint`.
     - revive
@@ -221,8 +260,29 @@ linters:
     - zerologlint
 
 issues:
-  exclude:
-    - "var-naming: don't use an underscore in package name"
+  # exclude:
+  #   - "var-naming: don't use an underscore in package name"
   exclude-rules:
-    - text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
-      linters: [ govet ]
+    # ignore shadowing of err and ctx
+    - linters: [ govet ]
+      text: 'shadow: declaration of "(err|ctx)" shadows declaration at'
+
+    # tolerate long functions in tests
+    - linters: [ revive ]
+      path: "(.+)_test.go"
+      text: "function-length: .*"
+
+    # tolerate long lines in tests
+    - linters: [ revive ]
+      path: "(.+)_test.go"
+      text: "line-length-limit: .*"
+
+    # tolerate deep-exit in tests
+    - linters: [ revive ]
+      path: "(.+)_test.go"
+      text: "deep-exit: .*"
+
+    # tolerate import shadowing in tests
+    - linters: [ revive ]
+      path: "(.+)_test.go"
+      text: "import-shadowing: The name ('require') shadows an import name"

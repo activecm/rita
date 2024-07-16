@@ -19,16 +19,7 @@ var (
 	defaultTextColor = lipgloss.AdaptiveColor{Light: "#2c2b2f", Dark: "#d3cdd4"}
 	subduedTextColor = lipgloss.AdaptiveColor{Light: "#454545", Dark: "#A49FA5"}
 	helpTextColor    = lipgloss.AdaptiveColor{Light: "#DDDADA", Dark: "#3C3C3C"}
-
-	criticalThreatTextColor = lipgloss.AdaptiveColor{Light: "#FF0267", Dark: "#FF1E6F"} //  "#ff1f7c" "#D2042D" "#eb2654"
-	highThreatColor         = lipgloss.AdaptiveColor{Light: "#FF6C2D", Dark: "#FF6C2D"}
-	mediumThreatColor       = lipgloss.AdaptiveColor{Light: "#B8860B", Dark: "#FFAF14"}
-	lowThreatColor          = lipgloss.AdaptiveColor{Light: "#00A36C", Dark: "#00A36C"}
-
-	columnBorder   = lipgloss.AdaptiveColor{Light: "#0BA4B8", Dark: "#AD58B4"} //"#c8c2d1"
-	separatorColor = lipgloss.AdaptiveColor{Light: "#0BA4B8", Dark: "#AD58B4"}
-
-	searchBorder = lipgloss.AdaptiveColor{Light: "#684eff", Dark: "#f792d4"}
+	separatorColor   = lipgloss.AdaptiveColor{Light: "#0BA4B8", Dark: "#AD58B4"}
 
 	// catpuccin theme colors
 	red      = lipgloss.AdaptiveColor{Light: "#D2042D", Dark: "#f38ba8"} //  "#ff1f7c" "#D2042D" "#eb2654"
@@ -88,9 +79,9 @@ func (m *listModel) Init() tea.Cmd {
 }
 
 func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
 
-	case tea.WindowSizeMsg:
+	// handle window resize
+	if _, ok := msg.(tea.WindowSizeMsg); ok {
 		_, v := listStyle.GetFrameSize()
 		m.Rows.SetSize(m.width, m.Rows.Height()-v)
 	}
@@ -99,7 +90,6 @@ func (m *listModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	m.Rows, cmd = m.Rows.Update(msg)
 	return m, cmd
-
 }
 
 func (m *listModel) SetHeight(height int) {
@@ -115,7 +105,7 @@ func (m *listModel) View() string {
 
 	header := renderColumnHeader(m.columns, m.width)
 
-	return listStyle.Copy().
+	return listStyle.
 		Border(lipgloss.RoundedBorder(), true, false, true, true).
 		BorderForeground(lavender).
 		Render(lipgloss.JoinVertical(lipgloss.Top, header, m.Rows.View()))
@@ -126,11 +116,10 @@ type listDelegate struct {
 	columns  []column
 }
 
-func (d listDelegate) Height() int                               { return 2 }
-func (d listDelegate) Spacing() int                              { return 1 }
-func (d listDelegate) Update(msg tea.Msg, m *list.Model) tea.Cmd { return nil }
-
-func (d listDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+func (d listDelegate) Height() int                             { return 2 }   //nolint:gocritic // bubbletea requires these to not be pointer methods
+func (d listDelegate) Spacing() int                            { return 1 }   //nolint:gocritic // bubbletea requires these to not be pointer methods
+func (d listDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil } //nolint:gocritic // bubbletea requires these to not be pointer methods
+func (d listDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) { //nolint:gocritic // bubbletea requires these to not be pointer methods
 
 	var (
 		severity      string
@@ -141,24 +130,26 @@ func (d listDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		threatIntel   string
 	)
 
-	if i, ok := listItem.(Item); ok {
-		severity = i.GetSeverity(true)
-		src = i.GetSrc()
-		dst = i.GetDst()
-		beacon = i.GetBeacon()
-		totalDuration = i.GetTotalDuration()
-		subdomains = i.GetSubdomains()
-		threatIntel = i.GetThreatIntel()
-	} else {
+	// get the item
+	i, ok := listItem.(*Item)
+	if !ok {
 		return
 	}
+
+	severity = i.GetSeverity(true)
+	src = i.GetSrc()
+	dst = i.GetDst()
+	beacon = i.GetBeacon()
+	totalDuration = i.GetTotalDuration()
+	subdomains = i.GetSubdomains()
+	threatIntel = i.GetThreatIntel()
 
 	if m.Width() <= 0 {
 		// short-circuit
 		return
 	}
 
-	// Conditions
+	// conditions
 	var (
 		isSelected = index == m.Index()
 	)
@@ -177,31 +168,31 @@ func (d listDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	}
 
 	// get severity
-	categoryStyle := style.Copy().PaddingLeft(2).Width(d.columns[0].width)
-	categoryTitle := categoryStyle.Render(Truncate(severity, categoryStyle))
+	categoryStyle := style.PaddingLeft(2).Width(d.columns[0].width)
+	categoryTitle := categoryStyle.Render(Truncate(severity, &categoryStyle))
 
 	// get source
-	srcStyle := style.Copy().Foreground(defaultTextColor).Width(d.columns[1].width)
-	srcTitle := srcStyle.Render(Truncate(src, srcStyle))
+	srcStyle := style.Foreground(defaultTextColor).Width(d.columns[1].width)
+	srcTitle := srcStyle.Render(Truncate(src, &srcStyle))
 
 	// get destination
-	dstStyle := style.Copy().Foreground(defaultTextColor).Width(d.columns[2].width)
-	dstTitle := dstStyle.Render(Truncate(dst, dstStyle))
+	dstStyle := style.Foreground(defaultTextColor).Width(d.columns[2].width)
+	dstTitle := dstStyle.Render(Truncate(dst, &dstStyle))
 
 	// get beacon
-	beaconStyle := style.Copy().Width(d.columns[3].width)
+	beaconStyle := style.Width(d.columns[3].width)
 	beaconTitle := beaconStyle.Render(beacon)
 
 	// get total duration
-	totalDurationStyle := style.Copy().Width(d.columns[4].width)
+	totalDurationStyle := style.Width(d.columns[4].width)
 	totalDurationTitle := totalDurationStyle.Render(totalDuration)
 
 	// get subdomains
-	subdomainsStyle := style.Copy().Width(d.columns[5].width)
+	subdomainsStyle := style.Width(d.columns[5].width)
 	subDomainsTitle := subdomainsStyle.Render(p.Sprint(subdomains))
 
 	// get threat intel
-	threatIntelStyle := style.Copy().Width(d.columns[6].width)
+	threatIntelStyle := style.Width(d.columns[6].width)
 	threatIntelTitle := threatIntelStyle.Render(p.Sprint(threatIntel))
 
 	// render the full row
@@ -215,7 +206,7 @@ func (d listDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprintf(w, "%s", row)
 }
 
-func Truncate(str string, style lipgloss.Style) string {
+func Truncate(str string, style *lipgloss.Style) string {
 	// Prevent text from exceeding list width
 	textwidth := uint(style.GetWidth() - style.GetPaddingLeft() - style.GetPaddingRight())
 	return truncate.StringWithTail(str, textwidth, ellipsis)
@@ -227,16 +218,16 @@ func renderIndicator(score float32, displayText string) string {
 
 	switch category {
 	case config.CriticalThreat:
-		return style.Copy().Foreground(red).Render(displayText)
+		return style.Foreground(red).Render(displayText)
 	case config.HighThreat:
-		return style.Copy().Foreground(peach).Render(displayText)
+		return style.Foreground(peach).Render(displayText)
 	case config.MediumThreat:
-		return style.Copy().Foreground(yellow).Render(displayText)
+		return style.Foreground(yellow).Render(displayText)
 	case config.LowThreat:
-		return style.Copy().Foreground(sapphire).Render(displayText)
+		return style.Foreground(sapphire).Render(displayText)
 	}
 
-	return style.Copy().Foreground(defaultTextColor).Render(displayText)
+	return style.Foreground(defaultTextColor).Render(displayText)
 
 }
 
@@ -251,14 +242,14 @@ func renderColumnHeader(columns []column, headerWidth int) string {
 		// the fist column must start with a margin,
 		if i == 0 {
 			width -= 2 // subtract off the margin
-			header += columnStyle.Copy().MarginLeft(2).Width(width).Render(c.name)
+			header += columnStyle.MarginLeft(2).Width(width).Render(c.name)
 		} else {
-			header += columnStyle.Copy().Width(width).Render(c.name)
+			header += columnStyle.Width(width).Render(c.name)
 		}
 
 		// add a column border if not the last column
 		if i < len(columns)-1 {
-			header += columnStyle.Copy().Foreground(surface0).Render(" | ")
+			header += columnStyle.Foreground(surface0).Render(" | ")
 		}
 	}
 

@@ -397,14 +397,14 @@ func (d *DatabaseTestSuite) TestDatabaseExists() {
 		_, err := cmd.RunImportCmd(time.Now(), d.cfg, afero.NewOsFs(), "../test_data/valid_tsv", "testDB", false, false)
 		require.NoError(t, err, "importing data should not produce an error")
 
-		exists, err := database.DatabaseExists(d.server.Conn, context.Background(), "testDB")
+		exists, err := database.DatabaseExists(context.Background(), d.server.Conn, "testDB")
 		require.NoError(t, err, "checking if database exists should not produce an error")
 		require.True(t, exists, "database should exist")
 	})
 
 	d.Run("Database Does Not Exist", func() {
 		t := d.T()
-		exists, err := database.DatabaseExists(d.server.Conn, context.Background(), "testDB")
+		exists, err := database.DatabaseExists(context.Background(), d.server.Conn, "testDB")
 		require.NoError(t, err, "checking if database exists should not produce an error")
 		require.False(t, exists, "database should not exist")
 	})

@@ -3,7 +3,6 @@ package viewer
 import (
 	"fmt"
 	"math"
-	"os"
 	"runtime"
 	"slices"
 	"time"
@@ -25,7 +24,7 @@ var mainStyle = lipgloss.NewStyle().Margin(0, 0)
 type Model struct {
 	// keys      keys.KeyMap
 	minTS          time.Time
-	SearchBar      searchModel
+	SearchBar      *searchModel
 	SideBar        sidebarModel
 	List           listModel
 	searchValue    string
@@ -59,17 +58,19 @@ type column struct {
 }
 
 // CreateUI creates the terminal UI
-func CreateUI(cfg *config.Config, db *database.DB, useCurrentTime bool, maxTimestamp time.Time, minTimestamp time.Time) error {
+func CreateUI(_ *config.Config, db *database.DB, useCurrentTime bool, maxTimestamp time.Time, minTimestamp time.Time) error {
+	// create model
 	m, err := NewModel(maxTimestamp, minTimestamp, useCurrentTime, db)
 	if err != nil {
 		return err
 	}
+
+	// create program
 	p := tea.NewProgram(m, tea.WithAltScreen())
 
 	// run the program
 	if _, err := p.Run(); err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
+		return fmt.Errorf("error running program: %w", err)
 	}
 
 	return nil
@@ -78,38 +79,44 @@ func CreateUI(cfg *config.Config, db *database.DB, useCurrentTime bool, maxTimes
 func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *database.DB) (*Model, error) {
 	pageSize := 100
 	// get results from database
-	rows, _, err := GetResults(db, Filter{}, 0, pageSize, minTimestamp)
+	rows, _, err := GetResults(db, &Filter{}, 0, pageSize, minTimestamp)
 	if err != nil {
 		return nil, err
 	}
 
+	// set columns
 	columns := []column{{"Severity", 14}, {"Source", 20}, {"Destination", 30}, {"Beacon", 10}, {"Duration", 15}, {"Subdomains", 15}, {"Threat Intel", 15}}
 
 	// set table size
 	width := getTableWidth(columns)
 	height := 20
 
-	// create list
-	list := MakeList(rows, columns, width, height)
+	// create dataList
+	dataList := MakeList(rows, columns, width, height)
 
 	// create search bar
 	searchBar := NewSearchModel("", width)
 
 	// create side bar
-	sideBar := NewSidebarModel(maxTimestamp, useCurrentTime, Item{})
-	if len(list.Rows.Items()) > 0 {
-		if data, ok := list.Rows.Items()[list.Rows.Index()].(Item); ok {
-			sideBar.Data = data
-		} else {
+	sideBar := NewSidebarModel(maxTimestamp, useCurrentTime, &Item{})
+	if len(dataList.Rows.Items()) > 0 {
+		// set sidebar data to whichever item is selected in the list
+		data, ok := dataList.Rows.Items()[dataList.Rows.Index()].(Item)
+		if !ok {
 			return nil, fmt.Errorf("error setting sidebar data")
 		}
+		sideBar.Data = &data
+
 	}
 
+	// create footer
 	footer := NewFooterModel(db.GetSelectedDB())
+
+	// create model
 	m := &Model{
 		minTS:          minTimestamp,
-		List:           list,
-		SearchBar:      searchBar,
+		List:           dataList,
+		SearchBar:      &searchBar,
 		SideBar:        sideBar,
 		serverPageSize: pageSize,
 		Footer:         footer,
@@ -117,8 +124,10 @@ func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *dat
 		width:          width,
 	}
 
+	// initialize model components
 	m.Init()
 
+	// initialize sidebar
 	m.SideBar.Init()
 
 	// create terminal ui model
@@ -126,8 +135,6 @@ func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *dat
 }
 
 func (m *Model) Init() tea.Cmd {
-	// set footer to search help text
-	// m.footer = searchHelpText()
 
 	// set title
 	m.title = getTitle()
@@ -178,7 +185,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		// make the footer the entire width of the terminal
 		m.Footer.width = msg.Width
-		list := m.List.View()
+
 		// make the list fill the extra vertical space
 		m.List.SetHeight(msg.Height - int(math.Max(float64(lipgloss.Height(m.SearchBar.View())), float64(lipgloss.Height(m.title)))) - lipgloss.Height(m.dbFooterBar))
 
@@ -186,7 +193,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.SideBar.Viewport.Height = m.List.totalHeight
 
 		// make sidebar fill the extra horizontal space
-		m.SideBar.Viewport.Width = msg.Width - lipgloss.Width(list) - 4
+		m.SideBar.Viewport.Width = msg.Width - lipgloss.Width(m.List.View()) - 4
 
 		// make search bar the same width as the list
 		m.SearchBar.width = m.List.width
@@ -252,11 +259,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		if data, ok := m.List.Rows.Items()[m.List.Rows.Index()].(Item); ok {
-			m.SideBar.Data = data
+			m.SideBar.Data = &data
 		}
 
 	} else {
-		m.SideBar.Data = Item{}
+		m.SideBar.Data = &Item{}
 	}
 
 	return m, cmd
@@ -275,7 +282,7 @@ func (m *Model) View() string {
 	default:
 		mainContent = lipgloss.JoinHorizontal(
 			lipgloss.Left,
-			mainStyle.Copy().Render(m.List.View()),
+			mainStyle.Render(m.List.View()),
 			mainStyle.Render(m.SideBar.View()),
 		)
 	}
@@ -445,7 +452,7 @@ func (m *Model) resetFiltering() {
 
 // getTitle returns the title of the application
 func getTitle() string {
-	return mainStyle.Copy().
+	return mainStyle.
 		MarginLeft(1).MarginTop(3).
 		// DO NOT INDENT THE FOLLOWING CODE BLOCK!
 		Render(`
@@ -588,7 +595,7 @@ func mainHelpText() string {
 }
 
 func helpPanel(height int, width int, contents string) string {
-	return mainStyle.Copy().Height(height).Width(width).
+	return mainStyle.Height(height).Width(width).
 		Border(lipgloss.RoundedBorder()).BorderForeground(surface0).
 		Render(contents)
 }

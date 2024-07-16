@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"net"
-	"net/http"
+	nethttp "net/http"
 	"sync/atomic"
 	"time"
 
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
@@ -68,7 +68,7 @@ type HTTPEntry struct {
 
 // parseHTTP listens on a channel of raw http/openhttp log records, formats them and sends them to be linked with conn/openconn records and written to the database
 func parseHTTP(cfg *config.Config, http <-chan zeektypes.HTTP, output chan database.Data, importTime time.Time, numHTTP *uint64, numConn *uint64) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// loop over raw http/openhttp channel
 	for h := range http {
@@ -124,7 +124,7 @@ func formatHTTPRecord(cfg *config.Config, parseHTTP *zeektypes.HTTP, importTime 
 	fqdn := parseHTTP.Host
 
 	// check if destination is a proxy server based on HTTP method
-	dstIsProxy := (parseHTTP.Method == http.MethodConnect)
+	dstIsProxy := (parseHTTP.Method == nethttp.MethodConnect)
 
 	// if the HTTP method is CONNECT, then the srcIP is communicating
 	// to an FQDN through the dstIP proxy. We need to handle that
@@ -211,8 +211,8 @@ func formatHTTPRecord(cfg *config.Config, parseHTTP *zeektypes.HTTP, importTime 
 	return entry, nil
 }
 
-func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Program, barID int, httpWriter, connWriter *database.BulkWriter, open bool) error { //httpWriter chan database.Data, connWriter chan database.Data
-	logger := logger.GetLogger()
+func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Program, barID int, httpWriter, connWriter *database.BulkWriter, open bool) error {
+	logger := zlog.GetLogger()
 
 	tmpTable := "http_tmp"
 	tableB := "conn_tmp"

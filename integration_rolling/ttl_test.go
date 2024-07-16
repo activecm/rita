@@ -24,8 +24,8 @@ import (
 
 // TearDownSuite is run once after all tests have finished
 func (d *TTLTestSuite) TearDownSuite() {
-	os.RemoveAll(logDir)
-	os.RemoveAll(futureLogDir)
+	d.Require().NoError(os.RemoveAll(logDir))
+	d.Require().NoError(os.RemoveAll(futureLogDir))
 	d.cleanupContainer()
 }
 
@@ -39,7 +39,7 @@ func SetupClickHouseTTL(t *testing.T) (time.Time, func(time.Duration) error, fun
 		require.NoError(t, compose.Down(context.Background(), tc.RemoveOrphans(true), tc.RemoveVolumes(true), tc.RemoveImagesLocal), "compose.Down()")
 	}
 
-	ctx, _ := context.WithCancel(context.Background())
+	ctx := context.Background()
 
 	err = compose.Up(ctx, tc.Wait(true), tc.WithRecreate("RecreateForce"))
 	require.NoError(t, err)
@@ -57,7 +57,6 @@ func SetupClickHouseTTL(t *testing.T) (time.Time, func(time.Duration) error, fun
 		require.EqualValues(t, 0, status)
 		return nil
 	}
-
 	return importTime, changeTimezone, cleanupContainer
 
 }
@@ -138,7 +137,6 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		age                     time.Duration
 		expectedAgeOutAt26Hours bool
 		expectedAgeOutAt2Weeks  bool
-		expectedAgeOutAt3Months bool
 	}
 
 	// all these tables will have a ttl interval of 26 hours
@@ -150,21 +148,6 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		rolling bool
 		imports []importData
 	}{
-		// {
-		// 	name: "Single Recent Import, No Age Out",
-		// 	afs:  afero.NewOsFs(),
-		//  rolling: true,
-		// 	imports: []importData{
-		// 		{
-
-		// 			directory:               "../test_data/valid_tsv",
-		// 			age:                     0,
-		// 			expectedAgeOutAt26Hours: false,
-		// 			expectedAgeOutAt2Weeks:  false,
-		// 		},
-		// 	},
-		// 	buffer: 3 * time.Second,
-		// },
 		{
 			name:    "Single Import - 26hrs",
 			afs:     afero.NewOsFs(),
@@ -179,116 +162,18 @@ func (d *TTLTestSuite) TestTableTTLs() {
 				},
 			},
 		},
-		// {
-		// 	name:    "Single Import - 2 Weeks",
-		// 	afs:     afero.NewOsFs(),
-		// 	rolling: true,
-		// 	imports: []importData{
-		// 		{
-
-		// 			directory:               "../test_data/valid_tsv",
-		// 			age:                     14 * 24 * time.Hour,
-		// 			expectedAgeOutAt26Hours: true,
-		// 			expectedAgeOutAt2Weeks:  true,
-		// 		},
-		// 	},
-		// 	buffer: 30 * time.Second,
-		// },
-		// {
-		// 	name: "Multiple Imports, No Age Out",
-		// 	afs:  afero.NewOsFs(),
-		// rolling: true,
-		// 	imports: []importData{
-		// 		{
-		// 			directory:               "../test_data/proxy_rolling",
-		// 			age:                     0,
-		// 			expectedAgeOutAt26Hours: false,
-		// 			expectedAgeOutAt2Weeks:  false,
-		// 		},
-		// 		{
-
-		// 			directory:               "../test_data/valid_tsv",
-		// 			age:                     0,
-		// 			expectedAgeOutAt26Hours: false,
-		// 			expectedAgeOutAt2Weeks:  false,
-		// 		},
-		// 	},
-		// 	buffer: 10 * time.Second,
-		// },
-		// {
-		// 	name:    "Multiple Imports, One Approaching 2 weeks",
-		// 	afs:     afero.NewOsFs(),
-		// 	rolling: true,
-		// 	imports: []importData{
-		// 		{
-		// 			directory:               "../test_data/proxy_rolling",
-		// 			age:                     0,
-		// 			expectedAgeOutAt26Hours: true,
-		// 			expectedAgeOutAt2Weeks:  false,
-		// 		},
-		// 		{
-
-		// 			directory:               "../test_data/valid_tsv",
-		// 			age:                     -(13 * 24 * time.Hour),
-		// 			expectedAgeOutAt26Hours: true,
-		// 			expectedAgeOutAt2Weeks:  true,
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	name:    "Multiple Imports, One Approaching 3 months",
-		// 	afs:     afero.NewOsFs(),
-		// 	rolling: true,
-		// 	imports: []importData{
-		// 		{
-		// 			directory: "../test_data/proxy_rolling",
-		// 			age:       0,
-		// 			// expectedAgeOutAt26Hours: true,
-		// 			expectedAgeOutAt2Weeks: false,
-		// 		},
-		// 		{
-
-		// 			directory: "../test_data/valid_tsv",
-		// 			age:       -(89 * 24 * time.Hour),
-		// 			// expectedAgeOutAt26Hours: true,
-		// 			expectedAgeOutAt2Weeks:  true,
-		// 			expectedAgeOutAt3Months: true,
-		// 		},
-		// 	},
-		// 	buffer: 30 * time.Second,
-		// },
-		// {
-		// 	name: "Multiple Imports, One Approaching 2 Weeks",
-		// 	afs:  afero.NewOsFs(),
-		// rolling: true,
-		// 	imports: []importData{
-		// 		{
-		// 			directory:               "../test_data/proxy_rolling",
-		// 			age:                     14 * 24 * time.Hour,
-		// 			expectedAgeOutAt26Hours: true,
-		// 			expectedAgeOutAt2Weeks:  true,
-		// 		},
-		// 		{
-		// 			directory:               "../test_data/valid_tsv",
-		// 			age:                     0,
-		// 			expectedAgeOutAt26Hours: false,
-		// 			expectedAgeOutAt2Weeks:  false,
-		// 		},
-		// 	},
-		// 	buffer: 30 * time.Second,
-		// },
 	}
-	for index, tc := range testCases {
-		d.Run("Import: "+tc.name, func() {
+	for index, test := range testCases {
+		d.Run("Import: "+test.name, func() {
 			t := d.T()
 
 			dbName := "testDB" + strconv.Itoa(index) // Convert index to string
 
 			// iterate over each rolling import
-			for i := range tc.imports {
+			for i := range test.imports {
 				// set up test variables
 				rebuild := i == 0
-				importData := &tc.imports[i] // pointer to modify the slice
+				importData := &test.imports[i] // pointer to modify the slice
 
 				// set import start time
 				importData.importStartTime = d.importTime.Add(importData.age)
@@ -296,7 +181,7 @@ func (d *TTLTestSuite) TestTableTTLs() {
 				// fmt.Println("TEST TIME", importData.importStartTime, "ACTUAL", time.Now().UTC().Add(importData.age), importData.age, tc.buffer)
 
 				// import the mock data
-				_, err := cmd.RunImportCmd(importData.importStartTime, d.cfg, tc.afs, importData.directory, dbName, tc.rolling, rebuild)
+				_, err := cmd.RunImportCmd(importData.importStartTime, d.cfg, test.afs, importData.directory, dbName, test.rolling, rebuild)
 				require.NoError(t, err, "importing data should not produce an error")
 			}
 		})
@@ -316,7 +201,7 @@ func (d *TTLTestSuite) TestTableTTLs() {
 	fmt.Println("Done merging.")
 
 	// verify data was imported to log tables
-	for index, tc := range testCases {
+	for index, test := range testCases {
 		t := d.T()
 		dbName := "testDB" + strconv.Itoa(index) // Convert index to string
 		// connect to the database
@@ -326,11 +211,11 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		optimizeTables(t, db)
 		fmt.Println("Done merging.")
 
-		for i := range tc.imports {
+		for i := range test.imports {
 			t.Run(fmt.Sprintf("post import data check: %s %d", dbName, i), func(t *testing.T) {
-				if tc.imports[i].age == 0 {
-					log.Println("VERIFY IMPORT FOR", tc.imports[i].importStartTime)
-					verifyTables(t, db, tc.imports[i].importStartTime, false, false, false, false)
+				if test.imports[i].age == 0 {
+					log.Println("VERIFY IMPORT FOR", test.imports[i].importStartTime)
+					verifyTables(t, db, test.imports[i].importStartTime, false, false, false, false)
 				}
 			})
 		}
@@ -351,7 +236,7 @@ func (d *TTLTestSuite) TestTableTTLs() {
 	verifyTimeChange(d.T(), metaDB, 26*time.Hour, 10)
 
 	// loop over imports
-	for index, tc := range testCases {
+	for index, test := range testCases {
 		t := d.T()
 		dbName := "testDB" + strconv.Itoa(index) // Convert index to string
 		// connect to the database
@@ -364,11 +249,11 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		fmt.Println("Done merging.")
 		verifyTimeChange(t, db, 26*time.Hour, 10)
 
-		for i := range tc.imports {
+		for i := range test.imports {
 			t.Run(fmt.Sprintf("post +26h check %s %d", dbName, i), func(t *testing.T) {
 				// check to see if data from old imports (>=2w old) are out of the dataset
-				expected2wEmpty := tc.imports[i].expectedAgeOutAt2Weeks
-				verifyTables(t, db, tc.imports[i].importStartTime, true, expected2wEmpty, false, false)
+				expected2wEmpty := test.imports[i].expectedAgeOutAt2Weeks
+				verifyTables(t, db, test.imports[i].importStartTime, true, expected2wEmpty, false, false)
 			})
 		}
 	}
@@ -385,7 +270,7 @@ func (d *TTLTestSuite) TestTableTTLs() {
 	optimizeMetaDBTables(gT, metaDB, d.changeTime, 14*24*time.Hour, "")
 	fmt.Println("Done merging.")
 
-	for index, tc := range testCases {
+	for index, test := range testCases {
 		t := d.T()
 		dbName := "testDB" + strconv.Itoa(index) // Convert index to string
 		// connect to the database
@@ -395,9 +280,9 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		optimizeTables(t, db)
 		fmt.Println("Done merging.")
 
-		for i := range tc.imports {
+		for i := range test.imports {
 			t.Run(fmt.Sprintf("post +2 weeks check %d", i), func(t *testing.T) {
-				verifyTables(t, db, tc.imports[i].importStartTime, true, true, false, false)
+				verifyTables(t, db, test.imports[i].importStartTime, true, true, false, false)
 			})
 		}
 	}
@@ -414,15 +299,15 @@ func (d *TTLTestSuite) TestTableTTLs() {
 	optimizeMetaDBTables(gT, metaDB, d.changeTime, 181*24*time.Hour, "files")
 	fmt.Println("Done merging.")
 
-	for index, tc := range testCases {
+	for index, test := range testCases {
 		t := d.T()
 		dbName := "testDB" + strconv.Itoa(index) // Convert index to string
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
-		for i := range tc.imports {
+		for i := range test.imports {
 			t.Run(fmt.Sprintf("post +6 months check %d", i), func(t *testing.T) {
-				verifyTables(t, db, tc.imports[i].importStartTime, true, true, true, false)
+				verifyTables(t, db, test.imports[i].importStartTime, true, true, true, false)
 			})
 		}
 	}
@@ -439,15 +324,15 @@ func (d *TTLTestSuite) TestTableTTLs() {
 	optimizeMetaDBTables(gT, metaDB, d.changeTime, 366*24*time.Hour, "imports")
 	fmt.Println("Done merging.")
 
-	for index, tc := range testCases {
+	for index, test := range testCases {
 		t := d.T()
 		dbName := "testDB" + strconv.Itoa(index) // Convert index to string
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
-		for i := range tc.imports {
+		for i := range test.imports {
 			t.Run(fmt.Sprintf("post +1 year check %d", i), func(t *testing.T) {
-				verifyMetaDBCountsByID(t, db, tc.imports[i].importStartTime, []bool{true, true})
+				verifyMetaDBCountsByID(t, db, test.imports[i].importStartTime, []bool{true, true})
 			})
 		}
 	}
@@ -617,25 +502,4 @@ func verifyTableCounts(t *testing.T, db *database.DB, importTime string, shouldB
 			require.Greater(t, count, uint64(0), "table %s.%s should have more than 0 rows for %s", db.GetSelectedDB(), table, importTime)
 		}
 	}
-}
-
-// // check that the table has the correct TTL
-// ttlMin, ttlMax := d.getTableTTL(t, dbName, table)
-// require.WithinDuration(t, expectedTTL, ttlMin, time.Minute, "TTL should be import time expected interval")
-func (d *TTLTestSuite) getTableTTL(t *testing.T, database, table string) (time.Time, time.Time) {
-	t.Helper()
-	ctx := d.server.QueryParameters(clickhouse.Parameters{
-		"database": database,
-		"table":    table,
-	})
-	var deleteTTLInfoMin, deleteTTLInfoMax time.Time
-	err := d.server.Conn.QueryRow(ctx, `--sql
-			SELECT delete_ttl_info_min, delete_ttl_info_max
-			FROM system.parts
-			WHERE database=={database:String} AND table=={table:String}
-			ORDER BY modification_time DESC
-			LIMIT 1
-	`).Scan(&deleteTTLInfoMin, &deleteTTLInfoMax)
-	require.NoError(t, err, "querying for table TTL should not produce an error")
-	return deleteTTLInfoMin, deleteTTLInfoMax
 }

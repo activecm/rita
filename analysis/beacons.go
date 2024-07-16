@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/montanaflynn/stats"
@@ -31,7 +31,7 @@ type Beacon struct {
 }
 
 func (analyzer *Analyzer) analyzeBeacon(entry *AnalysisResult) (Beacon, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 	var beacon Beacon
 
 	// verify that minTSBeacon < maxTSBeacon
@@ -55,14 +55,20 @@ func (analyzer *Analyzer) analyzeBeacon(entry *AnalysisResult) (Beacon, error) {
 	}
 
 	// calculate histogram score (note: we currently look at a 24 hour period)
-	_, _, totalBars, longestRun, histScore, err := getHistogramScore(analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), entry.TSList, analyzer.Config.Scoring.Beacon.HistModeSensitivity, analyzer.Config.Scoring.Beacon.HistBimodalOutlierRemoval, analyzer.Config.Scoring.Beacon.HistBimodalMinHours, 24)
+	_, _, totalBars, longestRun, histScore, err := getHistogramScore(
+		analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), entry.TSList, analyzer.Config.Scoring.Beacon.HistModeSensitivity,
+		analyzer.Config.Scoring.Beacon.HistBimodalOutlierRemoval, analyzer.Config.Scoring.Beacon.HistBimodalMinHours, 24,
+	)
 	if err != nil {
 		logger.Err(err).Caller().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("fqdn", entry.FQDN).Send()
 		return beacon, err
 	}
 
 	// calculate duration score
-	_, _, durScore, err := getDurationScore(analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), int64(entry.TSList[0]), int64(entry.TSList[len(entry.TSList)-1]), totalBars, longestRun, analyzer.Config.Scoring.Beacon.DurMinHours, analyzer.Config.Scoring.Beacon.DurIdealNumberOfConsistentHours)
+	_, _, durScore, err := getDurationScore(
+		analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), int64(entry.TSList[0]), int64(entry.TSList[len(entry.TSList)-1]),
+		totalBars, longestRun, analyzer.Config.Scoring.Beacon.DurMinHours, analyzer.Config.Scoring.Beacon.DurIdealNumberOfConsistentHours,
+	)
 	if err != nil {
 		logger.Err(err).Caller().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("fqdn", entry.FQDN).Send()
 		return beacon, err
@@ -129,6 +135,10 @@ func getBeaconScore(tsScore, tsWeight, dsScore, dsWeight, durScore, durWeight, h
 	return score, nil
 }
 
+// getTimestampScore calculates the timestamp score for a given list of timestamps. This score is based on the
+// statistical properties of the intervals between timestamps, utilizing skewness and median absolute deviation
+// to calculate a score that reflects the consistency of the intervals. This function returns the ts score, skew,
+// median absolute deviation, intervals between timestamps, their counts, the most frequent interval, and its count.
 func getTimestampScore(tsList []uint32) (float64, float64, float64, []int64, []int64, int64, int64, error) {
 	// ensure that the input slice has at least 4 elements (need at least 3 intervals, which requires at least 4 timestamps)
 	if len(tsList) < 4 {
@@ -184,6 +194,10 @@ func getTimestampScore(tsList []uint32) (float64, float64, float64, []int64, []i
 
 }
 
+// getDataSizeScore calculates the data size score for a given list of data sizes. This score is based on the
+// statistical properties of the data sizes, utilizing skewness and median absolute deviation to calculate a
+// score that reflects the consistency of the data sizes. This function returns the ds score, skew,
+// median absolute deviation, unique data sizes, their counts, the most frequent data size, and its count.
 func getDataSizeScore(bytesList []float64) (float64, float64, float64, []int64, []int64, int64, int64, error) {
 	// ensure that the input slice has at least 3 elements
 	if len(bytesList) < 3 {
@@ -209,7 +223,7 @@ func getDataSizeScore(bytesList []float64) (float64, float64, float64, []int64, 
 
 }
 
-// calculateStatisticalScore calculates the statistical score, skew, and median absolute derivation for a given list of float64 values
+// calculateStatisticalScore calculates the statistical score, skew, and median absolute deviation for a given list of float64 values
 func calculateStatisticalScore(values []float64, defaultMadScore float64) (float64, float64, float64, error) {
 	// ensure that the input slice is not empty
 	if len(values) == 0 {

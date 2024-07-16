@@ -312,7 +312,6 @@ func generateNormalLogs(t *testing.T, startTS time.Time) (int64, int64, int64, i
 		_, err = fmt.Fprintf(f, "%s\n", data)
 		require.NoError(t, err)
 	}
-
 	f.Close()
 
 	f, err = os.OpenFile(logDir+"http.log", os.O_CREATE|os.O_WRONLY, 0666)
@@ -324,8 +323,8 @@ func generateNormalLogs(t *testing.T, startTS time.Time) (int64, int64, int64, i
 	https = append(https, http7...)
 	https = append(https, http8...)
 
-	for _, d := range https {
-		data, err := json.Marshal(&d) // #nosec G601
+	for i := range https {
+		data, err := json.Marshal(&https[i])
 		require.NoError(t, err)
 		_, err = fmt.Fprintf(f, "%s\n", data)
 		require.NoError(t, err)
@@ -444,8 +443,8 @@ func generateFutureLogs(t *testing.T, startTS time.Time) {
 	https = append(https, http6...)
 	https = append(https, http7...)
 
-	for _, d := range https {
-		data, err := json.Marshal(&d) // #nosec G601
+	for i := range https {
+		data, err := json.Marshal(&https[i])
 		require.NoError(t, err)
 		_, err = fmt.Fprintf(f, "%s\n", data)
 		require.NoError(t, err)
@@ -454,8 +453,8 @@ func generateFutureLogs(t *testing.T, startTS time.Time) {
 
 	f, err = os.OpenFile(futureLogDir+"open_http.log", os.O_CREATE|os.O_WRONLY, 0666)
 	require.NoError(t, err)
-	for _, d := range openhttp6 {
-		data, err := json.Marshal(&d) // #nosec G601
+	for i := range openhttp6 {
+		data, err := json.Marshal(&openhttp6[i])
 		require.NoError(t, err)
 		_, err = fmt.Fprintf(f, "%s\n", data)
 		require.NoError(t, err)
@@ -573,8 +572,8 @@ func generateOpenLogs(t *testing.T, startTS time.Time) (int64, int64, int64, int
 	https = append(https, openhttp5...)
 	https = append(https, openhttp6...)
 
-	for _, d := range https {
-		data, err := json.Marshal(&d) // #nosec G601
+	for i := range https {
+		data, err := json.Marshal(&https[i]) // #nosec G601
 		require.NoError(t, err)
 		_, err = fmt.Fprintf(f, "%s\n", data)
 		require.NoError(t, err)

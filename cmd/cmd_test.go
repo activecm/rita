@@ -60,6 +60,9 @@ func (c *CmdTestSuite) SetupSuite() {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err, "config should load without error")
 
+	// // set version
+	// config.Version = ""
+
 	// start clickhouse container
 	c.SetupClickHouse(t)
 

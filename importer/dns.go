@@ -10,7 +10,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/google/uuid"
@@ -62,7 +62,7 @@ type UniqueFQDN struct {
 
 // parseDNS listens on a channel of raw dns log records, formats them into dns and pdns entries and and sends them to be written to the database
 func parseDNS(cfg *config.Config, dns <-chan zeektypes.DNS, dnsOutput, pdnsOutput chan<- database.Data, numDNS, numPDNSRaw *uint64, importTime time.Time) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// loop over raw dns channel
 	for d := range dns {

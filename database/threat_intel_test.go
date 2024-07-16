@@ -57,7 +57,7 @@ func TestParseOnlineFeeds(t *testing.T) {
 			}
 		}
 		// make sure expected total is greater than zero
-		require.Greater(t, expectedTotal, 0, "expected total should be greater than zero")
+		require.Positive(t, expectedTotal, "expected total should be greater than zero")
 		feed.Close()
 
 		// read feed again
@@ -117,7 +117,7 @@ func TestParseOnlineFeeds(t *testing.T) {
 		wg.Wait()
 
 		// make sure at least one fqdn was parsed
-		require.Greater(t, total, 0, "at least one fqdn should have been parsed")
+		require.Positive(t, total, "at least one fqdn should have been parsed")
 
 	})
 }

@@ -50,7 +50,7 @@ func CheckForUpdate(cCtx *cli.Context, afs afero.Fs) error {
 	}
 
 	// check for update if version is set
-	if cfg.UpdateCheckEnabled && currentVersion != "" {
+	if cfg.UpdateCheckEnabled && currentVersion != "" && currentVersion != "dev" {
 		newer, latestVersion, err := util.CheckForNewerVersion(github.NewClient(nil), currentVersion)
 		if err != nil {
 			return fmt.Errorf("error checking for newer version of RITA: %w", err)

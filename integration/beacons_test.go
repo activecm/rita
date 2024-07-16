@@ -130,7 +130,8 @@ func (it *ValidDatasetTestSuite) TestBeacons() { // used by valid dataset test s
 			},
 		}
 
-		for _, test := range beaconCases {
+		for i := range beaconCases {
+			test := beaconCases[i]
 			t.Run(test.name, func(t *testing.T) {
 				var hash util.FixedString
 				var err error

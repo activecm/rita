@@ -43,6 +43,7 @@ var ViewCommand = &cli.Command{
 			Usage:    "limit the number of results to display",
 			Required: false,
 		},
+		ConfigFlag(false),
 	},
 	Action: func(cCtx *cli.Context) error {
 		afs := afero.NewOsFs()
@@ -78,7 +79,13 @@ var ViewCommand = &cli.Command{
 			}
 		}
 
-		if err := runViewCmd(afs, cCtx.String("config"), cCtx.Args().First(), cCtx.Bool("stdout"), cCtx.String("search"), cCtx.Int("limit")); err != nil {
+		// load config file
+		cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
+		if err != nil {
+			return err
+		}
+
+		if err := runViewCmd(cfg, cCtx.Args().First(), cCtx.Bool("stdout"), cCtx.String("search"), cCtx.Int("limit")); err != nil {
 			return err
 		}
 
@@ -91,14 +98,8 @@ var ViewCommand = &cli.Command{
 	},
 }
 
-func runViewCmd(afs afero.Fs, configPath string, dbName string, stdout bool, search string, limit int) error {
+func runViewCmd(cfg *config.Config, dbName string, stdout bool, search string, limit int) error {
 	fmt.Printf("Viewing database: %s\n", dbName)
-
-	// load config file
-	cfg, err := config.ReadFileConfig(afs, configPath)
-	if err != nil {
-		return err
-	}
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), dbName, cfg, nil)
@@ -137,14 +138,3 @@ func runViewCmd(afs afero.Fs, configPath string, dbName string, stdout bool, sea
 
 	return nil
 }
-
-// func validateDatabaseName(dbName string) error {
-// 	//  do not allow anything but alphanumeric and underscores for the database name
-// 	re := regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
-
-// 	if !re.MatchString(dbName) {
-// 		return fmt.Errorf("invalid database name: %s", dbName)
-// 	}
-
-// 	return nil
-// }

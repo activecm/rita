@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	zerolog "github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	jsoniter "github.com/json-iterator/go"
@@ -65,7 +65,7 @@ const lineErrorLimit = 25
 // parsing/unmarshaling it into its associated zeektype and sending it on the passed in generic channel. The generic type is based on the path's prefix in the calling
 // function.
 func parseFile[Z zeekRecord](afs afero.Fs, path string, entryChan chan<- Z, errc chan<- error, metaDBChan chan<- MetaDBFile, database string, importID util.FixedString) {
-	logger := zerolog.GetLogger()
+	logger := zlog.GetLogger()
 
 	// open file for reading
 	empty, err := afero.IsEmpty(afs, path)

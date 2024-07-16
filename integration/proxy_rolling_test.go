@@ -112,7 +112,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	min, _, _, err := it.db.GetBeaconMinMaxTimestamps()
 	require.NoError(t, err)
 
-	query, params, _ := viewer.BuildResultsQuery(viewer.Filter{}, 0, 10, min)
+	query, params, _ := viewer.BuildResultsQuery(&viewer.Filter{}, 0, 10, min)
 	ctx := it.db.QueryParameters(params)
 	rows, err := it.db.Conn.Query(ctx, query)
 	require.NoError(t, err)

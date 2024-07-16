@@ -245,7 +245,17 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 
 	err = db.Conn.Exec(ctx, `
 		INSERT INTO metadatabase.imports (import_id, rolling, database, started_at, ended_at, min_timestamp, max_timestamp, min_open_timestamp, max_open_timestamp)
-		VALUES (unhex({importID:String}), {rolling:Bool}, {database:String}, fromUnixTimestamp64Micro({importStartedAt:Int64}), fromUnixTimestamp({importEndedAt:Int32}), fromUnixTimestamp({minTs:Int32}), fromUnixTimestamp({maxTs:Int32}), fromUnixTimestamp({minOpenTs:Int32}), fromUnixTimestamp({maxOpenTs:Int32}))
+		VALUES (
+			unhex({importID:String}), 
+			{rolling:Bool}, 
+			{database:String}, 
+			fromUnixTimestamp64Micro({importStartedAt:Int64}), 
+			fromUnixTimestamp({importEndedAt:Int32}), 
+			fromUnixTimestamp({minTs:Int32}), 
+			fromUnixTimestamp({maxTs:Int32}), 
+			fromUnixTimestamp({minOpenTs:Int32}), 
+			fromUnixTimestamp({maxOpenTs:Int32})
+		)
 	`)
 	return err
 }
@@ -312,7 +322,7 @@ func (db *DB) checkFileHashes(fileList []string) ([]string, error) {
 // ClearMetaDBEntriesForDatabase deletes all file and import record entries in the metadatabase for the specified database
 func (server *ServerConn) ClearMetaDBEntriesForDatabase(database string) error {
 	// verify that the metadatabase exists
-	exists, err := DatabaseExists(server.Conn, server.ctx, "metadatabase")
+	exists, err := DatabaseExists(server.ctx, server.Conn, "metadatabase")
 	if err != nil {
 		return err
 	}

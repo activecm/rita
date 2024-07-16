@@ -671,9 +671,9 @@ func testLogFieldParsing(t *testing.T, db *database.DB, log reflect.Type, table 
 
 	// get list of string fields in log entry
 	var stringFields []string
-	for i := 0; i < log.NumField(); i++ {
-		if log.Field(i).Type.Kind() == reflect.String {
-			stringFields = append(stringFields, log.Field(i).Tag.Get("ch"))
+	for idx := 0; idx < log.NumField(); idx++ {
+		if log.Field(idx).Type.Kind() == reflect.String {
+			stringFields = append(stringFields, log.Field(idx).Tag.Get("ch"))
 		}
 	}
 
@@ -682,9 +682,9 @@ func testLogFieldParsing(t *testing.T, db *database.DB, log reflect.Type, table 
 
 	// get list of number fields in log entry
 	var numFields []string
-	for i := 0; i < log.NumField(); i++ {
-		if typeIsNumber(log.Field(i).Type.Kind()) {
-			numFields = append(numFields, log.Field(i).Tag.Get("ch"))
+	for idx := 0; idx < log.NumField(); idx++ {
+		if typeIsNumber(log.Field(idx).Type.Kind()) {
+			numFields = append(numFields, log.Field(idx).Tag.Get("ch"))
 		}
 	}
 

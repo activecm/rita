@@ -12,7 +12,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
@@ -66,7 +66,7 @@ type SSLEntry struct {
 
 // parseSSL listens on a channel of raw ssl/openssl log records, formats them and sends them to be linked with conn/openconn records and written to the database
 func parseSSL(cfg *config.Config, ssl <-chan zeektypes.SSL, output chan database.Data, importTime time.Time, numSSL *uint64) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// loop over raw ssl/openssl channel
 	for s := range ssl {
@@ -172,7 +172,7 @@ func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime tim
 }
 
 func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Program, barID int, sslWriter *database.BulkWriter, open bool) error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	var totalSSL uint64
 	err := importer.Database.Conn.QueryRow(importer.Database.GetContext(), `

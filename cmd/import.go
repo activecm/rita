@@ -17,9 +17,9 @@ import (
 	"github.com/activecm/rita/v5/analysis"
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
-	"github.com/activecm/rita/v5/importer"
-	"github.com/activecm/rita/v5/logger"
-	"github.com/activecm/rita/v5/modifier"
+	i "github.com/activecm/rita/v5/importer"
+	zlog "github.com/activecm/rita/v5/logger"
+	m "github.com/activecm/rita/v5/modifier"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/spf13/afero"
@@ -125,7 +125,7 @@ type ImportTimestamps struct {
 	maxTSBeacon time.Time
 }
 type ImportResults struct {
-	importer.ResultCounts
+	i.ResultCounts
 	ImportID         []util.FixedString
 	ImportTimestamps []ImportTimestamps
 }
@@ -133,7 +133,7 @@ type ImportResults struct {
 func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir string, dbName string, rolling bool, rebuild bool) (ImportResults, error) {
 
 	var importResults ImportResults
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// keep track of the cumulative elapsed time
 	importStartedAt := startTime
@@ -195,24 +195,22 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 				continue
 			}
 
+			// log the start of the import
 			logger.Debug().Str("started_at", importStartedAt.String()).Msg(fmt.Sprintf("Importing hour %d/%d", hour+1, len(hourlyLogs)))
 
+			// reset temporary tables
 			err = db.ResetTemporaryTables()
 			if err != nil {
 				return importResults, err
 			}
 
-			// parse logs
-			// importStart := importStartedAt
-			// if hour > 0 || day > 0 {
-			// 	// add the duration of all imports up to now to the original importStartedAt date
-			// 	importStart = importStartedAt.Add(time.Duration(elapsedTime) * time.Nanosecond)
-			// }
-			importer, err := importer.NewImporter(db, cfg, importStartedAt, numDigesters, numParsers, numWriters)
+			// set up new importer
+			importer, err := i.NewImporter(db, cfg, importStartedAt, numDigesters, numParsers, numWriters)
 			if err != nil {
 				return importResults, err
 			}
 
+			// import the data
 			err = importer.Import(afs, files)
 			if err != nil {
 				return importResults, err
@@ -265,7 +263,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 			}
 
 			// set up new modifier
-			modifier, err := modifier.NewModifier(db, cfg, importer.ImportID, minTS, maxTS)
+			modifier, err := m.NewModifier(db, cfg, importer.ImportID, minTS)
 			if err != nil {
 				return importResults, err
 			}
@@ -362,7 +360,7 @@ func parseFolderDate(folder string) (time.Time, error) {
 // path of each regular file on the string channel.  It sends the result of the
 // walk on the error channel.  If done is closed, WalkFiles abandons its work.
 func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error) {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// check if root is a valid directory or file
 	err := util.ValidateDirectory(afs, root)
@@ -464,20 +462,20 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		// check if the file is one of the accepted log types
 		var prefix string
 		switch {
-		case strings.HasPrefix(filepath.Base(path), importer.ConnPrefix) && !strings.HasPrefix(filepath.Base(path), importer.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(path), importer.ConnSummaryPrefixHyphen):
-			prefix = importer.ConnPrefix
-		case strings.HasPrefix(filepath.Base(path), importer.OpenConnPrefix):
-			prefix = importer.OpenConnPrefix
-		case strings.HasPrefix(filepath.Base(path), importer.DNSPrefix):
-			prefix = importer.DNSPrefix
-		case strings.HasPrefix(filepath.Base(path), importer.HTTPPrefix):
-			prefix = importer.HTTPPrefix
-		case strings.HasPrefix(filepath.Base(path), importer.OpenHTTPPrefix):
-			prefix = importer.OpenHTTPPrefix
-		case strings.HasPrefix(filepath.Base(path), importer.SSLPrefix):
-			prefix = importer.SSLPrefix
-		case strings.HasPrefix(filepath.Base(path), importer.OpenSSLPrefix):
-			prefix = importer.OpenSSLPrefix
+		case strings.HasPrefix(filepath.Base(path), i.ConnPrefix) && !strings.HasPrefix(filepath.Base(path), i.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(path), i.ConnSummaryPrefixHyphen):
+			prefix = i.ConnPrefix
+		case strings.HasPrefix(filepath.Base(path), i.OpenConnPrefix):
+			prefix = i.OpenConnPrefix
+		case strings.HasPrefix(filepath.Base(path), i.DNSPrefix):
+			prefix = i.DNSPrefix
+		case strings.HasPrefix(filepath.Base(path), i.HTTPPrefix):
+			prefix = i.HTTPPrefix
+		case strings.HasPrefix(filepath.Base(path), i.OpenHTTPPrefix):
+			prefix = i.OpenHTTPPrefix
+		case strings.HasPrefix(filepath.Base(path), i.SSLPrefix):
+			prefix = i.SSLPrefix
+		case strings.HasPrefix(filepath.Base(path), i.OpenSSLPrefix):
+			prefix = i.OpenSSLPrefix
 		default: // skip file if it doesn't match any of the accepted prefixes
 			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInvalidLogType})
 			continue
@@ -520,17 +518,17 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		for hour := range logMap[day] {
 
 			// if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
-			if len(logMap[day][hour][importer.ConnPrefix]) == 0 && (len(logMap[day][hour][importer.SSLPrefix]) > 0 || len(logMap[day][hour][importer.HTTPPrefix]) > 0) {
+			if len(logMap[day][hour][i.ConnPrefix]) == 0 && (len(logMap[day][hour][i.SSLPrefix]) > 0 || len(logMap[day][hour][i.HTTPPrefix]) > 0) {
 				logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
-				delete(logMap[day][hour], importer.SSLPrefix)
-				delete(logMap[day][hour], importer.HTTPPrefix)
+				delete(logMap[day][hour], i.SSLPrefix)
+				delete(logMap[day][hour], i.HTTPPrefix)
 			}
 
 			// 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
-			if len(logMap[day][hour][importer.OpenConnPrefix]) == 0 && (len(logMap[day][hour][importer.OpenSSLPrefix]) > 0 || len(logMap[day][hour][importer.OpenHTTPPrefix]) > 0) {
+			if len(logMap[day][hour][i.OpenConnPrefix]) == 0 && (len(logMap[day][hour][i.OpenSSLPrefix]) > 0 || len(logMap[day][hour][i.OpenHTTPPrefix]) > 0) {
 				logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
-				delete(logMap[day][hour], importer.OpenSSLPrefix)
-				delete(logMap[day][hour], importer.OpenHTTPPrefix)
+				delete(logMap[day][hour], i.OpenSSLPrefix)
+				delete(logMap[day][hour], i.OpenHTTPPrefix)
 			}
 
 			// track the total number of files after filtering out invalid file combinations

@@ -50,29 +50,29 @@ type MixtapeResult struct {
 
 type Item MixtapeResult
 
-func (i Item) GetSrc() string {
+func (i *Item) GetSrc() string {
 	if i.Src.String() == "::" && i.Dst.String() == "::" && len(i.FQDN) > 0 {
 		return ""
 	}
 
 	return i.Src.String()
 }
-func (i Item) GetDst() string {
+func (i *Item) GetDst() string {
 	if i.Dst.String() == "::" && len(i.FQDN) > 0 {
 		return i.FQDN
 	}
 	return i.Dst.String()
 }
 
-// func (i item) FQDN() string           { return i.fqdn }
-func (i Item) GetBeacon() string {
+// func (i *Item) FQDN() string           { return i.fqdn }
+func (i *Item) GetBeacon() string {
 	// if connection is a strobe, set beacon score to 100%
 	if i.StrobeScore > 0 {
 		return renderIndicator(i.StrobeScore, "100%")
 	}
 	return renderIndicator(i.BeaconThreatScore, fmt.Sprintf("%1.2f%%", i.BeaconScore*100))
 }
-func (i Item) GetFirstSeen(relativeTimestamp time.Time) string {
+func (i *Item) GetFirstSeen(relativeTimestamp time.Time) string {
 	timeAgo := relativeTimestamp.Sub(i.FirstSeen)
 	switch {
 	case timeAgo.Hours() >= 8760:
@@ -111,27 +111,28 @@ func (i Item) GetFirstSeen(relativeTimestamp time.Time) string {
 	}
 	return fmt.Sprintf("%d %s ago", int(math.Floor(timeAgo.Hours())), text)
 }
-func (i Item) GetTotalDuration() string {
+func (i *Item) GetTotalDuration() string {
 	return renderIndicator(i.LongConnScore, time.Duration(i.TotalDuration*float32(time.Second)).Truncate(time.Second).String())
 }
-func (i Item) GetPrevalence() string {
+func (i *Item) GetPrevalence() string {
 	return renderIndicator(i.PrevalenceScore, fmt.Sprintf("%1.2f%%", i.Prevalence))
 }
-func (i Item) GetSubdomains() string {
+func (i *Item) GetSubdomains() string {
 	return renderIndicator(i.C2OverDNSScore, fmt.Sprintf("%d", i.Subdomains))
 }
 
-func (i Item) GetPortProtoService() []string { return i.PortProtoService }
+func (i *Item) GetPortProtoService() []string { return i.PortProtoService }
 
-func (i Item) GetThreatIntel() string {
+func (i *Item) GetThreatIntel() string {
 	if i.ThreatIntelScore > 0 {
 		return "⛔"
 	}
 	return ""
 }
 
-func (i Item) FilterValue() string { return i.GetSrc() } // no-op
-func (i Item) GetSeverity(color bool) string {
+// no-op
+func (i Item) FilterValue() string { return i.GetSrc() } //nolint:gocritic // filtervalue cannot be a pointer method
+func (i *Item) GetSeverity(color bool) string {
 	caser := cases.Title(language.English)
 
 	var severity config.ImpactCategory
@@ -156,7 +157,7 @@ func (i Item) GetSeverity(color bool) string {
 	return caser.String(string(severity))
 }
 
-func GetResults(db *database.DB, filter Filter, currentPage, pageSize int, minTimestamp time.Time) ([]list.Item, bool, error) {
+func GetResults(db *database.DB, filter *Filter, currentPage, pageSize int, minTimestamp time.Time) ([]list.Item, bool, error) {
 	// build query
 	query, params, appliedFilter := BuildResultsQuery(filter, currentPage, pageSize, minTimestamp)
 
@@ -175,7 +176,7 @@ func GetResults(db *database.DB, filter Filter, currentPage, pageSize int, minTi
 		if err := rows.ScanStruct(&res); err != nil {
 			return nil, false, fmt.Errorf("could not read mixtape result for viewer: %w", err)
 		}
-		items = append(items, list.Item(res))
+		items = append(items, list.Item(&res))
 	}
 
 	rows.Close()
@@ -183,7 +184,7 @@ func GetResults(db *database.DB, filter Filter, currentPage, pageSize int, minTi
 	return items, appliedFilter, nil
 }
 
-func BuildResultsQuery(filter Filter, currentPage, pageSize int, minTimestamp time.Time) (string, clickhouse.Parameters, bool) {
+func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp time.Time) (string, clickhouse.Parameters, bool) {
 	params := clickhouse.Parameters{}
 	query := `--sql
 		SELECT src, dst, fqdn,

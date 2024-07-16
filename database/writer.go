@@ -5,10 +5,10 @@ import (
 	"sync"
 
 	"github.com/activecm/rita/v5/config"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 
 	clickhouse "github.com/ClickHouse/clickhouse-go/v2"
-	driver "github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
@@ -101,7 +101,7 @@ func (w *BulkWriter) shouldReadData(id int, empty bool) bool {
 
 // Close waits for the write threads to finish
 func (w *BulkWriter) Close() {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 	// tell workers that no more data will be sent on this channel
 	close(w.WriteChannel)
 	// mark the channel as closed
@@ -120,7 +120,7 @@ func (w *BulkWriter) Close() {
 func (w *BulkWriter) Start(id int) {
 
 	w.WriteWg.Go(func() error {
-		logger := logger.GetLogger()
+		logger := zlog.GetLogger()
 
 		conn := w.db.getConn()
 

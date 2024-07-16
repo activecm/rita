@@ -10,16 +10,12 @@ import (
 
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
-	"github.com/activecm/rita/v5/logger"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 )
-
-func (r ThreatMixtape) FilterValue() string { return r.Src.String() }
-func (i ThreatMixtape) Title() string       { return i.Dst.String() }
-func (i ThreatMixtape) Description() string { return fmt.Sprint(i.FinalScore * 100) }
 
 type Analyzer struct {
 	Database        *database.DB
@@ -80,13 +76,6 @@ type ThreatMixtape struct {
 	FirstSeenScore           float32 `ch:"first_seen_score"`
 	ThreatIntelDataSizeScore float32 `ch:"threat_intel_data_size_score"`
 	MissingHostHeaderScore   float32 `ch:"missing_host_header_score"`
-
-	// FirstSeenMod           float32 `ch:"first_seen_mod"`
-	// PrevalenceMod          float32 `ch:"prevalence_mod"`
-	// MissingHostHeaderMod   float32 `ch:"missing_host_header_mod"`
-	// C2OverDNSDirectConnMod float32 `ch:"c2_over_dns_direct_conn_mod"`
-	// MIMETypeMismatchMod    float32 `ch:"mime_type_mismatch_mod"`
-	// RareSignatureMod       float32 `ch:"rare_signature_mod"`
 }
 
 // NewAnalyzer returns a new Analyzer object
@@ -100,10 +89,6 @@ func NewAnalyzer(db *database.DB, cfg *config.Config, importID util.FixedString,
 	}
 	var firstSeenMaxTS time.Time
 	if !useCurrentTime {
-		// _, firstSeenMaxTS, _, _, err = db.GetTrueMinMaxTimestamps()
-		// if err != nil {
-		// 	return nil, fmt.Errorf("could not get max timestamp for first seen analysis: %w", err)
-		// }
 		firstSeenMaxTS = maxTS
 	}
 
@@ -128,7 +113,7 @@ func NewAnalyzer(db *database.DB, cfg *config.Config, importID util.FixedString,
 }
 
 func (analyzer *Analyzer) Analyze() error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// log the start time of the analysis
 	start := time.Now()
@@ -174,7 +159,7 @@ func (analyzer *Analyzer) Analyze() error {
 }
 
 func (analyzer *Analyzer) runAnalysis() error {
-	logger := logger.GetLogger()
+	logger := zlog.GetLogger()
 
 	// loop over the uconn channel to process each entry
 	for entry := range analyzer.UconnChan {
@@ -189,7 +174,11 @@ func (analyzer *Analyzer) runAnalysis() error {
 		// set the first seen historical value
 		firstSeenHistorical, replaced := util.ValidateTimestamp(entry.FirstSeenHistorical)
 		if replaced {
-			logger.Debug().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("missing_host_count", fmt.Sprint(entry.MissingHostCount)).Str("fqdn", entry.FQDN).Msg("historical first seen timestamp was missing")
+			logger.Debug().
+				Str("src", entry.Src.String()).
+				Str("dst", entry.Dst.String()).
+				Str("missing_host_count", fmt.Sprint(entry.MissingHostCount)).
+				Str("fqdn", entry.FQDN).Msg("historical first seen timestamp was missing")
 		}
 
 		// if the last seen timestamp was not valid, then this entry cannot be inserted into the mixtape
@@ -197,7 +186,11 @@ func (analyzer *Analyzer) runAnalysis() error {
 		// this should log a warning as this is a bugs
 		lastSeen, replaced := util.ValidateTimestamp(entry.LastSeen)
 		if replaced {
-			logger.Debug().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("missing_host_count", fmt.Sprint(entry.MissingHostCount)).Str("fqdn", entry.FQDN).Msg("last seen timestamp was missing")
+			logger.Debug().
+				Str("src", entry.Src.String()).
+				Str("dst", entry.Dst.String()).
+				Str("missing_host_count", fmt.Sprint(entry.MissingHostCount)).
+				Str("fqdn", entry.FQDN).Msg("last seen timestamp was missing")
 		}
 
 		mixtape.FirstSeenHistorical = firstSeenHistorical

@@ -68,7 +68,7 @@ func (c *CmdTestSuite) TestRunImportCmd() {
 		{
 			name:           "No Subdirectories, No Hours",
 			afs:            afero.NewOsFs(),
-			dbName:         "bingbong",
+			dbName:         "ahhhhhhhhhh",
 			rolling:        false,
 			rebuild:        false,
 			logDir:         "../test_data/valid_tsv",
@@ -158,7 +158,7 @@ func (c *CmdTestSuite) TestRunImportCmd() {
 			require.Len(t, importResults.ImportID, tc.expectedImport, "import results should have expected number of import IDs")
 
 			// check if the database exists
-			exists, err := database.SensorDatabaseExists(c.server.Conn, context.Background(), tc.dbName)
+			exists, err := database.SensorDatabaseExists(context.Background(), c.server.Conn, tc.dbName)
 			require.NoError(t, err, "checking if sensor database exists should not produce an error")
 			require.True(t, exists, "sensor database should exist")
 

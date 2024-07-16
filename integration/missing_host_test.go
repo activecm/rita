@@ -135,7 +135,7 @@ func (it *MissingHostSuite) TestThreat() {
 
 	require.EqualValues(t, expected.count, count, "the number of connections from the conn table should match, expected: %d, got: %d ", expected.count, count)
 
-	filter := viewer.Filter{Src: expected.src, Dst: expected.dst}
+	filter := &viewer.Filter{Src: expected.src, Dst: expected.dst}
 	min = time.Unix(0, 0)
 	query, params, _ := viewer.BuildResultsQuery(filter, 0, 10, min)
 	ctx = it.db.QueryParameters(params)
@@ -159,7 +159,7 @@ func (it *MissingHostSuite) TestThreat() {
 		require.InDelta(t, expected.missingHostScore, res.MissingHostHeaderScore, 0.001, "missing host score should match")
 		require.InDelta(t, expected.prevalence, res.Prevalence, 0.001, "prevalence should match")
 		require.InDelta(t, -it.cfg.Modifiers.PrevalenceScoreDecrease, res.PrevalenceScore, 0.001, "prevalence score should equal the prevalence decrease config value")
-		require.EqualValues(t, 0, res.FirstSeenScore, 0.001, "first seen score should equal 0 for a non-rolling dataset")
+		require.InDelta(t, 0, res.FirstSeenScore, 0.001, "first seen score should equal 0 for a non-rolling dataset")
 		require.EqualValues(t, expected.firstSeen.UTC(), res.FirstSeen, "first seen date should match")
 		require.InDelta(t, it.cfg.Modifiers.MissingHostCountScoreIncrease, res.MissingHostHeaderScore, 0.001, "missing host header score should equal the missing host header increase score config value")
 		require.InDelta(t, it.cfg.Modifiers.RareSignatureScoreIncrease, res.TotalModifierScore, 0.001, "total modifier score should equal the rare signature increase score config value")

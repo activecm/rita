@@ -4,17 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/spf13/afero"
 )
-
-var appConfig *Config
-var loadedConfig bool
-var once sync.Once
 
 var Version string
 
@@ -190,6 +185,7 @@ func GetDefaultConfig() (Config, error) {
 
 // readFile reads the config file at the specified path and returns its contents
 func readFile(afs afero.Fs, path string) ([]byte, error) {
+
 	// validate file
 	err := util.ValidateFile(afs, path)
 	if err != nil {
@@ -231,7 +227,6 @@ func (cfg *Config) ResetConfig() error {
 		return err
 	}
 	*cfg = newConfig
-	loadedConfig = false
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -158,20 +159,19 @@ func TestReadValidTextMIMETypeFile(t *testing.T) {
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			total := 0
-			go func() {
+			go func(writeChan chan Data, expectedMIMETypes []*ValidMIMEType) {
 				defer wg.Done()
-				for entry := range test.writeChan {
-					require := require.New(t)
+				for entry := range writeChan {
 					// cast entry to ValidMIMEType
 					validMIMEType, ok := entry.(*ValidMIMEType)
-					require.True(ok, "entry should be of type *ValidMIMEType")
+					assert.True(t, ok, "entry should be of type *ValidMIMEType")
 
 					// check if the MIME type is in the list of expected MIME types
-					require.Contains(test.expectedMIMETypes, validMIMEType, "MIME type should be in the list of expected MIME types")
+					assert.Contains(t, expectedMIMETypes, validMIMEType, "MIME type should be in the list of expected MIME types")
 
 					total++
 				}
-			}()
+			}(test.writeChan, test.expectedMIMETypes)
 
 			// run the function
 			err = readValidTextMIMETypeFile(tmpFile.Name(), test.writeChan)
