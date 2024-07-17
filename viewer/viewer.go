@@ -189,7 +189,7 @@ func (m *Model) Init() tea.Cmd {
 // Update updates the model
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
-	var cmd tea.Cmd
+	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		// make the footer the entire width of the terminal
@@ -231,7 +231,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// handle filtering
 		case m.SearchBar.TextInput.Focused():
-			cmd = m.handleFiltering(msg)
+			cmd := m.handleFiltering(msg)
+			cmds = append(cmds, cmd)
 
 		// clear filtering (when search bar not focused)
 		case key.Matches(msg, m.keys.clearFilter):
@@ -239,18 +240,24 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// handle quiting
 		case key.Matches(msg, m.keys.quit):
-			cmd = tea.Quit
+			cmd := tea.Quit
+			cmds = append(cmds, cmd)
 
 		// otherwise, handle browsing
 		default:
-			cmd = m.handleBrowsing(msg)
+			cmd := m.handleBrowsing(msg)
+			cmds = append(cmds, cmd)
 		}
 	case StillLoadingResults, FooterFlash:
-		_, cmd = m.Footer.Update(msg)
+		_, cmd := m.Footer.Update(msg)
+		cmds = append(cmds, cmd)
 	case FinishedLoadingResults:
 
 	case spinner.TickMsg:
+		var cmd tea.Cmd
 		m.Footer.spinner, cmd = m.Footer.spinner.Update(msg)
+		cmds = append(cmds, cmd)
+
 	}
 
 	// update sidebar
@@ -271,15 +278,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// set sidebar data to the selected item
 		if data, ok := m.List.Rows.Items()[m.List.Rows.Index()].(*Item); ok {
-			m.SideBar.Data = data
+			_, cmd := m.SideBar.Update(data)
+			cmds = append(cmds, cmd)
 		}
 
 	} else {
-		// if there are no items to display, set the sidebar data to an empty item
-		m.SideBar.Data = &Item{}
+		// if there are no items to display, set the sidebar data to nil
+		_, cmd := m.SideBar.Update(nil)
+		cmds = append(cmds, cmd)
 	}
 
-	return m, cmd
+	return m, tea.Batch(cmds...)
 }
 
 // View renders the model to the terminal
@@ -428,6 +437,11 @@ func (m *Model) requestResults(appendResults bool) {
 		// set loading spinner to true
 		m.Footer.loading = true
 		// time.Sleep(4 * time.Second)
+
+		// reset the server page number if we're not appending results to the rows list
+		if !appendResults {
+			m.serverPage = 0
+		}
 
 		// get results from database
 		items, appliedFilter, err := GetResults(m.db, filter, m.serverPage, m.serverPageSize, m.minTS)

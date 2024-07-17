@@ -42,25 +42,36 @@ func (m *sidebarModel) Init() tea.Cmd {
 	m.Viewport.SetContent(m.getSidebarContents())
 	return nil
 }
+
+type UpdateItem *Item
+
 func (m *sidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
-	switch msg.(type) {
-	case tea.KeyMsg:
-		// if k := msg.String(); k == "ctrl+c" || k == "q" || k == "esc" {
-		// 	return m, tea.Quit
-		// }
+	switch msg := msg.(type) {
+
+	case *Item:
+
+		m.Data = msg
+		content := m.getSidebarContents()
+		numlines := strings.Count(content, "\n") + 1 + 2
+
+		numToClear := m.Viewport.Height - numlines
+		if numToClear > 0 {
+			spaces := m.Viewport.Width - 2
+			for i := 0; i < numToClear; i++ {
+				content += fmt.Sprintf("%*s\n", spaces, "")
+			}
+		}
+
+		m.Viewport.SetContent(content)
 
 	case tea.WindowSizeMsg:
 		cmds = append(cmds, viewport.Sync(m.Viewport))
-
-		// return m, nil
 	}
 	return m, tea.Batch(cmds...)
 }
 
 func (m *sidebarModel) View() string {
-	m.Viewport.SetContent(m.getSidebarContents())
-	m.Viewport.Height = m.Height
 	borderColor := mauve
 	if m.ScrollEnabled {
 		borderColor = green
@@ -71,13 +82,17 @@ func (m *sidebarModel) View() string {
 		Padding(0, 1).
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor)
-	hi := style.Render(m.Viewport.View())
-	return lipgloss.NewStyle().Render(hi)
-	// Border(lipgloss.NormalBorder())
+	sidebar := style.Render(m.Viewport.View())
+	return lipgloss.NewStyle().Render(sidebar)
+
 }
 
 // getSidebarContents gets and formats the data to be displayed in the sidebar
 func (m *sidebarModel) getSidebarContents() string {
+	if m.Data == nil {
+		return lipgloss.NewStyle().Foreground(overlay0).Render("No result found.")
+	}
+
 	// get header
 	var target string
 	headerPadding := 2
@@ -119,15 +134,17 @@ func (m *sidebarModel) getSidebarContents() string {
 
 	connInfoLabel := sectionStyle.Render("「 Connection Info 」")
 
+	dataStyle := lipgloss.NewStyle().Foreground(defaultTextColor)
+
 	// get connection count
 	connCountStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2)
 	connCountHeader := connCountStyle.Render("Connection Count")
-	connCount := lipgloss.JoinVertical(lipgloss.Top, connCountHeader, fmt.Sprintf("%d", m.Data.Count))
+	connCount := dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, connCountHeader, fmt.Sprintf("%d", m.Data.Count)))
 
 	// get total bytes
 	bytesHeaderStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2)
 	bytesHeader := bytesHeaderStyle.Render("Total Bytes")
-	bytes := lipgloss.JoinVertical(lipgloss.Top, bytesHeader, m.Data.TotalBytesFormatted)
+	bytes := dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, bytesHeader, m.Data.TotalBytesFormatted))
 
 	// get port:proto:service
 	portProtoService := m.Data.GetPortProtoService()
@@ -145,7 +162,7 @@ func (m *sidebarModel) getSidebarContents() string {
 
 		// render header
 		portsHeader := portsHeaderStyle.Render("Port : Proto : Service")
-		ports = lipgloss.JoinVertical(lipgloss.Top, portsHeader, strings.Join(portProtoService, ","))
+		ports = dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, portsHeader, strings.Join(portProtoService, "\n")))
 		// strings.Join(portProtoService, "\n")
 		// calculate the number of lines available for port data
 		// remainingLines := m.viewport.Height - (lipgloss.Height(heading) + lipgloss.Height(modifiers) + lipgloss.Height(modifierLabel) + lipgloss.Height(connInfoLabel) + lipgloss.Height(bytes) + lipgloss.Height(connCount))
@@ -182,7 +199,7 @@ func (m *sidebarModel) renderModifiers() string {
 
 			width := lipgloss.Width(newMod)
 			if m.Viewport.Width <= width {
-				modifierLines = append(modifierLines, lipgloss.JoinHorizontal(lipgloss.Left, linebreakStyle.Render(currentModifiers)))
+				modifierLines = append(modifierLines, lipgloss.NewStyle().Foreground(defaultTextColor).Render(lipgloss.JoinHorizontal(lipgloss.Left, linebreakStyle.Render(currentModifiers))))
 				currentModifiers = mod
 				if i != len(renderedModifiers)-1 {
 					currentModifiers = newlineStyle.Render(mod)

@@ -40,6 +40,7 @@ var ErrInvalidLogHourRange = errors.New("could not parse hour from log file name
 var ErrInvalidLogType = errors.New("incompatible log type")
 var ErrIncompatibleFileExtension = errors.New("incompatible file extension")
 var ErrSkippedDuplicateLog = errors.New("encountered file with same name but different extension, skipping file due to older last modified time")
+var ErrMissingLogDirectory = errors.New("log directory flag is required")
 
 type WalkError struct {
 	Path  string
@@ -110,7 +111,7 @@ var ImportCommand = &cli.Command{
 		}
 
 		// check for updates after running the command
-		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+		if err := CheckForUpdate(cfg); err != nil {
 			return err
 		}
 
@@ -303,7 +304,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 
 func ValidateLogDirectory(afs afero.Fs, logDir string) error {
 	if logDir == "" {
-		return fmt.Errorf("log directory flag is required")
+		return ErrMissingLogDirectory
 	}
 
 	dir, err := util.ParseRelativePath(logDir)
@@ -343,7 +344,12 @@ func ValidateDatabaseName(name string) error {
 	return nil
 }
 
-func parseFolderDate(folder string) (time.Time, error) {
+// ParseFolderDate extracts the date from a given folder name
+func ParseFolderDate(folder string) (time.Time, error) {
+	if folder == "" {
+		return time.Unix(0, 0), errors.New("folder name cannot be empty")
+	}
+
 	// check if the path is a directory
 	folderDate, err := time.Parse(time.DateOnly, folder)
 	if err != nil {
@@ -489,7 +495,7 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		}
 
 		parentDir := filepath.Base(filepath.Dir(file.path))
-		folderDate, err := parseFolderDate(parentDir)
+		folderDate, err := ParseFolderDate(parentDir)
 		if err != nil {
 			walkErrors = append(walkErrors, WalkError{Path: path, Error: err})
 		}

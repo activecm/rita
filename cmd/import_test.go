@@ -52,56 +52,193 @@ NON-ROLLING LOGS
 */
 
 func (c *CmdTestSuite) TestRunImportCmd() {
-
-	type TestCase struct {
+	type importDB struct {
 		name           string
-		afs            afero.Fs
-		dbName         string
-		rolling        bool
-		rebuild        bool
 		logDir         string
 		hours          [][]string
+		rolling        bool
+		rebuild        bool
 		expectedImport int
+		expectedError  error
+	}
+
+	type TestCase struct {
+		name      string
+		afs       afero.Fs
+		importDBs []importDB
+		// dbName         string
+		// rolling        bool
+		// rebuild        bool
+		// logDir         string
+		// hours          [][]string
+		// expectedImport int
+		// expectedError error
 	}
 
 	testCases := []TestCase{
 		{
-			name:           "No Subdirectories, No Hours",
-			afs:            afero.NewOsFs(),
-			dbName:         "ahhhhhhhhhh",
-			rolling:        false,
-			rebuild:        false,
-			logDir:         "../test_data/valid_tsv",
-			hours:          [][]string{{"conn.log.gz", "dns.log.gz", "http.log.gz", "ssl.log.gz", "open_conn.log.gz", "open_http.log.gz", "open_ssl.log.gz"}},
-			expectedImport: 1,
+			name: "No Subdirectories, No Hours",
+			afs:  afero.NewOsFs(),
+			importDBs: []importDB{
+				{
+					name:           "ahhhhhhhhhh",
+					logDir:         "../test_data/valid_tsv",
+					hours:          [][]string{{"conn.log.gz", "dns.log.gz", "http.log.gz", "ssl.log.gz", "open_conn.log.gz", "open_http.log.gz", "open_ssl.log.gz"}},
+					rolling:        false,
+					rebuild:        false,
+					expectedImport: 1,
+					expectedError:  nil,
+				},
+			},
 		},
 		{
-			name:    "Simple, SubDirectories - Multi-Day Logs",
-			afs:     afero.NewMemMapFs(),
-			dbName:  "bingbong",
-			rolling: false,
-			rebuild: false,
-			logDir:  "/logs",
-			hours: [][]string{
-				{"2024-04-29/conn.log", "2024-04-29/dns.log", "2024-04-29/http.log", "2024-04-29/ssl.log", "2024-04-29/open_conn.log", "2024-04-29/open_http.log", "2024-04-29/open_ssl.log"},
-				{"2024-05-01/conn.log", "2024-05-01/dns.log", "2024-05-01/http.log", "2024-05-01/ssl.log", "2024-05-01/open_conn.log", "2024-05-01/open_http.log", "2024-05-01/open_ssl.log", "2024-05-01/ssl_blue.log"},
+			name: "Simple, SubDirectories - Multi-Day Logs",
+			afs:  afero.NewMemMapFs(),
+			importDBs: []importDB{
+				{
+					name:   "bingbong",
+					logDir: "/logs",
+					hours: [][]string{
+						{"2024-04-29/conn.log", "2024-04-29/dns.log", "2024-04-29/http.log", "2024-04-29/ssl.log", "2024-04-29/open_conn.log", "2024-04-29/open_http.log", "2024-04-29/open_ssl.log"},
+						{"2024-05-01/conn.log", "2024-05-01/dns.log", "2024-05-01/http.log", "2024-05-01/ssl.log", "2024-05-01/open_conn.log", "2024-05-01/open_http.log", "2024-05-01/open_ssl.log", "2024-05-01/ssl_blue.log"},
+					},
+					rolling:        false,
+					rebuild:        false,
+					expectedImport: 2,
+					expectedError:  nil,
+				},
 			},
-			expectedImport: 2,
 		},
 		{
-			name:    "SubDirectories, Multi-Day, Multi-Hour Logs",
-			afs:     afero.NewMemMapFs(),
-			dbName:  "bingbong",
-			rolling: false,
-			rebuild: false,
-			logDir:  "/logs",
-			hours: [][]string{
-				{"2024-04-29/conn.00:00:00-01:00:00.log", "2024-04-29/open_conn.00:00:00-01:00:00.log", "2024-04-29/dns.00:00:00-01:00:00.log", "2024-04-29/http.00:00:00-01:00:00.log", "2024-04-29/open_http.00:00:00-01:00:00.log", "2024-04-29/ssl.00:00:00-01:00:00.log", "2024-04-29/open_ssl.00:00:00-01:00:00.log"},
-				{"2024-04-29/conn.23:00:00-00:00:00.log", "2024-04-29/open_conn.23:00:00-00:00:00.log", "2024-04-29/dns.23:00:00-00:00:00.log", "2024-04-29/http.23:00:00-00:00:00.log", "2024-04-29/open_http.23:00:00-00:00:00.log", "2024-04-29/ssl.23:00:00-00:00:00.log", "2024-04-29/open_ssl.23:00:00-00:00:00.log"},
-				{"2024-05-01/conn.00:00:00-01:00:00.log", "2024-05-01/open_conn.00:00:00-01:00:00.log", "2024-05-01/dns.00:00:00-01:00:00.log", "2024-05-01/http.00:00:00-01:00:00.log", "2024-05-01/open_http.00:00:00-01:00:00.log", "2024-05-01/ssl.00:00:00-01:00:00.log", "2024-05-01/open_ssl.00:00:00-01:00:00.log"},
-				{"2024-05-01/conn.23:00:00-00:00:00.log", "2024-05-01/open_conn.23:00:00-00:00:00.log", "2024-05-01/dns.23:00:00-00:00:00.log", "2024-05-01/http.23:00:00-00:00:00.log", "2024-05-01/open_http.23:00:00-00:00:00.log", "2024-05-01/ssl.23:00:00-00:00:00.log", "2024-05-01/open_ssl.23:00:00-00:00:00.log", "2024-05-01/ssl_blue.23:00:00-00:00:00.log"},
+			name: "SubDirectories, Multi-Day, Multi-Hour Logs",
+			afs:  afero.NewMemMapFs(),
+			importDBs: []importDB{
+				{
+					name:   "bingbong",
+					logDir: "/logs",
+					hours: [][]string{
+						{"2024-04-29/conn.00:00:00-01:00:00.log", "2024-04-29/open_conn.00:00:00-01:00:00.log", "2024-04-29/dns.00:00:00-01:00:00.log", "2024-04-29/http.00:00:00-01:00:00.log", "2024-04-29/open_http.00:00:00-01:00:00.log", "2024-04-29/ssl.00:00:00-01:00:00.log", "2024-04-29/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-04-29/conn.23:00:00-00:00:00.log", "2024-04-29/open_conn.23:00:00-00:00:00.log", "2024-04-29/dns.23:00:00-00:00:00.log", "2024-04-29/http.23:00:00-00:00:00.log", "2024-04-29/open_http.23:00:00-00:00:00.log", "2024-04-29/ssl.23:00:00-00:00:00.log", "2024-04-29/open_ssl.23:00:00-00:00:00.log"},
+						{"2024-05-01/conn.00:00:00-01:00:00.log", "2024-05-01/open_conn.00:00:00-01:00:00.log", "2024-05-01/dns.00:00:00-01:00:00.log", "2024-05-01/http.00:00:00-01:00:00.log", "2024-05-01/open_http.00:00:00-01:00:00.log", "2024-05-01/ssl.00:00:00-01:00:00.log", "2024-05-01/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-05-01/conn.23:00:00-00:00:00.log", "2024-05-01/open_conn.23:00:00-00:00:00.log", "2024-05-01/dns.23:00:00-00:00:00.log", "2024-05-01/http.23:00:00-00:00:00.log", "2024-05-01/open_http.23:00:00-00:00:00.log", "2024-05-01/ssl.23:00:00-00:00:00.log", "2024-05-01/open_ssl.23:00:00-00:00:00.log", "2024-05-01/ssl_blue.23:00:00-00:00:00.log"},
+					},
+					rolling:        false,
+					rebuild:        false,
+					expectedImport: 4,
+					expectedError:  nil,
+				},
 			},
-			expectedImport: 4,
+		},
+
+		{
+			name: "SubDirectories, Multi-Day, Multi-Hour Logs",
+			afs:  afero.NewMemMapFs(),
+			importDBs: []importDB{
+				{
+					name:   "bingbong",
+					logDir: "/logs",
+					hours: [][]string{
+						{"2024-04-29/conn.00:00:00-01:00:00.log", "2024-04-29/open_conn.00:00:00-01:00:00.log", "2024-04-29/dns.00:00:00-01:00:00.log", "2024-04-29/http.00:00:00-01:00:00.log", "2024-04-29/open_http.00:00:00-01:00:00.log", "2024-04-29/ssl.00:00:00-01:00:00.log", "2024-04-29/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-04-29/conn.23:00:00-00:00:00.log", "2024-04-29/open_conn.23:00:00-00:00:00.log", "2024-04-29/dns.23:00:00-00:00:00.log", "2024-04-29/http.23:00:00-00:00:00.log", "2024-04-29/open_http.23:00:00-00:00:00.log", "2024-04-29/ssl.23:00:00-00:00:00.log", "2024-04-29/open_ssl.23:00:00-00:00:00.log"},
+						{"2024-05-01/conn.00:00:00-01:00:00.log", "2024-05-01/open_conn.00:00:00-01:00:00.log", "2024-05-01/dns.00:00:00-01:00:00.log", "2024-05-01/http.00:00:00-01:00:00.log", "2024-05-01/open_http.00:00:00-01:00:00.log", "2024-05-01/ssl.00:00:00-01:00:00.log", "2024-05-01/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-05-01/conn.23:00:00-00:00:00.log", "2024-05-01/open_conn.23:00:00-00:00:00.log", "2024-05-01/dns.23:00:00-00:00:00.log", "2024-05-01/http.23:00:00-00:00:00.log", "2024-05-01/open_http.23:00:00-00:00:00.log", "2024-05-01/ssl.23:00:00-00:00:00.log", "2024-05-01/open_ssl.23:00:00-00:00:00.log", "2024-05-01/ssl_blue.23:00:00-00:00:00.log"},
+					},
+					rolling:        false,
+					rebuild:        false,
+					expectedImport: 4,
+					expectedError:  nil,
+				},
+			},
+		},
+		{
+			name: "Rolling",
+			afs:  afero.NewMemMapFs(),
+			importDBs: []importDB{
+				{
+					name:   "bingbong",
+					logDir: "/logs/1",
+					hours: [][]string{
+						{"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log"},
+					},
+					rolling:        true,
+					rebuild:        false,
+					expectedImport: 1,
+					expectedError:  nil,
+				},
+				{
+					name:   "bingbong",
+					logDir: "/logs/2",
+					hours: [][]string{
+						{"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log"},
+					},
+					rolling:        true,
+					rebuild:        false,
+					expectedImport: 1,
+					expectedError:  nil,
+				},
+			},
+		},
+		{
+			name: "Rolling - Multi-Day, Multi-Hour Logs",
+			afs:  afero.NewMemMapFs(),
+			importDBs: []importDB{
+				{
+					name:   "bingbong",
+					logDir: "/logs/1",
+					hours: [][]string{
+						{"2024-04-29/conn.00:00:00-01:00:00.log", "2024-04-29/open_conn.00:00:00-01:00:00.log", "2024-04-29/dns.00:00:00-01:00:00.log", "2024-04-29/http.00:00:00-01:00:00.log", "2024-04-29/open_http.00:00:00-01:00:00.log", "2024-04-29/ssl.00:00:00-01:00:00.log", "2024-04-29/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-04-29/conn.23:00:00-00:00:00.log", "2024-04-29/open_conn.23:00:00-00:00:00.log", "2024-04-29/dns.23:00:00-00:00:00.log", "2024-04-29/http.23:00:00-00:00:00.log", "2024-04-29/open_http.23:00:00-00:00:00.log", "2024-04-29/ssl.23:00:00-00:00:00.log", "2024-04-29/open_ssl.23:00:00-00:00:00.log"},
+						{"2024-05-01/conn.00:00:00-01:00:00.log", "2024-05-01/open_conn.00:00:00-01:00:00.log", "2024-05-01/dns.00:00:00-01:00:00.log", "2024-05-01/http.00:00:00-01:00:00.log", "2024-05-01/open_http.00:00:00-01:00:00.log", "2024-05-01/ssl.00:00:00-01:00:00.log", "2024-05-01/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-05-01/conn.23:00:00-00:00:00.log", "2024-05-01/open_conn.23:00:00-00:00:00.log", "2024-05-01/dns.23:00:00-00:00:00.log", "2024-05-01/http.23:00:00-00:00:00.log", "2024-05-01/open_http.23:00:00-00:00:00.log", "2024-05-01/ssl.23:00:00-00:00:00.log", "2024-05-01/open_ssl.23:00:00-00:00:00.log", "2024-05-01/ssl_blue.23:00:00-00:00:00.log"},
+					},
+					rolling:        true,
+					rebuild:        false,
+					expectedImport: 4,
+					expectedError:  nil,
+				},
+				{
+					name:   "bingbong",
+					logDir: "/logs/2",
+					hours: [][]string{
+						{"2024-05-02/conn.00:00:00-01:00:00.log", "2024-05-02/open_conn.00:00:00-01:00:00.log", "2024-05-02/dns.00:00:00-01:00:00.log", "2024-05-02/http.00:00:00-01:00:00.log", "2024-05-02/open_http.00:00:00-01:00:00.log", "2024-05-02/ssl.00:00:00-01:00:00.log", "2024-05-02/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-05-02/conn.23:00:00-00:00:00.log", "2024-05-02/open_conn.23:00:00-00:00:00.log", "2024-05-02/dns.23:00:00-00:00:00.log", "2024-05-02/http.23:00:00-00:00:00.log", "2024-05-02/open_http.23:00:00-00:00:00.log", "2024-05-02/ssl.23:00:00-00:00:00.log", "2024-05-02/open_ssl.23:00:00-00:00:00.log"},
+						{"2024-05-03/conn.00:00:00-01:00:00.log", "2024-05-03/open_conn.00:00:00-01:00:00.log", "2024-05-03/dns.00:00:00-01:00:00.log", "2024-05-03/http.00:00:00-01:00:00.log", "2024-05-03/open_http.00:00:00-01:00:00.log", "2024-05-03/ssl.00:00:00-01:00:00.log", "2024-05-03/open_ssl.00:00:00-01:00:00.log"},
+						{"2024-05-03/conn.23:00:00-00:00:00.log", "2024-05-03/open_conn.23:00:00-00:00:00.log", "2024-05-03/dns.23:00:00-00:00:00.log", "2024-05-03/http.23:00:00-00:00:00.log", "2024-05-03/open_http.23:00:00-00:00:00.log", "2024-05-03/ssl.23:00:00-00:00:00.log", "2024-05-03/open_ssl.23:00:00-00:00:00.log", "2024-05-03/ssl_blue.23:00:00-00:00:00.log"},
+					},
+					rolling:        true,
+					rebuild:        false,
+					expectedImport: 4,
+					expectedError:  nil,
+				},
+			},
+		},
+		{
+			name: "Files Previously Imported",
+			afs:  afero.NewMemMapFs(),
+			importDBs: []importDB{
+				{
+					name:   "bingbong",
+					logDir: "/logs/1",
+					hours: [][]string{
+						{"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log"},
+					},
+					rolling:        true,
+					rebuild:        false,
+					expectedImport: 1,
+					expectedError:  nil,
+				},
+				{
+					name:   "bingbong",
+					logDir: "/logs/1",
+					hours: [][]string{
+						{"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log"},
+					},
+					rolling:        true,
+					rebuild:        false,
+					expectedImport: 1,
+					expectedError:  importer.ErrAllFilesPreviouslyImported,
+				},
+			},
 		},
 	}
 
@@ -109,88 +246,111 @@ func (c *CmdTestSuite) TestRunImportCmd() {
 		c.Run(tc.name, func() {
 			t := c.T()
 
-			importStartedAt := time.Now()
+			// loop over each importDB
+			for _, db := range tc.importDBs {
+				// get start time
+				importStartedAt := time.Now()
 
-			var files []string
-			var fullPathHours [][]string
+				var files []string
+				var fullPathHours [][]string
 
-			// get the root directory path
-			fullRootDir := tc.logDir
+				// get the root directory path
+				fullRootDir := db.logDir
 
-			// if we are using the real logs directory, we need to get the real full path
-			if tc.logDir != "/logs" {
-				// get the current working directory
-				cwd, err := os.Getwd()
-				if err != nil {
-					fmt.Println("Error getting current working directory:", err)
-					return
+				// if we are using the real logs directory, we need to get the real full path
+				if !strings.HasPrefix(db.logDir, "/logs") {
+					// get the current working directory
+					cwd, err := os.Getwd()
+					if err != nil {
+						fmt.Println("Error getting current working directory:", err)
+						return
+					}
+
+					fullRootDir = filepath.Join(cwd, db.logDir)
 				}
 
-				fullRootDir = filepath.Join(cwd, tc.logDir)
-			}
+				// iterate over each day of logs
+				for _, day := range db.hours {
+					// append all the files to a single list for creation
+					files = append(files, day...)
 
-			// iterate over each day of logs
-			for _, day := range tc.hours {
-				// append all the files to a single list for creation
-				files = append(files, day...)
-
-				// convert the day list of files to full path versions
-				var fullHourFiles []string
-				for _, file := range day {
-					fullPath := filepath.Join(fullRootDir, file)
-					fullHourFiles = append(fullHourFiles, fullPath)
-				}
-				fullPathHours = append(fullPathHours, fullHourFiles)
-			}
-
-			// if we are using the mock directory, we need to create it along with the files
-			if tc.logDir == "/logs" {
-				// create mock directory with files
-				createMockZeekLogs(t, tc.afs, tc.logDir, files, true)
-			}
-
-			// run the import command
-			importResults, err := cmd.RunImportCmd(importStartedAt, c.cfg, tc.afs, tc.logDir, tc.dbName, tc.rolling, tc.rebuild)
-			require.NoError(t, err, "running import command should not produce an error")
-			require.NotNil(t, importResults, "import results should not be nil")
-
-			// verify the number of import IDs
-			require.Len(t, importResults.ImportID, tc.expectedImport, "import results should have expected number of import IDs")
-
-			// check if the database exists
-			exists, err := database.SensorDatabaseExists(context.Background(), c.server.Conn, tc.dbName)
-			require.NoError(t, err, "checking if sensor database exists should not produce an error")
-			require.True(t, exists, "sensor database should exist")
-
-			// check rolling status
-			isRolling, err := database.GetRollingStatus(context.Background(), c.server.Conn, tc.dbName)
-			require.NoError(t, err, "checking if sensor database is rolling should not produce an error")
-			require.Equal(t, tc.rolling, isRolling, "rolling status should match expected value")
-
-			// verify imported paths for each hour
-			for i := range fullPathHours {
-				var result struct {
-					Paths []string `ch:"paths"`
+					// convert the day list of files to full path versions
+					var fullHourFiles []string
+					for _, file := range day {
+						fullPath := filepath.Join(fullRootDir, file)
+						fullHourFiles = append(fullHourFiles, fullPath)
+					}
+					fullPathHours = append(fullPathHours, fullHourFiles)
 				}
 
-				ctx := clickhouse.Context(context.Background(), clickhouse.WithParameters(clickhouse.Parameters{
-					"import_id": importResults.ImportID[i].Hex(),
-					"database":  tc.dbName,
-				}))
+				// if we are using the mock directory, we need to create it along with the files
+				if strings.HasPrefix(db.logDir, "/logs") {
+					// create mock directory with files
+					createMockZeekLogs(t, tc.afs, db.logDir, files, true)
+				}
 
-				err = c.server.Conn.QueryRow(ctx, `
+				// run the import command
+				importResults, err := cmd.RunImportCmd(importStartedAt, c.cfg, tc.afs, db.logDir, db.name, db.rolling, db.rebuild)
+
+				// check if we expect an error
+				if db.expectedError != nil {
+					require.Error(t, err, "running import command should produce an error")
+					require.Contains(t, err.Error(), db.expectedError.Error(), "error should contain expected value")
+					continue
+				}
+
+				// if no error was expected, continue with the rest of the checks
+				require.NoError(t, err, "running import command should not produce an error")
+				require.NotNil(t, importResults, "import results should not be nil")
+
+				// verify the number of import IDs
+				require.Len(t, importResults.ImportID, db.expectedImport, "import results should have expected number of import IDs")
+
+				// check if the database exists
+				exists, err := database.SensorDatabaseExists(context.Background(), c.server.Conn, db.name)
+				require.NoError(t, err, "checking if sensor database exists should not produce an error")
+				require.True(t, exists, "sensor database should exist")
+
+				// check rolling status
+				isRolling, err := database.GetRollingStatus(context.Background(), c.server.Conn, db.name)
+				require.NoError(t, err, "checking if sensor database is rolling should not produce an error")
+				require.Equal(t, db.rolling, isRolling, "rolling status should match expected value")
+
+				// verify imported paths for each hour
+				for i := range fullPathHours {
+					var result struct {
+						Paths []string `ch:"paths"`
+					}
+
+					ctx := clickhouse.Context(context.Background(), clickhouse.WithParameters(clickhouse.Parameters{
+						"import_id": importResults.ImportID[i].Hex(),
+						"database":  db.name,
+					}))
+
+					err = c.server.Conn.QueryRow(ctx, `
 					SELECT groupArray(path) AS paths
 					FROM metadatabase.files
 					WHERE import_id = unhex({import_id:String}) AND database = {database:String}
 				`).ScanStruct(&result)
-				require.NoError(t, err, "querying for total file count should not produce an error")
+					require.NoError(t, err, "querying for total file count should not produce an error")
 
-				require.ElementsMatch(t, fullPathHours[i], result.Paths, "paths should match expected value")
+					require.ElementsMatch(t, fullPathHours[i], result.Paths, "paths should match expected value")
+				}
+
 			}
 
-			// clean up the directory
-			if tc.logDir == "/logs" {
-				require.NoError(t, tc.afs.RemoveAll(tc.logDir), "removing directory should not produce an error")
+			// cleanup each importDB
+			for _, db := range tc.importDBs {
+				// clean up the directory if we are using a mock directory
+				// if tc.logDir == "/logs" {
+				if strings.HasPrefix(db.logDir, "/logs") {
+					require.NoError(t, tc.afs.RemoveAll(db.logDir), "removing directory should not produce an error")
+				}
+
+				// clean up the database
+				err := c.server.DeleteSensorDB(db.name)
+				require.NoError(t, err, "dropping database should not produce an error")
+
 			}
 		})
 	}
@@ -230,7 +390,7 @@ func createMockZeekLogs(t *testing.T, afs afero.Fs, directory string, files []st
 				"1715641234.367201\tCxT125\t10.0.0.5\t52.12.0.5\n",
 			)
 		}
-		err = afero.WriteFile(afs, filepath.Join(directory, file), data, os.FileMode(0o775))
+		err := afero.WriteFile(afs, filepath.Join(directory, file), data, os.FileMode(0o775))
 		require.NoError(t, err, "creating files should not produce an error")
 	}
 }
@@ -949,27 +1109,142 @@ func TestValidateDatabaseName(t *testing.T) {
 	}
 
 	tests := []testCase{
+		{name: "Common name, dnscat2_ja3_strobe", db: "dnscat2_ja3_strobe"},
+		{name: "Common name, combined__0000_rolling", db: "combined__0000_rolling"},
+		{name: "Common name, seconion_2024_05_15", db: "combined__0000_rolling"},
 		{name: "All alpha characters", db: "vsagent"},
 		{name: "All alphanumeric characters", db: "dnscat20"},
+		{name: "All numeric characters", db: "2024", shouldErr: true},
+		{name: "Starting with a number", db: "2vsagent", shouldErr: true},
 		{name: "Starting with a capital letter", db: "Vsagent", shouldErr: true},
 		{name: "All caps", db: "INFORMATION_SCHEMA", shouldErr: true},
+		{name: "Contains special characters", db: "ch!ck3n$tr!p", shouldErr: true},
+		{name: "Contains a hyphen", db: "combined__0000-rolling", shouldErr: true},
 		{name: "Starting with an underscore", db: "_vsagent", shouldErr: true},
+		{name: "Ending with underscore", db: "dnscat2_", shouldErr: true},
+		{name: "Length >63 characters", db: "i_am_a_very_long_database_name_that_is_over_63_characters_long_and_should_fail", shouldErr: true},
 		{name: "Name is reserved: default", db: "default", shouldErr: true},
 		{name: "Name is reserved: system", db: "system", shouldErr: true},
 		{name: "Name is reserved: information_schema", db: "information_schema", shouldErr: true},
 		{name: "Name is reserved: metadatabase", db: "metadatabase", shouldErr: true},
-		{name: "Contains special characters", db: "ch!ck3n$tr!p", shouldErr: true},
-		{name: "Contains a hyphen", db: "combined__0000-rolling", shouldErr: true},
-		{name: "Ends with underscore", db: "dnscat2_", shouldErr: true},
-		{name: "Common name, dnscat2_ja3_strobe", db: "dnscat2_ja3_strobe"},
-		{name: "Common name, combined__0000_rolling", db: "combined__0000_rolling"},
-		{name: "Common name, seconion_2024_05_15", db: "combined__0000_rolling"},
+		{name: "Empty string", db: "", shouldErr: true},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			err := cmd.ValidateDatabaseName(test.db)
 			require.Equal(t, test.shouldErr, err != nil, "expected error:%t, got error: %t", test.shouldErr, err)
+		})
+	}
+}
+
+func TestValidateLogDirectory(t *testing.T) {
+	tests := []struct {
+		name          string
+		logDir        string
+		setup         func(afs afero.Fs)
+		expectedError error
+	}{
+		{
+			name:   "Valid Directory",
+			logDir: "/validlogdir",
+			setup: func(afs afero.Fs) {
+				require.NoError(t, afs.Mkdir("/validlogdir", 0755))
+				require.NoError(t, afero.WriteFile(afs, "/validlogdir/file.txt", []byte("content"), 0644))
+			},
+			expectedError: nil,
+		},
+		{
+			name:   "Empty Directory",
+			logDir: "/emptylogdir",
+			setup: func(afs afero.Fs) {
+				require.NoError(t, afs.Mkdir("/emptylogdir", 0755))
+			},
+			expectedError: util.ErrDirIsEmpty,
+		},
+		{
+			name:   "Path is a File",
+			logDir: "/logfile.txt",
+			setup: func(afs afero.Fs) {
+				require.NoError(t, afero.WriteFile(afs, "/logfile.txt", []byte("content"), 0644))
+			},
+			expectedError: util.ErrPathIsNotDir,
+		},
+		{
+			name:          "Empty Log Directory",
+			logDir:        "",
+			setup:         func(_ afero.Fs) {},
+			expectedError: cmd.ErrMissingLogDirectory,
+		},
+		{
+			name:          "Invalid Relative Path",
+			logDir:        "~/invalid/dir",
+			setup:         func(_ afero.Fs) {},
+			expectedError: util.ErrDirDoesNotExist,
+		},
+		{
+			name:          "Non-Existent Directory",
+			logDir:        "/nonexistentdir",
+			setup:         func(_ afero.Fs) {},
+			expectedError: util.ErrDirDoesNotExist,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			afs := afero.NewMemMapFs()
+			test.setup(afs)
+
+			err := cmd.ValidateLogDirectory(afs, test.logDir)
+
+			if test.expectedError != nil {
+				require.Error(t, err, "error should not be nil")
+				require.ErrorContains(t, err, test.expectedError.Error(), "error message should contain expected value")
+			} else {
+				require.NoError(t, err, "validating log directory should not produce an error")
+			}
+		})
+	}
+}
+
+func TestParseFolderDate(t *testing.T) {
+	tests := []struct {
+		name          string
+		folder        string
+		expectedTime  time.Time
+		expectedError error
+	}{
+		{
+			name:         "Valid Date Folder",
+			folder:       "2023-06-01",
+			expectedTime: time.Date(2023, 6, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name:         "Invalid Date Folder",
+			folder:       "invalid-folder",
+			expectedTime: time.Date(2006, 1, 2, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name:          "Empty Folder Name",
+			folder:        "",
+			expectedTime:  time.Unix(0, 0),
+			expectedError: fmt.Errorf("folder name cannot be empty"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := cmd.ParseFolderDate(test.folder)
+
+			if test.expectedError != nil {
+				require.Error(t, err, "error should not be nil")
+				require.ErrorContains(t, err, test.expectedError.Error(), "error message should contain expected value")
+
+			} else {
+				require.NoError(t, err, "parsing folder date should not produce an error")
+			}
+
+			require.Equal(t, test.expectedTime, result, "the result should match the expected value")
 		})
 	}
 }

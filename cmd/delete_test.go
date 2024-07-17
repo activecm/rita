@@ -202,8 +202,12 @@ func (c *CmdTestSuite) TestRunDeleteCmd() {
 			}
 
 			// validate that the expected databases remain
-			for _, db := range test.expectedRemainingDbs {
-				require.Contains(t, dbString, db, "database %s should not have been deleted", db)
+			require.ElementsMatch(t, test.expectedRemainingDbs, dbString, "remaining databases should match expected value")
+
+			// cleanup
+			for _, db := range test.dbs {
+				err := c.server.DeleteSensorDB(db.name)
+				require.NoError(t, err, "dropping database should not produce an error")
 			}
 
 		})

@@ -35,13 +35,14 @@ var ValidateConfigCommand = &cli.Command{
 		afs := afero.NewOsFs()
 
 		// validate config file
-		if err := RunValidateConfigCommand(afs, cCtx.String("config")); err != nil {
+		cfg, err := RunValidateConfigCommand(afs, cCtx.String("config"))
+		if err != nil {
 			fmt.Printf("\n\t[!] Configuration file is not valid...")
 			return err
 		}
 
 		// check for updates after running the command
-		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+		if err := CheckForUpdate(cfg); err != nil {
 			return err
 		}
 
@@ -49,21 +50,21 @@ var ValidateConfigCommand = &cli.Command{
 	},
 }
 
-func RunValidateConfigCommand(afs afero.Fs, configPath string) error {
+func RunValidateConfigCommand(afs afero.Fs, configPath string) (*config.Config, error) {
 	// validate config file path
 	if err := ValidateConfigPath(afs, configPath); err != nil {
-		return err
+		return nil, err
 	}
 
 	// load config path
-	_, err := config.ReadFileConfig(afs, configPath)
+	cfg, err := config.ReadFileConfig(afs, configPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Printf("\n\t[✨] Configuration file is valid \n\n")
 
-	return nil
+	return cfg, nil
 }
 
 func ValidateConfigPath(afs afero.Fs, configPath string) error {

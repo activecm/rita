@@ -66,6 +66,7 @@ func init() {
 	privateIPBlocks = privateIPs
 }
 
+// NewFixedStringHash creates a FixedString from a hash of all the passed in strings
 func NewFixedStringHash(args ...string) (FixedString, error) {
 	if len(args) == 0 {
 		return FixedString{}, errors.New("no arguments provided")
@@ -85,24 +86,21 @@ func NewFixedStringHash(args ...string) (FixedString, error) {
 	return fs, nil
 }
 
+// NewFixedStringFromString creates a FixedString from a passed in hex string
 func NewFixedStringFromHex(h string) (FixedString, error) {
+	if h == "" {
+		return FixedString{}, errors.New("hex string is empty")
+	}
+
 	data, err := hex.DecodeString(h)
 	if err != nil {
-		return FixedString{}, err
+		return FixedString{}, fmt.Errorf("error decoding hex string: %w", err)
 	}
 	var fixed [16]byte
-	copy(fixed[:], data[:16])
+	copy(fixed[:], data)
 	return FixedString{
 		Data: fixed,
 	}, nil
-}
-
-func ValidFQDN(value string) bool {
-	// Regular expression for validating FQDN
-	// This pattern requires at least two labels (separated by dots), with each label starting and ending with an alphanumeric character.
-	// Labels in between can have hyphens. The last label (TLD) must be at least two characters long, with only letters.
-	re := regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
-	return re.MatchString(value)
 }
 
 func (bin *FixedString) Hex() string {
@@ -125,6 +123,14 @@ func (bin *FixedString) UnmarshalBinary(b []byte) error {
 // Returns value of FixedString as a pointer, used when sometimes writing to database
 func (bin FixedString) Value() (driver.Value, error) {
 	return &bin.val, nil
+}
+
+func ValidFQDN(value string) bool {
+	// Regular expression for validating FQDN
+	// This pattern requires at least two labels (separated by dots), with each label starting and ending with an alphanumeric character.
+	// Labels in between can have hyphens. The last label (TLD) must be at least two characters long, with only letters.
+	re := regexp.MustCompile(`^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+	return re.MatchString(value)
 }
 
 // ContainsIP checks if a collection of subnets contains an IP
@@ -294,23 +300,7 @@ func GetRelativeFirstSeenTimestamp(useCurrentTime bool, maxTimestamp time.Time) 
 	return time.Now()
 }
 
-// func ParseRelativePath(dir string) (string, error) {
-// 	// if path is home, parse and set home dir
-// 	if dir[:2] == "~/" {
-// 		home, err := os.UserHomeDir()
-// 		if err != nil {
-// 			return "", err
-// 		}
-// 		return filepath.Join(home, dir[2:]), nil
-// 	}
-// 	// otherwise, get the path relative to the current working directory
-// 	currentDir, err := os.Getwd()
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return filepath.Join(currentDir, dir), nil
-// }
-
+// ParseRelativePath parses a given directory path and returns the absolute path
 func ParseRelativePath(dir string) (string, error) {
 	// validate parameters
 	if dir == "" {
@@ -337,7 +327,6 @@ func ParseRelativePath(dir string) (string, error) {
 		return dir, nil
 
 	}
-
 }
 
 // ValidateDirectory returns whether a directory exists and is empty
@@ -392,6 +381,7 @@ func ValidateFile(afs afero.Fs, file string) error {
 	return nil
 }
 
+// validatePath validates a given path
 func validatePath(afs afero.Fs, path string) (bool, bool, bool, error) {
 	var exists, isDir, isEmpty bool
 
@@ -428,31 +418,42 @@ func validatePath(afs afero.Fs, path string) (bool, bool, bool, error) {
 
 // CheckForNewerVersion checks if a newer version of the project is available on the GitHub repository
 func CheckForNewerVersion(client *github.Client, currentVersion string) (bool, string, error) {
-
-	// Get the latest release
-	latestRelease, _, err := client.Repositories.GetLatestRelease(context.Background(), "activecm", "rita")
+	// get the latest version
+	latestVersion, err := GetLatestReleaseVersion(client, "activecm", "rita")
 	if err != nil {
-		return false, "", fmt.Errorf("error fetching latest release: %w", err)
+		return false, "", err
 	}
 
-	// Get the latest version from release tag name
-	latestVersion := latestRelease.GetTagName()
-
-	// Parse the current and latest versions
+	// parse the current version
 	currentSemver, err := semver.ParseTolerant(currentVersion)
 	if err != nil {
 		return false, "", fmt.Errorf("error parsing current version: %w", err)
 	}
 
+	// parse the latest version
 	latestSemver, err := semver.ParseTolerant(latestVersion)
 	if err != nil {
 		return false, "", fmt.Errorf("error parsing latest version: %w", err)
 	}
 
-	// Compare the versions
+	// compare the versions
 	if latestSemver.GT(currentSemver) {
 		return true, latestVersion, nil
 	}
 
 	return false, latestVersion, nil
+}
+
+// GetLatestReleaseVersion gets the latest release version from the GitHub repository
+func GetLatestReleaseVersion(client *github.Client, owner, repo string) (string, error) {
+	// get the latest release
+	latestRelease, _, err := client.Repositories.GetLatestRelease(context.Background(), owner, repo)
+	if err != nil {
+		return "", fmt.Errorf("error fetching latest release: %w", err)
+	}
+
+	// get the latest version from release tag name
+	latestVersion := latestRelease.GetTagName()
+
+	return latestVersion, nil
 }

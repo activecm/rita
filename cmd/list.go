@@ -34,13 +34,19 @@ var ListCommand = &cli.Command{
 		// set up file system interface
 		afs := afero.NewOsFs()
 
+		// load config file
+		cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
+		if err != nil {
+			return err
+		}
+
 		// run the delete command
-		if err := runListCmd(afs, cCtx.String("config")); err != nil {
+		if err := runListCmd(cfg); err != nil {
 			return err
 		}
 
 		// check for updates after running the command
-		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+		if err := CheckForUpdate(cfg); err != nil {
 			return err
 		}
 
@@ -48,12 +54,7 @@ var ListCommand = &cli.Command{
 	},
 }
 
-func runListCmd(afs afero.Fs, configPath string) error {
-
-	cfg, err := config.ReadFileConfig(afs, configPath)
-	if err != nil {
-		return err
-	}
+func runListCmd(cfg *config.Config) error {
 
 	// connect to server
 	server, err := database.ConnectToServer(context.Background(), cfg)

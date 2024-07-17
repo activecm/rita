@@ -15,6 +15,9 @@ import (
 var ErrMissingDatabaseName = errors.New("database name is required")
 var ErrMissingConfigPath = errors.New("config path parameter is required")
 var ErrTooManyArguments = errors.New("too many arguments provided")
+var ErrInvalidConfigObject = errors.New("config was nil or invalid")
+var ErrCurrentVersionEmpty = errors.New("current version unset")
+var ErrCheckingForUpdate = errors.New("error checking for newer version of RITA")
 
 func Commands() []*cli.Command {
 	return []*cli.Command{
@@ -39,21 +42,20 @@ func ConfigFlag(required bool) *cli.StringFlag {
 	}
 }
 
-func CheckForUpdate(cCtx *cli.Context, afs afero.Fs) error {
+func CheckForUpdate(cfg *config.Config) error {
+	// make sure config is not nil
+	if cfg == nil {
+		return ErrInvalidConfigObject
+	}
+
 	// get the current version
 	currentVersion := config.Version
-
-	// load config file
-	cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
-	if err != nil {
-		return fmt.Errorf("error loading config file: %w", err)
-	}
 
 	// check for update if version is set
 	if cfg.UpdateCheckEnabled && currentVersion != "" && currentVersion != "dev" {
 		newer, latestVersion, err := util.CheckForNewerVersion(github.NewClient(nil), currentVersion)
 		if err != nil {
-			return fmt.Errorf("error checking for newer version of RITA: %w", err)
+			return fmt.Errorf("%w: %w", ErrCheckingForUpdate, err)
 		}
 		if newer {
 			fmt.Printf("\n\t✨ A newer version (%s) of RITA is available! https://github.com/activecm/rita/releases ✨\n\n", latestVersion)

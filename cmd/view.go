@@ -46,8 +46,6 @@ var ViewCommand = &cli.Command{
 		ConfigFlag(false),
 	},
 	Action: func(cCtx *cli.Context) error {
-		afs := afero.NewOsFs()
-
 		// flags must go before the argument, otherwise they won't be applied ._.
 		// we can either make the db name a flag or see if cobra is any better
 		if !cCtx.Args().Present() {
@@ -79,18 +77,22 @@ var ViewCommand = &cli.Command{
 			}
 		}
 
+		// set up file system interface
+		afs := afero.NewOsFs()
+
 		// load config file
 		cfg, err := config.ReadFileConfig(afs, cCtx.String("config"))
 		if err != nil {
 			return err
 		}
 
+		// run the view command
 		if err := runViewCmd(cfg, cCtx.Args().First(), cCtx.Bool("stdout"), cCtx.String("search"), cCtx.Int("limit")); err != nil {
 			return err
 		}
 
 		// check for updates after running the command
-		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+		if err := CheckForUpdate(cfg); err != nil {
 			return err
 		}
 

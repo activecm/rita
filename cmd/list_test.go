@@ -66,4 +66,10 @@ func (c *CmdTestSuite) TestFormatListTable() {
 		require.Equal(expectedDBs[i].rolling, strings.TrimSpace(cols[1]))
 		require.Equal(expectedDBs[i].tsRange, strings.TrimSpace(cols[2]))
 	}
+
+	// clean up
+	for _, db := range expectedDBs {
+		err := c.server.DeleteSensorDB(db.name)
+		require.NoError(err)
+	}
 }

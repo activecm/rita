@@ -26,7 +26,7 @@ var ErrNoMetaDBImportRecordForDatabase = errors.New("no import record found for 
 var ErrDatabaseNotFound = errors.New("database does not exist")
 var ErrDatabaseNameEmpty = errors.New("database name cannot be empty")
 var ErrMissingConfig = errors.New("config cannot be nil")
-var errImportTwiceNonRolling = errors.New("cannot import more than once to a non-rolling database")
+var ErrImportTwiceNonRolling = errors.New("cannot import more than once to a non-rolling database")
 var errRollingStatusFailure = errors.New("failed to detect rolling status of given import database")
 var errRollingFlagMissing = errors.New("cannot import non-rolling data to a rolling database")
 
@@ -337,8 +337,8 @@ func (server *ServerConn) checkRolling(dbName string, rollingFlag bool, rebuildF
 	// command is requesting to import data as rolling, but dataset is not rolling
 	case rollingFlag && !rolling && !rebuildFlag:
 		logger.Warn().Str("database", dbName).
-			Msg(errImportTwiceNonRolling.Error())
-		return rolling, errImportTwiceNonRolling
+			Msg(ErrImportTwiceNonRolling.Error())
+		return rolling, ErrImportTwiceNonRolling
 
 	// command is requesting to import data as non-rolling, but dataset is rolling
 	case rolling && !rollingFlag && !rebuildFlag:

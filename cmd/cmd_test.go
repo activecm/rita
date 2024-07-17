@@ -1,6 +1,7 @@
 package cmd_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -8,11 +9,15 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/util"
+	"github.com/google/go-github/github"
 
 	"github.com/joho/godotenv"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
@@ -91,20 +96,7 @@ func (c *CmdTestSuite) TearDownSuite() {
 // func (d *DatabaseTestSuite) TearDownTest() {}
 
 // SetupSubTest is run before each subtest
-func (c *CmdTestSuite) SetupSubTest() {
-	t := c.T()
-	fmt.Println("Running setup subtest...")
-
-	// drop all databases that may have been created during subtest
-	if c.server != nil && c.server.Conn != nil {
-		dbs, err := c.server.ListImportDatabases()
-		require.NoError(t, err, "listing databases should not produce an error")
-		for _, db := range dbs {
-			err := c.server.DeleteSensorDB(db.Name)
-			require.NoError(t, err, "dropping database should not produce an error")
-		}
-	}
-}
+// func (c *CmdTestSuite) SetupSubTest() {}
 
 // TearDownSubTest is run after each subtest
 // func (c *CmdTestSuite) TearDownSubTest() {}
@@ -148,8 +140,117 @@ func setupTestApp(commands []*cli.Command, flags []cli.Flag) (*cli.App, context.
 	// this prevents the test from exiting when testing for errors
 	app.ExitErrHandler = func(_ *cli.Context, _ error) {
 		// add any custom test logic, or assertions or leave it blank
-
 	}
 
 	return app, ctx
+}
+
+func TestCheckForUpdate(t *testing.T) {
+	// set up file system interface
+	afs := afero.NewOsFs()
+
+	// load the config file
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
+	require.NoError(t, err, "config should load without error")
+
+	// get latest release version
+	latestVersion, err := util.GetLatestReleaseVersion(github.NewClient(nil), "activecm", "rita")
+	require.NoError(t, err, "latest release version should be retrieved without error")
+
+	tests := []struct {
+		name               string
+		cfg                *config.Config
+		updateCheckEnabled bool
+		currentVersion     string
+		expectedErr        error
+		expectedOutput     string
+	}{
+		{
+			name:               "New version available",
+			updateCheckEnabled: true,
+			cfg:                cfg,
+			currentVersion:     "v0.0.0",
+			expectedOutput:     fmt.Sprintf("\n\t✨ A newer version (%s) of RITA is available! https://github.com/activecm/rita/releases ✨\n\n", latestVersion),
+		},
+		{
+			name:               "Error checking for newer version",
+			updateCheckEnabled: true,
+			cfg:                cfg,
+			currentVersion:     "notaversion",
+			expectedErr:        cmd.ErrCheckingForUpdate,
+		},
+		{
+			name:               "Update check disabled",
+			updateCheckEnabled: false,
+			cfg:                cfg,
+			currentVersion:     "1.0.0",
+		},
+		{
+			name:               "Current version is dev",
+			updateCheckEnabled: true,
+			cfg:                cfg,
+			currentVersion:     "dev",
+		},
+		{
+			name:               "Current version is empty",
+			updateCheckEnabled: true,
+			cfg:                cfg,
+			currentVersion:     "",
+		},
+		{
+			name:        "Nil config",
+			cfg:         nil,
+			expectedErr: cmd.ErrInvalidConfigObject,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// set update check enabled in config
+			if test.cfg != nil {
+				test.cfg.UpdateCheckEnabled = test.updateCheckEnabled
+			}
+
+			// override global variables and functions
+			config.Version = test.currentVersion
+
+			// capture stdout
+			output := captureOutput(t, func() {
+				err := cmd.CheckForUpdate(test.cfg)
+				// check error
+				if test.expectedErr != nil {
+					require.Contains(t, err.Error(), test.expectedErr.Error(), "error should contain expected value")
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+
+			// Assert output
+			if test.expectedOutput != "" {
+				assert.Equal(t, test.expectedOutput, output)
+			}
+		})
+	}
+}
+
+// captureOutput captures stdout from a function
+func captureOutput(t *testing.T, f func()) string {
+	t.Helper()
+
+	// capture stdout
+	old := os.Stdout
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdout = w
+
+	// run the function
+	f()
+
+	// close and restore stdout
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(r)
+	require.NoError(t, err)
+	return buf.String()
 }

@@ -77,7 +77,7 @@ var DeleteCommand = &cli.Command{
 		}
 
 		// check for updates after running the command
-		if err := CheckForUpdate(cCtx, afero.NewOsFs()); err != nil {
+		if err := CheckForUpdate(cfg); err != nil {
 			return err
 		}
 
