@@ -129,41 +129,75 @@ type (
 // ReadFileConfig attempts to read the config file at the specified path and
 // returns a config object, using the default config if the file was unable to be read.
 func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
-	if Version == "" {
-		Version = "dev"
-	}
-
-	// get the default cfg
-	cfg, err := GetDefaultConfig()
-	if err != nil {
-		return &cfg, err
-	}
-
 	// read the config file
 	contents, err := readFile(afs, path)
 	if err != nil {
-		return &cfg, err
+		return nil, err
 	}
-
-	// parse file contents
-	err = cfg.parseJSON(contents)
-	if err != nil {
-		return &cfg, err
-	}
-
-	// validate values
-	err = cfg.Validate()
-	if err != nil {
-		return &cfg, err
+	var cfg Config
+	// parse the JSON config file
+	if err := hjson.Unmarshal(contents, &cfg); err != nil {
+		return nil, err
 	}
 
 	return &cfg, nil
 }
 
+// UnmarshalJSON unmarshals the JSON bytes into the config struct
+// overrides the default unmarshalling method to allow for custom parsing
+func (c *Config) UnmarshalJSON(bytes []byte) error {
+	// create temporary config struct to unmarshal into
+	// not doing this would result in an infinite unmarshalling loop
+
+	type tmpConfig Config
+	// init default config
+	defaultCfg, err := GetDefaultConfig()
+	if err != nil {
+		return err
+	}
+
+	// set the default config to a variable of the temporary type
+	tmpCfg := tmpConfig(defaultCfg)
+
+	// unmarshal json into the default config struct
+	err = hjson.Unmarshal(bytes, &tmpCfg)
+	if err != nil {
+		return err
+	}
+
+	// convert the temporary config struct to a config struct
+	cfg := Config(tmpCfg)
+
+	// parse the new subnet filter values
+	if err := cfg.parseFilter(); err != nil {
+		return err
+	}
+
+	// parse impact category scores
+	if err := cfg.parseImpactCategoryScores(); err != nil {
+		return err
+	}
+
+	// validate values
+	err = cfg.Validate()
+	if err != nil {
+		return err
+	}
+
+	// set the new config values
+	*c = cfg
+
+	return nil
+}
+
 // GetDefaultConfig returns a Config object with default values
 func GetDefaultConfig() (Config, error) {
+	// set version to dev if not set
+	if Version == "" {
+		Version = "dev"
+	}
+
 	// set default config values
-	// cfg := defaultConfig
 	cfg := defaultConfig()
 
 	// get the database connection string
@@ -175,7 +209,7 @@ func GetDefaultConfig() (Config, error) {
 
 	// set up the filter based on default values
 	// (must be done to convert strings in the default config variable to net.IPNet)
-	err := cfg.ParseFilter()
+	err := cfg.parseFilter()
 	if err != nil {
 		return cfg, err
 	}
@@ -185,7 +219,6 @@ func GetDefaultConfig() (Config, error) {
 
 // readFile reads the config file at the specified path and returns its contents
 func readFile(afs afero.Fs, path string) ([]byte, error) {
-
 	// validate file
 	err := util.ValidateFile(afs, path)
 	if err != nil {
@@ -198,26 +231,6 @@ func readFile(afs afero.Fs, path string) ([]byte, error) {
 	}
 
 	return file, nil
-}
-
-// parseJSON parses the JSON config file and stores the result in the provided Config object
-func (cfg *Config) parseJSON(configFile []byte) error {
-	// parse the JSON config file
-	if err := hjson.Unmarshal(configFile, cfg); err != nil {
-		return err
-	}
-
-	// parse the new subnet filter values
-	if err := cfg.ParseFilter(); err != nil {
-		return err
-	}
-
-	// parse impact category scores
-	if err := cfg.ParseImpactCategoryScores(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // ResetConfig resets the config values to default
@@ -452,8 +465,8 @@ func validateScoreThresholds(s ScoreThresholds, min int, max int) error {
 	return nil
 }
 
-// ParseImpactCategoryScores sets the corresponding scores for the binary indicators
-func (cfg *Config) ParseImpactCategoryScores() error {
+// parseImpactCategoryScores sets the corresponding scores for the binary indicators
+func (cfg *Config) parseImpactCategoryScores() error {
 
 	strobeScore, err := GetScoreFromImpactCategory(cfg.Scoring.StrobeImpact.Category)
 	if err != nil {

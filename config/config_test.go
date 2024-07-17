@@ -26,18 +26,6 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestLoadConfig(t *testing.T) {
-	afs := afero.NewOsFs()
-
-	// load the default config file
-	cfg, err := ReadFileConfig(afs, defaultConfigPath)
-	require.NoError(t, err, "should be able to load the default config file")
-
-	// validate the loaded config
-	err = cfg.Validate()
-	require.NoError(t, err, "the loaded default config file should be valid")
-}
-
 func TestReadFile(t *testing.T) {
 	afs := afero.NewOsFs()
 	fileContents, err := readFile(afs, defaultConfigPath)
@@ -45,92 +33,91 @@ func TestReadFile(t *testing.T) {
 	assert.NotEmpty(t, fileContents)
 }
 
-func TestParseJSON(t *testing.T) {
+func TestReadFileConfig(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		config         []byte
+		configJSON     string
 		expectedConfig Config
-		expectedError  error
+		expectedError  bool
 	}{
 		{
 			name: "valid config",
-			config: []byte(`
-			{
-				db_connection: "localhost:9000",
-				update_check_enabled: false,
-				filtering: {
-					internal_subnets: ["11.0.0.0/8", "120.130.140.150/8"],
-					always_included_subnets: ["13.0.0.0/8", "160.140.150.160/8"],
-					never_included_subnets: ["12.0.0.0/8", "150.140.150.160/8"],
-					always_included_domains: ["abc.com", "def.com"],
-					never_included_domains: ["ghi.com", "jkl.com"],
-					filter_external_to_internal: false,
-				},
-				http_extensions_file_path: "/path/to/http/extensions",
-				batch_size: 75000,
-				max_query_execution_time: 120000,
-				months_to_keep_historical_first_seen: 6,
-				threat_intel: {
-					online_feeds: ["https://example.com/feed1", "https://example.com/feed2"],
-					custom_feeds_directory: "/path/to/custom/feeds",
-				},
-				scoring: {
-					beacon: {
-						unique_connection_threshold: 10,
-						timestamp_score_weight: 0.35,
-						datasize_score_weight: 0.20,
-						duration_score_weight: 0.35,
-						histogram_score_weight: 0.10,
-						duration_min_hours_seen: 10,
-						duration_consistency_ideal_hours_seen: 15,
-						histogram_mode_sensitivity: 0.08,
-						histogram_bimodal_outlier_removal: 2,
-						histogram_bimodal_min_hours_seen: 15,
-						score_thresholds: {
-							base: 0,
-							low: 1,
-							medium: 2,
-							high: 3
+			// create a JSON string to write to the temporary file
+			configJSON: `{
+					"db_connection": "localhost:9999",
+					update_check_enabled: false,
+					filtering: {
+						internal_subnets: ["11.0.0.0/8", "120.130.140.150/8"],
+						always_included_subnets: ["13.0.0.0/8", "160.140.150.160/8"],
+						never_included_subnets: ["12.0.0.0/8", "150.140.150.160/8"],
+						always_included_domains: ["abc.com", "def.com"],
+						never_included_domains: ["ghi.com", "jkl.com"],
+						filter_external_to_internal: false,
+					},
+					http_extensions_file_path: "/path/to/http/extensions",
+					batch_size: 75000,
+					max_query_execution_time: 120000,
+					months_to_keep_historical_first_seen: 6,
+					threat_intel: {
+						online_feeds: ["https://example.com/feed1", "https://example.com/feed2"],
+						custom_feeds_directory: "/path/to/custom/feeds",
+					},
+					scoring: {
+						beacon: {
+							unique_connection_threshold: 10,
+							timestamp_score_weight: 0.35,
+							datasize_score_weight: 0.20,
+							duration_score_weight: 0.35,
+							histogram_score_weight: 0.10,
+							duration_min_hours_seen: 10,
+							duration_consistency_ideal_hours_seen: 15,
+							histogram_mode_sensitivity: 0.08,
+							histogram_bimodal_outlier_removal: 2,
+							histogram_bimodal_min_hours_seen: 15,
+							score_thresholds: {
+								base: 0,
+								low: 1,
+								medium: 2,
+								high: 3
+							},
+						},
+						long_connection_score_thresholds: {
+							base: 1,
+							low: 2,
+							medium: 3,
+							high: 4
+						},
+						c2_score_thresholds: {
+							base: 1,
+							low: 2,
+							medium: 3,
+							high: 4
+						},
+						strobe_impact: {
+							category: "low",
+						},
+						threat_intel_impact: {
+							category: "low",
 						},
 					},
-					long_connection_score_thresholds: {
-						base: 0,
-						low: 1,
-						medium: 2,
-						high: 3
+					modifiers: {
+						threat_intel_score_increase: 0.1,
+						threat_intel_datasize_threshold: 100,
+						prevalence_score_increase: 0.6,
+						prevalence_increase_threshold: 0.1,
+						prevalence_score_decrease: 0.1,
+						prevalence_decrease_threshold: 0.2,
+						first_seen_score_increase: 0.8,
+						first_seen_increase_threshold: 10,
+						first_seen_score_decrease: 0.2,
+						first_seen_decrease_threshold: 50,
+						missing_host_count_score_increase: 0.4,
+						rare_signature_score_increase: 0.4,
+						c2_over_dns_direct_conn_score_increase: 0.9,
+						mime_type_mismatch_score_increase: 0.6
 					},
-					c2_score_thresholds: {
-						base: 0,
-						low: 1,
-						medium: 2,
-						high: 3
-					},
-					strobe_impact: {
-						category: "low",
-					},
-					threat_intel_impact: {
-						category: "low",
-					},
-				},
-				modifiers: {
-					threat_intel_score_increase: 0.1,
-					threat_intel_datasize_threshold: 100,
-					prevalence_score_increase: 0.6,
-					prevalence_increase_threshold: 0.1,
-					prevalence_score_decrease: 0.1,
-					prevalence_decrease_threshold: 0.2,
-					first_seen_score_increase: 0.8,
-					first_seen_increase_threshold: 10,
-					first_seen_score_decrease: 0.2,
-					first_seen_decrease_threshold: 50,
-					missing_host_count_score_increase: 0.4,
-					rare_signature_score_increase: 0.4,
-					c2_over_dns_direct_conn_score_increase: 0.9,
-					mime_type_mismatch_score_increase: 0.6
-				},
-			}
-			`),
+			}`,
 			expectedConfig: Config{
 				UpdateCheckEnabled: false,
 				Filter: Filter{
@@ -189,16 +176,16 @@ func TestParseJSON(t *testing.T) {
 						},
 					},
 					LongConnectionScoreThresholds: ScoreThresholds{
-						Base: 0,
-						Low:  1,
-						Med:  2,
-						High: 3,
+						Base: 1,
+						Low:  2,
+						Med:  3,
+						High: 4,
 					},
 					C2ScoreThresholds: ScoreThresholds{
-						Base: 0,
-						Low:  1,
-						Med:  2,
-						High: 3,
+						Base: 1,
+						Low:  2,
+						Med:  3,
+						High: 4,
 					},
 					StrobeImpact: ScoreImpact{
 						Category: LowThreat,
@@ -230,33 +217,53 @@ func TestParseJSON(t *testing.T) {
 					CustomFeedsDirectory: "/path/to/custom/feeds",
 				},
 			},
-			expectedError: nil,
+			expectedError: false,
 		},
 	}
 
-	for _, test := range tests {
+	for i, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require := require.New(t)
 
-			// set up default config
-			cfg, err := GetDefaultConfig()
-			require.NoError(err, "loading default config should not produce an error")
+			// create mock file system in memory
+			afs := afero.NewMemMapFs()
 
-			// parse JSON
-			err = cfg.parseJSON(test.config)
+			// get config file path
+			configPath := fmt.Sprintf("test-config-%d.hjson", i)
 
-			// check if an error was expected
-			require.Equal(test.expectedError, err, "error should match expected value")
+			// create a temporary file to read from
+			file, err := afs.Create(configPath)
+			require.NoError(err, "creating file should not produce an error")
 
-			// verify that env variables are not overwritten by JSON
-			// load environment variables with panic prevention
+			// set file permissions
+			err = afs.Chmod(configPath, os.FileMode(0o775))
+			require.NoError(err, "changing file permissions should not produce an error")
+
+			// write the JSON to temporary file
+			bytesWritten, err := file.Write([]byte(test.configJSON))
+			require.NoError(err, "writing data to file should not produce an error")
+			require.Equal(len(test.configJSON), bytesWritten, "number of bytes written should be equal to the length of the mock data")
+
+			// close temporary file
+			err = file.Close()
+			require.NoError(err, "closing file should not produce an error")
+
+			// call function
+			cfg, err := ReadFileConfig(afs, configPath)
+			require.NoError(err, "Expected no error when reading file config, got err=%v", err)
+
+			// get the database connection string from environment variables
 			err = godotenv.Overload("../.env", "../integration/test.env")
 			require.NoError(err, "loading environment variables should not produce an error")
-			// get the database connection string
 			connection := os.Getenv("DB_ADDRESS")
+
+			// verify that env variables are not overwritten by JSON
 			require.Equal(connection, cfg.DBConnection, "DBConnection should not be overwritten by JSON and should match the env variable")
 
-			// check for proper parsing
+			// verify version
+			require.Equal("dev", Version, "version should be 'dev'")
+
+			// verify parsed values
 			require.Equal(test.expectedConfig.UpdateCheckEnabled, cfg.UpdateCheckEnabled, "UpdateCheckEnabled should match expected value")
 
 			require.ElementsMatch(test.expectedConfig.Filter.InternalSubnetsJSON, cfg.Filter.InternalSubnetsJSON, "InternalSubnetsJSON should match expected value")
@@ -328,163 +335,6 @@ func TestParseJSON(t *testing.T) {
 			require.InDelta(test.expectedConfig.Modifiers.RareSignatureScoreIncrease, cfg.Modifiers.RareSignatureScoreIncrease, 0.00001, "RareSignatureScoreIncrease should match expected value")
 			require.InDelta(test.expectedConfig.Modifiers.C2OverDNSDirectConnScoreIncrease, cfg.Modifiers.C2OverDNSDirectConnScoreIncrease, 0.00001, "C2OverDNSDirectConnScoreIncrease should match expected value")
 			require.InDelta(test.expectedConfig.Modifiers.MIMETypeMismatchScoreIncrease, cfg.Modifiers.MIMETypeMismatchScoreIncrease, 0.00001, "MIMETypeMismatchScoreIncrease should match expected value")
-		})
-	}
-}
-
-func TestReadFileConfig(t *testing.T) {
-
-	tests := []struct {
-		name           string
-		configJSON     string
-		expectedConfig Config
-		expectedError  bool
-	}{
-		{
-			name: "valid config",
-			// create a JSON string to write to the temporary file
-			configJSON: `{
-					"db_connection": "localhost:9999",
-					"filtering": {
-						"internal_subnets": ["11.0.0.0/8", "120.130.140.150/8"],
-						"always_included_subnets": [],
-						"never_included_subnets": ["::1/128", "12.0.0.0/8", "150.140.150.160/8"],
-						"always_included_domains": [],
-						"never_included_domains": [],
-						"filter_external_to_internal": true,
-					},
-					scoring: {
-						beacon: {
-							"unique_connection_threshold": 10,
-							"timestamp_score_weight": 0.35,
-							"datasize_score_weight": 0.20,
-							"duration_score_weight": 0.35,
-							"histogram_score_weight": 0.10,
-							"score_thresholds": {
-								"base": 0,
-								"low": 1,
-								"medium": 2,
-								"high": 3
-							}
-						}
-					}	
-				}`,
-			expectedConfig: Config{
-				Filter: Filter{
-					InternalSubnetsJSON: []string{"11.0.0.0/8", "120.130.140.150/8"},
-					InternalSubnets: []*net.IPNet{
-						{IP: net.IP{11, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
-						{IP: net.IP{120, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
-					},
-					AlwaysIncludedSubnetsJSON: []string{},
-					AlwaysIncludedSubnets:     nil,
-					// mandatoryNeverIncludeSubnets are always apended to any neverIncludedSubnet entries
-					// in this case we are including one of the mandatoryNeverIncludeSubnets in the neverIncludedSubnets list
-					// to test that the mandatory entries are not duplicated when they are appended
-					NeverIncludedSubnetsJSON: util.EnsureSliceContainsAll([]string{"::1/128", "12.0.0.0/8", "150.140.150.160/8"}, GetMandatoryNeverIncludeSubnets()),
-					NeverIncludedSubnets: []*net.IPNet{
-						{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)}, // would normally be appended with mandatory values at the end of config entries
-						{IP: net.IP{12, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
-						{IP: net.IP{150, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
-						{IP: net.IP{0, 0, 0, 0}, Mask: net.IPMask{255, 255, 255, 255}},
-						{IP: net.IP{127, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}},
-						{IP: net.IP{169, 254, 0, 0}, Mask: net.IPMask{255, 255, 0, 0}},
-						{IP: net.IP{224, 0, 0, 0}, Mask: net.IPMask{240, 0, 0, 0}},
-						{IP: net.IP{255, 255, 255, 255}, Mask: net.IPMask{255, 255, 255, 255}},
-						{IP: net.IPv6unspecified, Mask: net.CIDRMask(128, 128)},
-						{IP: net.ParseIP("fe80::"), Mask: net.CIDRMask(10, 128)},
-						{IP: net.ParseIP("ff00::"), Mask: net.CIDRMask(8, 128)},
-						{IP: net.ParseIP("ff02::2"), Mask: net.CIDRMask(128, 128)},
-					},
-
-					AlwaysIncludedDomains:    []string{},
-					NeverIncludedDomains:     []string{},
-					FilterExternalToInternal: true,
-				},
-				Scoring: Scoring{
-					Beacon: Beacon{
-						UniqueConnectionThreshold: 10,
-						TsWeight:                  0.35,
-						DsWeight:                  0.20,
-						DurWeight:                 0.35,
-						HistWeight:                0.10,
-						ScoreThresholds: ScoreThresholds{
-							Base: 0,
-							Low:  1,
-							Med:  2,
-							High: 3,
-						},
-					},
-				},
-			},
-			expectedError: false,
-		},
-	}
-
-	for i, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require := require.New(t)
-
-			// create mock file system in memory
-			afs := afero.NewMemMapFs()
-
-			// get config file path
-			configPath := fmt.Sprintf("test-config-%d.hjson", i)
-
-			// create a temporary file to read from
-			file, err := afs.Create(configPath)
-			require.NoError(err, "creating file should not produce an error")
-
-			// set file permissions
-			err = afs.Chmod(configPath, os.FileMode(0o775))
-			require.NoError(err, "changing file permissions should not produce an error")
-
-			// write the JSON to temporary file
-			bytesWritten, err := file.Write([]byte(test.configJSON))
-			require.NoError(err, "writing data to file should not produce an error")
-			require.Equal(len(test.configJSON), bytesWritten, "number of bytes written should be equal to the length of the mock data")
-
-			// close temporary file
-			err = file.Close()
-			require.NoError(err, "closing file should not produce an error")
-
-			// call function
-			cfg, err := ReadFileConfig(afs, configPath)
-			require.NoError(err, "Expected no error when reading file config, got err=%v", err)
-
-			// verify that env variables are not overwritten by JSON
-			// load environment variables with panic prevention
-			err = godotenv.Overload("../.env", "../integration/test.env")
-			require.NoError(err, "loading environment variables should not produce an error")
-			// get the database connection string
-			connection := os.Getenv("DB_ADDRESS")
-			fmt.Println("connection: ", connection)
-			require.Equal(connection, cfg.DBConnection, "DBConnection should not be overwritten by JSON and should match the env variable")
-
-			// verify parsed values
-			require.Equal(test.expectedConfig.Filter.InternalSubnetsJSON, cfg.Filter.InternalSubnetsJSON, "Expected InternalSubnetsJSON to be %v, got %v", test.expectedConfig.Filter.InternalSubnetsJSON, cfg.Filter.InternalSubnetsJSON)
-			require.Equal(test.expectedConfig.Filter.InternalSubnets, cfg.Filter.InternalSubnets, "Expected InternalSubnets to be %v, got %v", test.expectedConfig.Filter.InternalSubnets, cfg.Filter.InternalSubnets)
-
-			require.Equal(test.expectedConfig.Filter.AlwaysIncludedSubnetsJSON, cfg.Filter.AlwaysIncludedSubnetsJSON, "Expected AlwaysIncludedSubnetsJSON to be %v, got %v", test.expectedConfig.Filter.AlwaysIncludedSubnetsJSON, cfg.Filter.AlwaysIncludedSubnetsJSON)
-			require.Equal(test.expectedConfig.Filter.AlwaysIncludedSubnets, cfg.Filter.AlwaysIncludedSubnets, "Expected AlwaysIncludedSubnets to be %v, got %v", test.expectedConfig.Filter.AlwaysIncludedSubnets, cfg.Filter.AlwaysIncludedSubnets)
-
-			require.Equal(test.expectedConfig.Filter.NeverIncludedSubnetsJSON, cfg.Filter.NeverIncludedSubnetsJSON, "Expected NeverIncludedSubnetsJSON to be %v, got %v", test.expectedConfig.Filter.NeverIncludedSubnetsJSON, cfg.Filter.NeverIncludedSubnetsJSON)
-			require.ElementsMatch(test.expectedConfig.Filter.NeverIncludedSubnets, cfg.Filter.NeverIncludedSubnets, "Expected NeverIncludedSubnets to be %v, got %v", test.expectedConfig.Filter.NeverIncludedSubnets, cfg.Filter.NeverIncludedSubnets)
-
-			require.Equal(test.expectedConfig.Filter.AlwaysIncludedDomains, cfg.Filter.AlwaysIncludedDomains, "Expected AlwaysIncludedDomains to be %v, got %v", test.expectedConfig.Filter.AlwaysIncludedDomains, cfg.Filter.AlwaysIncludedDomains)
-			require.Equal(test.expectedConfig.Filter.NeverIncludedDomains, cfg.Filter.NeverIncludedDomains, "Expected NeverIncludedDomains to be %v, got %v", test.expectedConfig.Filter.NeverIncludedDomains, cfg.Filter.NeverIncludedDomains)
-
-			require.Equal(test.expectedConfig.Filter.FilterExternalToInternal, cfg.Filter.FilterExternalToInternal, "Expected FilterExternalToInternal to be %v, got %v", test.expectedConfig.Filter.FilterExternalToInternal, cfg.Filter.FilterExternalToInternal)
-
-			require.Equal(test.expectedConfig.Scoring.Beacon.UniqueConnectionThreshold, cfg.Scoring.Beacon.UniqueConnectionThreshold, "Expected BeaconUniqueConnectionThreshold to be %v, got %v", test.expectedConfig.Scoring.Beacon.UniqueConnectionThreshold, cfg.Scoring.Beacon.UniqueConnectionThreshold)
-			require.InDelta(test.expectedConfig.Scoring.Beacon.TsWeight, cfg.Scoring.Beacon.TsWeight, 0.00001, "BeaconTsWeight should match expected value")
-			require.InDelta(test.expectedConfig.Scoring.Beacon.DsWeight, cfg.Scoring.Beacon.DsWeight, 0.00001, "BeaconDsWeight should match expected value")
-			require.InDelta(test.expectedConfig.Scoring.Beacon.DurWeight, cfg.Scoring.Beacon.DurWeight, 0.00001, "BeaconDurWeight should match expected value")
-			require.InDelta(test.expectedConfig.Scoring.Beacon.HistWeight, cfg.Scoring.Beacon.HistWeight, 0.00001, "BeaconHistWeight should match expected value")
-			require.Equal(test.expectedConfig.Scoring.Beacon.ScoreThresholds.Base, cfg.Scoring.Beacon.ScoreThresholds.Base, "Expected BeaconScoreThresholds.Base to be %v, got %v", test.expectedConfig.Scoring.Beacon.ScoreThresholds.Base, cfg.Scoring.Beacon.ScoreThresholds.Base)
-			require.Equal(test.expectedConfig.Scoring.Beacon.ScoreThresholds.Low, cfg.Scoring.Beacon.ScoreThresholds.Low, "Expected BeaconScoreThresholds.Low to be %v, got %v", test.expectedConfig.Scoring.Beacon.ScoreThresholds.Low, cfg.Scoring.Beacon.ScoreThresholds.Low)
-			require.Equal(test.expectedConfig.Scoring.Beacon.ScoreThresholds.Med, cfg.Scoring.Beacon.ScoreThresholds.Med, "Expected BeaconScoreThresholds.Med to be %v, got %v", test.expectedConfig.Scoring.Beacon.ScoreThresholds.Med, cfg.Scoring.Beacon.ScoreThresholds.Med)
-			require.Equal(test.expectedConfig.Scoring.Beacon.ScoreThresholds.High, cfg.Scoring.Beacon.ScoreThresholds.High, "Expected BeaconScoreThresholds.High to be %v, got %v", test.expectedConfig.Scoring.Beacon.ScoreThresholds.High, cfg.Scoring.Beacon.ScoreThresholds.High)
 
 			// clean up after the test
 			err = afs.Remove(configPath)
@@ -572,6 +422,9 @@ func TestGetDefaultConfig(t *testing.T) {
 	connection := os.Getenv("DB_ADDRESS")
 	require.NotEmpty(connection, "DB_ADDRESS should not be empty")
 	origConfigVar.DBConnection = connection
+
+	// verify version got set
+	require.Equal("dev", Version, "version should be 'dev'")
 
 	// parse the filter variables from the default config variable by hand to ensure they are correctly
 
@@ -734,7 +587,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.ParseImpactCategoryScores()
+		err := cfg.parseImpactCategoryScores()
 		require.NoError(t, err)
 		require.InDelta(t, float32(HIGH_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
 		require.InDelta(t, float32(LOW_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
@@ -752,7 +605,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.ParseImpactCategoryScores()
+		err := cfg.parseImpactCategoryScores()
 		require.NoError(t, err)
 		require.InDelta(t, float32(MEDIUM_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
 		require.InDelta(t, float32(NONE_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
@@ -770,7 +623,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.ParseImpactCategoryScores()
+		err := cfg.parseImpactCategoryScores()
 		require.Error(t, err)
 	})
 
@@ -786,7 +639,7 @@ func TestParseImpactCategoryScores(t *testing.T) {
 			},
 		}
 
-		err := cfg.ParseImpactCategoryScores()
+		err := cfg.parseImpactCategoryScores()
 		require.Error(t, err)
 	})
 }

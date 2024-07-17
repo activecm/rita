@@ -43,7 +43,7 @@ func GetMandatoryNeverIncludeSubnets() []string {
 	}
 }
 
-func (cfg *Config) ParseFilter() error {
+func (cfg *Config) parseFilter() error {
 	// parse internal subnets
 	internalSubnetList, err := util.ParseSubnets(cfg.Filter.InternalSubnetsJSON)
 	if err != nil {
