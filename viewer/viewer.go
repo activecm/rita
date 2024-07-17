@@ -277,13 +277,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		// set sidebar data to the selected item
 		if data, ok := m.List.Rows.Items()[m.List.Rows.Index()].(*Item); ok {
-			_, cmd := m.SideBar.Update(data)
+			_, cmd := m.SideBar.Update(UpdateItem(data))
 			cmds = append(cmds, cmd)
 		}
 
 	} else {
 		// if there are no items to display, set the sidebar data to nil
-		_, cmd := m.SideBar.Update(nil)
+		_, cmd := m.SideBar.Update(UpdateItem(nil))
 		cmds = append(cmds, cmd)
 	}
 

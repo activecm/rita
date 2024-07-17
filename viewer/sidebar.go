@@ -49,7 +49,7 @@ func (m *sidebarModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 	switch msg := msg.(type) {
 
-	case *Item:
+	case UpdateItem:
 
 		m.Data = msg
 		content := m.getSidebarContents()
@@ -132,19 +132,23 @@ func (m *sidebarModel) getSidebarContents() string {
 	modifierLabel := sectionStyle.Render("「 Threat Modifiers 」")
 	modifiers := m.renderModifiers()
 
-	connInfoLabel := sectionStyle.Render("「 Connection Info 」")
-
 	dataStyle := lipgloss.NewStyle().Foreground(defaultTextColor)
 
-	// get connection count
-	connCountStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2)
-	connCountHeader := connCountStyle.Render("Connection Count")
-	connCount := dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, connCountHeader, fmt.Sprintf("%d", m.Data.Count)))
+	var connInfoLabel, connCount, bytes string
+	// display connection count and bytes for everything except C2 over DNS
+	if m.Data.C2OverDNSScore == 0 {
+		connInfoLabel = sectionStyle.Render("「 Connection Info 」")
 
-	// get total bytes
-	bytesHeaderStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2)
-	bytesHeader := bytesHeaderStyle.Render("Total Bytes")
-	bytes := dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, bytesHeader, m.Data.TotalBytesFormatted))
+		// get connection count
+		connCountStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2)
+		connCountHeader := connCountStyle.Render("Connection Count")
+		connCount = dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, connCountHeader, fmt.Sprintf("%d", m.Data.Count)))
+
+		// get total bytes
+		bytesHeaderStyle := lipgloss.NewStyle().Background(overlay2).Foreground(base).Bold(true).Padding(0, 2)
+		bytesHeader := bytesHeaderStyle.Render("Total Bytes")
+		bytes = dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, bytesHeader, m.Data.TotalBytesFormatted))
+	}
 
 	// get port:proto:service
 	portProtoService := m.Data.GetPortProtoService()
@@ -163,11 +167,6 @@ func (m *sidebarModel) getSidebarContents() string {
 		// render header
 		portsHeader := portsHeaderStyle.Render("Port : Proto : Service")
 		ports = dataStyle.Render(lipgloss.JoinVertical(lipgloss.Top, portsHeader, strings.Join(portProtoService, "\n")))
-		// strings.Join(portProtoService, "\n")
-		// calculate the number of lines available for port data
-		// remainingLines := m.viewport.Height - (lipgloss.Height(heading) + lipgloss.Height(modifiers) + lipgloss.Height(modifierLabel) + lipgloss.Height(connInfoLabel) + lipgloss.Height(bytes) + lipgloss.Height(connCount))
-		// ports = renderPorts(portProtoService, m.viewport.Width, remainingLines)
-
 	}
 
 	// join contents
