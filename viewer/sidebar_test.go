@@ -119,7 +119,7 @@ func (s *ViewerTestSuite) TestSidebarUpdating() {
 	items := m.List.Rows.Items()
 
 	// get selected row
-	selectedRow, ok := items[selectedIndex].(viewer.Item)
+	selectedRow, ok := items[selectedIndex].(*viewer.Item)
 	require.True(t, ok, "casting item to Item should not return an error")
 
 	// check the sidebar data
@@ -135,7 +135,7 @@ func (s *ViewerTestSuite) TestSidebarUpdating() {
 	}
 
 	// get the selected row after scrolling
-	selectedRow, ok = items[m.List.Rows.Index()].(viewer.Item)
+	selectedRow, ok = items[m.List.Rows.Index()].(*viewer.Item)
 	require.True(t, ok, "casting item to Item should not return an error")
 
 	// check the sidebar data

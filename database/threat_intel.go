@@ -391,7 +391,6 @@ func parseFeedEntries(feedHash util.FixedString, feed io.ReadCloser, writeChan c
 
 	for {
 		line, readErr := reader.ReadString('\n')
-		// fmt.Println(line)
 
 		// if there is an error reading the line and its not the end of the file, return the error
 		if readErr != nil && readErr != io.EOF {

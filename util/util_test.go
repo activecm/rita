@@ -943,7 +943,6 @@ func TestValidateTimestamp(t *testing.T) {
 func TestParseRelativePath(t *testing.T) {
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
-	fmt.Println("home: ", home)
 
 	workingDir, err := os.Getwd()
 	require.NoError(t, err)

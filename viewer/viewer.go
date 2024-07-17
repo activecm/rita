@@ -107,7 +107,6 @@ func NewModel(maxTimestamp, minTimestamp time.Time, useCurrentTime bool, db *dat
 		// set sidebar data to whichever item is selected in the list
 		tmp := dataList.Rows.Items()[dataList.Rows.Index()]
 		data, ok := tmp.(*Item)
-		fmt.Println(data, tmp)
 
 		if !ok {
 			return nil, fmt.Errorf("error setting sidebar data")

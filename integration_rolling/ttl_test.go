@@ -378,7 +378,6 @@ func optimizeMetaDBTables(t *testing.T, db *database.DB, updateTime func(time.Du
 		require.NoError(t, err)
 		err = db.Conn.Exec(ctx, `OPTIMIZE TABLE metadatabase.{table:Identifier} FINAL`)
 		require.NoError(t, err, "optimizing %s.%s should not fail", "metadatabase", table)
-		// fmt.Println("OPTIMIZED", table)
 	}
 }
 func verifyTables(t *testing.T, db *database.DB, importTime time.Time, expect26hEmpty, expect2wEmpty, expect6mEmpty, expect1YrEmpty bool) {

@@ -207,7 +207,6 @@ func (modifier *Modifier) detectMIMETypeMismatch(ctx context.Context) error {
 			rows.Close()
 			return ctx.Err()
 		default:
-			// fmt.Println("hi")
 			var res analysis.ThreatMixtape
 			if err := rows.ScanStruct(&res); err != nil {
 				// return error and cancel all uconn analysis
