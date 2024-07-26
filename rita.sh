@@ -92,6 +92,12 @@ parse_flag() {
 
 COMPOSE_FILE="$(dirname "$ENV_FILE")/docker-compose.yml"
 
+# Ensure that the docker-compose file exists
+[ -f "$COMPOSE_FILE" ] || { echo "Docker compose file not found at '$COMPOSE_FILE'"; exit 1; }
+
+$SUDO docker compose -f $COMPOSE_FILE up -d
+
+
 IS_HELP="false"
 
 # For the most part, we can just pass all arguments directly through to rita.
@@ -104,9 +110,9 @@ while [[ $# -gt 0 ]]; do
 	if [ "$1" = "import" ]; then
 
         # check to see if rita is already running
-        # RITA_RUNNING=$(docker compose -f "$COMPOSE_FILE" ps --services --filter "status=running" | grep -q "rita")
+        # This checks the service name, not the container name
         if $SUDO docker compose -f "$COMPOSE_FILE" ps --services --filter "status=running" | grep -q "rita"; then
-            echo "A RITA import is currently in progress... Wait for it to complete or stop the existing import."
+            echo "Another instance of RITA is currently running... Please exit it and try again."
             exit 1
         fi
 
@@ -193,6 +199,10 @@ fi
 # Specifically wait to do this until after "realpath" is called so the user 
 # can specify a relative path to their current working directory for their logs.
 pushd "$(dirname "$ENV_FILE")" > /dev/null
+
+
+# Set trap to ensure that everything is cleaned up when the script exits
+trap "$SUDO docker compose -f $COMPOSE_FILE stop rita" EXIT
 
 
 # run RITA service
