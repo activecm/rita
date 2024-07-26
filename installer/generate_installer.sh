@@ -60,6 +60,7 @@ cp ../default_config.hjson "$INSTALL_ETC"/config.hjson
 # copy over installed files to /opt
 cp ../rita.sh "$INSTALL_OPT"/rita.sh
 curl --fail --silent --show-error -o "$INSTALL_OPT"/zeek https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
+chmod +x "$INSTALL_OPT"/zeek
 cp ../.env.production "$INSTALL_OPT"/.env
 cp ../docker-compose.prod.yml "$INSTALL_OPT"/docker-compose.yml
 cp ../LICENSE "$INSTALL_OPT"/LICENSE
