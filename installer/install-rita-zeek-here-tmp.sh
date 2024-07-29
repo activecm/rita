@@ -22,9 +22,9 @@ $Sudo mkdir -p /usr/local/bin/
 
 echo "==== Installing rita $RITA_VERSION ====" >&2
 cd
-wget https://github.com/activecm/rita/releases/download/v${RITA_VERSION}/rita-v${RITA_VERSION}.tar.gz
-tar -xzvf rita-v${RITA_VERSION}.tar.gz
-cd rita-v${RITA_VERSION}-installer
+wget https://github.com/activecm/rita/releases/download/${RITA_VERSION}/rita-${RITA_VERSION}.tar.gz
+tar -xzvf rita-${RITA_VERSION}.tar.gz
+cd rita-${RITA_VERSION}-installer
 ./install_rita.sh localhost </dev/stderr
 rita help </dev/stderr
 
