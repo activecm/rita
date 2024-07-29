@@ -34,4 +34,4 @@ jobs:
         with:
             files: |
               installer/rita-${{ github.ref_name }}.tar.gz
-              install-rita-zeek-here.sh
+              installer/install-rita-zeek-here.sh
