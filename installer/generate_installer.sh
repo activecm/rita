@@ -67,19 +67,23 @@ cp ../LICENSE "$INSTALL_OPT"/LICENSE
 cp ../README.md "$INSTALL_OPT"/README
 
 
+cp ./install-rita-zeek-here-tmp.sh install-rita-zeek-here.sh
 
 # update version variables for files that need them
 if [ "$(uname)" == "Darwin" ]; then
+    sed -i'.bak' "s/RITA_REPLACE_ME/${VERSION}/g" "install-rita-zeek-here.sh" 
     sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.yml" 
     sed -i'.bak' "s/REPLACE_ME/${ZEEK_VERSION}/g" "$BASE_DIR/install_zeek.yml" 
     sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"
     sed -i'.bak' "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
-
+    
+    rm "install-rita-zeek-here.sh.bak"
     rm "$BASE_DIR/install_rita.yml.bak"
     rm "$BASE_DIR/install_zeek.yml.bak"
     rm "$BASE_DIR/install_rita.sh.bak"
     rm "$INSTALL_OPT/docker-compose.yml.bak"
 else 
+    sed -i  "s/RITA_REPLACE_ME/${VERSION}/g" ./install-rita-zeek-here.sh
     sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.yml" 
     sed -i  "s/REPLACE_ME/${ZEEK_VERSION}/g" "$BASE_DIR/install_zeek.yml" 
     sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"

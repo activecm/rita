@@ -32,4 +32,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-            files: installer/rita-${{ github.ref_name }}.tar.gz
+            files: |
+              installer/rita-${{ github.ref_name }}.tar.gz
+              install-rita-zeek-here.sh
