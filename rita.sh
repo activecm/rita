@@ -95,8 +95,6 @@ COMPOSE_FILE="$(dirname "$ENV_FILE")/docker-compose.yml"
 # Ensure that the docker-compose file exists
 [ -f "$COMPOSE_FILE" ] || { echo "Docker compose file not found at '$COMPOSE_FILE'"; exit 1; }
 
-$SUDO docker compose -f $COMPOSE_FILE up -d
-
 
 IS_HELP="false"
 
@@ -191,6 +189,9 @@ if [[ "$IS_IMPORT_COMMAND" = true && "$IS_HELP" == false ]]; then
         exit 1
     fi
 fi
+
+# bring up db and syslog
+$SUDO docker compose -f $COMPOSE_FILE up -d
 
 # Print out the final arguments and exit for debugging
 #echo "DOCKER_ARGS: ${DOCKER_ARGS[@]}"; echo "RITA_ARGS: ${RITA_ARGS[@]}"; exit  # debug
