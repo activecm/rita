@@ -166,7 +166,6 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 	}
 
 	var elapsedTime int64
-	// var dayStartedAt time.Time
 
 	// loop through each day
 	for day, hourlyLogs := range logMap {
@@ -213,8 +212,13 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 
 			// import the data
 			err = importer.Import(afs, files)
-			if err != nil {
+			if err != nil && !errors.Is(err, i.ErrAllFilesPreviouslyImported) {
 				return importResults, err
+			}
+
+			// skip the rest of this hour's import if all files have been previously imported
+			if errors.Is(err, i.ErrAllFilesPreviouslyImported) {
+				continue
 			}
 
 			// update result counts (used for testing)
@@ -297,6 +301,10 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 		}
 	}
 
+	// if after going through every day/hour and there are no import IDs, return error stating all files were previously imported
+	if len(importResults.ImportID) == 0 {
+		return importResults, i.ErrAllFilesPreviouslyImported
+	}
 	logger.Info().Str("elapsed_time", fmt.Sprintf("%1.1fs", time.Since(startTime).Seconds())).Msg("🎊✨ Finished Import! ✨🎊")
 
 	return importResults, nil
@@ -580,20 +588,31 @@ func ParseHourFromFilename(filename string) (int, error) {
 	// attempt to find a match in the filename
 	matches := timeRegex.FindStringSubmatch(filename)
 
-	// if hour pattern didn't match, check if the filename is a simple log file
+	// if hour pattern didn't match, check if filename is a security onion log or simple log file
 	if matches == nil {
-		// regex to identify simple log files (ie, conn.log, open_conn.log, /logs/conn.log.gz, etc) without hour
-		simpleLogPattern := `^\w+\.log(\.gz)?$`
-		simpleLogRegex := regexp.MustCompile(simpleLogPattern)
+		timePatternSecOnion := `[A-Za-z]+[:/_]\d{8}[:/_](\d{2})[:/_]\d{2}`
 
-		// if the filename matches the simple log pattern, consider file as 0 hour and return
-		if simpleLogRegex.MatchString(filepath.Base(filename)) {
-			return 0, nil
+		// attempt to match the second onion pattern
+		// compile the timeRegex
+		timeRegex := regexp.MustCompile(timePatternSecOnion)
+
+		// attempt to find a match in the filename
+		matches = timeRegex.FindStringSubmatch(filename)
+
+		if matches == nil {
+			// regex to identify simple log files (ie, conn.log, open_conn.log, /logs/conn.log.gz, etc) without hour
+			simpleLogPattern := `^\w+\.log(\.gz)?$`
+			simpleLogRegex := regexp.MustCompile(simpleLogPattern)
+
+			// if the filename matches the simple log pattern, consider file as 0 hour and return
+			if simpleLogRegex.MatchString(filepath.Base(filename)) {
+				return 0, nil
+			}
+
+			// if format doesn't match the hourly pattern or the simple log pattern, return an error
+			// to catch malformed hour formats
+			return 0, ErrInvalidLogHourFormat
 		}
-
-		// if format doesn't match the hourly pattern or the simple log pattern, return an error
-		// to catch malformed hour formats
-		return 0, ErrInvalidLogHourFormat
 	}
 
 	// convert the extracted hour string to an integer

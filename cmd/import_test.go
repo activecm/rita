@@ -285,8 +285,11 @@ func (c *CmdTestSuite) TestRunImportCmd() {
 
 				// if we are using the mock directory, we need to create it along with the files
 				if strings.HasPrefix(db.logDir, "/logs") {
-					// create mock directory with files
-					createMockZeekLogs(t, tc.afs, db.logDir, files, true)
+					// create mock directory
+					err := tc.afs.MkdirAll(db.logDir, os.FileMode(0o775))
+					require.NoError(t, err, "creating directory should not produce an error")
+					// create mock files
+					createMockZeekConnLogs(t, tc.afs, db.logDir, files, true)
 				}
 
 				// run the import command
@@ -357,14 +360,181 @@ func (c *CmdTestSuite) TestRunImportCmd() {
 
 }
 
-// createMockZeekLogs creates a directory with files that contain mock Zeek logs, filling them with valid
-// log values if necessary for the test
-func createMockZeekLogs(t *testing.T, afs afero.Fs, directory string, files []string, valid bool) {
-	t.Helper()
+func (c *CmdTestSuite) TestRollingLogsBeingAddedToSameFolder() {
+	t := c.T()
 
-	// create directory
-	err := afs.MkdirAll(directory, os.FileMode(0o775))
-	require.NoError(t, err, "creating directory should not produce an error")
+	type importCase struct {
+		connLogs     []string
+		dnsLogs      []string
+		httpLogs     []string
+		sslLogs      []string
+		openConnLogs []string
+	}
+
+	testCases := []struct {
+		name          string
+		cases         []importCase
+		expectedError error
+	}{
+		{
+			name: "Same Folder Non Hour",
+			cases: []importCase{
+				{
+					connLogs: []string{"conn.log"},
+				},
+				{
+					dnsLogs: []string{"dns.log"},
+				},
+			},
+		},
+		{
+			name: "Same Folder - Hour",
+			cases: []importCase{
+				{
+					connLogs: []string{"conn.00:00:00-01:00:00.log"},
+					dnsLogs:  []string{"dns.00:00:00-01:00:00.log"},
+					httpLogs: []string{"http.00:00:00-01:10:00.log"},
+					sslLogs:  []string{"ssl.00:00:00-01:10:00.log"},
+				},
+				{
+					connLogs: []string{"conn.01:00:00-02:00:00.log"},
+					dnsLogs:  []string{"dns.01:00:00-02:00:00.log"},
+					httpLogs: []string{"http.01:00:00-02:50:00.log"},
+					sslLogs:  []string{"ssl.01:00:00-02:10:00.log"},
+				},
+			},
+		},
+		{
+			name: "Subfolders - One Has Non Imported",
+			cases: []importCase{
+				{
+					connLogs: []string{"conn.log", "/subfolder/conn.log"},
+					dnsLogs:  []string{"dns.log", "/subfolder/dns.log"},
+					httpLogs: []string{"http.log", "/subfolder/http.log"},
+					sslLogs:  []string{"ssl.log", "/subfolder/ssl.log"},
+				},
+				{
+					connLogs: []string{"/subfolder2/conn.log"},
+					dnsLogs:  []string{"/subfolder2/dns.log"},
+					httpLogs: []string{"/subfolder2/http.log"},
+					sslLogs:  []string{"/subfolder2/ssl.log"},
+				},
+			},
+		},
+		{
+			name: "Subfolders - Both Have Non Imported",
+			cases: []importCase{
+				{
+					connLogs: []string{"conn.log"},
+					dnsLogs:  []string{"dns.log"},
+					httpLogs: []string{"http.log"},
+					sslLogs:  []string{"ssl.log"},
+				},
+				{
+					connLogs: []string{"/subfolder/conn.log", "/subfolder2/conn.log"},
+					dnsLogs:  []string{"/subfolder/conn.log", "/subfolder2/dns.log"},
+					httpLogs: []string{"/subfolder/conn.log", "/subfolder2/http.log"},
+					sslLogs:  []string{"/subfolder/conn.log", "/subfolder2/ssl.log"},
+				},
+			},
+		},
+		{
+			name: "Subfolders - All Have Non Imported",
+			cases: []importCase{
+				{
+					connLogs: []string{"conn.log"},
+					dnsLogs:  []string{"dns.log"},
+					httpLogs: []string{"http.log"},
+					sslLogs:  []string{"ssl.log"},
+				},
+				{
+					connLogs: []string{"conn.00:00:00-01:00:00.log", "/subfolder/conn.log", "/subfolder2/conn.log"},
+					dnsLogs:  []string{"dns.03:00:00-04:00:00.log", "/subfolder/dns.log", "/subfolder2/dns.log"},
+					httpLogs: []string{"http.00:00:00-01:00:00.log", "/subfolder/http.log", "/subfolder2/http.log"},
+					sslLogs:  []string{"ssl.00:00:00-01:00:00.log", "/subfolder/ssl.log", "/subfolder2/ssl.log"},
+				},
+			},
+		},
+		{
+			name: "Subfolders - All Previously Imported",
+			cases: []importCase{
+				{
+					connLogs: []string{"conn.00:00:00-01:00:00.log", "/subfolder/conn.log", "/subfolder2/conn.log"},
+					dnsLogs:  []string{"dns.03:00:00-04:00:00.log", "/subfolder/dns.log", "/subfolder2/dns.log"},
+					httpLogs: []string{"http.00:00:00-01:00:00.log", "/subfolder/http.log", "/subfolder2/http.log"},
+					sslLogs:  []string{"ssl.00:00:00-01:00:00.log", "/subfolder/ssl.log", "/subfolder2/ssl.log"},
+				},
+				{
+					connLogs: []string{"conn.00:00:00-01:00:00.log", "/subfolder/conn.log", "/subfolder2/conn.log"},
+					dnsLogs:  []string{"dns.03:00:00-04:00:00.log", "/subfolder/dns.log", "/subfolder2/dns.log"},
+					httpLogs: []string{"http.00:00:00-01:00:00.log", "/subfolder/http.log", "/subfolder2/http.log"},
+					sslLogs:  []string{"ssl.00:00:00-01:00:00.log", "/subfolder/ssl.log", "/subfolder2/ssl.log"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			afs := afero.NewMemMapFs()
+			err := afs.MkdirAll("/logs", 0o755)
+			require.NoError(t, err)
+
+			for hour, importCase := range tc.cases {
+				// create conn files
+				createMockZeekConnLogs(t, afs, "/logs", importCase.connLogs, true)
+				createMockZeekProtoLogs(t, afs, "/logs", importCase.dnsLogs, true, "query")
+				createMockZeekConnLogs(t, afs, "/logs", importCase.openConnLogs, true)
+				createMockZeekProtoLogs(t, afs, "/logs", importCase.httpLogs, true, "host")
+				createMockZeekProtoLogs(t, afs, "/logs", importCase.sslLogs, true, "server_name")
+
+				results, err := cmd.RunImportCmd(time.Now(), c.cfg, afs, "/logs", "test_rolling_same_folder", true, true)
+
+				// check if we expect an error
+				if tc.expectedError != nil {
+					require.Error(t, err, "running import command should produce an error")
+					require.Contains(t, err.Error(), tc.expectedError.Error(), "error should contain expected value")
+				} else {
+					require.NoError(t, err, "running import command should not produce an error")
+
+					if len(importCase.connLogs) > 0 {
+						require.Greater(t, results.ResultCounts.Conn, uint64(0), "hour %d: conn logs should be imported", hour)
+					}
+
+					if len(importCase.dnsLogs) > 0 {
+						require.Greater(t, results.ResultCounts.DNS, uint64(0), "hour %d: dns logs should be imported", hour)
+					}
+
+					if len(importCase.httpLogs) > 0 {
+						require.Greater(t, results.ResultCounts.HTTP, uint64(0), "hour %d: http logs should be imported", hour)
+					}
+
+					if len(importCase.sslLogs) > 0 {
+						require.Greater(t, results.ResultCounts.SSL, uint64(0), "hour %d: ssl logs should be imported", hour)
+					}
+
+					if len(importCase.openConnLogs) > 0 {
+						require.Greater(t, results.ResultCounts.OpenConn, uint64(0), "hour %d: open conn logs should be imported", hour)
+					}
+
+				}
+
+			}
+
+			require.NoError(t, afs.RemoveAll("/logs"), "removing directory should not produce an error")
+
+			// clean up the database
+			require.NoError(t, c.server.DeleteSensorDB("test_rolling_same_folder"), "dropping database should not produce an error")
+		})
+	}
+
+}
+
+// createMockZeekConnLogs creates a directory with files that contain mock Zeek logs, filling them with valid
+// log values if necessary for the test
+func createMockZeekConnLogs(t *testing.T, afs afero.Fs, directory string, files []string, valid bool) {
+	t.Helper()
 
 	// create files
 	for _, file := range files {
@@ -388,6 +558,38 @@ func createMockZeekLogs(t *testing.T, afs afero.Fs, directory string, files []st
 				"1715641174.367201\tCxT124\t10.0.0.4\t52.12.0.4\n" +
 				"1715641234.367201\tCxT125\t10.0.0.5\t52.12.0.5\n" +
 				"1715641234.367201\tCxT125\t10.0.0.5\t52.12.0.5\n",
+			)
+		}
+		err := afero.WriteFile(afs, filepath.Join(directory, file), data, os.FileMode(0o775))
+		require.NoError(t, err, "creating files should not produce an error")
+	}
+}
+
+func createMockZeekProtoLogs(t *testing.T, afs afero.Fs, directory string, files []string, valid bool, field string) {
+	t.Helper()
+
+	// create files
+	for _, file := range files {
+		data := []byte("test")
+		if valid {
+			data = []byte("#separator \\x09\n" +
+				"#set_separator\t,\n" +
+				"#empty_field\t(empty)\n" +
+				"#unset_field\t-\n" +
+				"#path\tdns\n" +
+				"#open\t2019-02-28-12-07-01\n" +
+				"#fields\tts\tuid\tid.orig_h\tid.resp_h\t" + field + "\n" +
+				"#types\ttime\tstring\taddr\taddr\tstring\n" +
+				"1715640994.367201\tCxT121\t10.0.0.1\t52.12.0.1\tmicrosoft.com\n" +
+				"1715640994.367201\tCxT121\t10.0.0.1\t52.12.0.1\ta.microsoft.com\n" +
+				"1715641054.367201\tCxT122\t10.0.0.2\t52.12.0.2\tgoogle.com\n" +
+				"1715641054.367201\tCxT122\t10.0.0.2\t52.12.0.2\tyahoo.com\n" +
+				"1715641114.367201\tCxT123\t10.0.0.3\t52.12.0.3\ttime.apple.com\n" +
+				"1715641114.367201\tCxT123\t10.0.0.3\t52.12.0.3\treddit.com\n" +
+				"1715641174.367201\tCxT124\t10.0.0.4\t52.12.0.4\tnasa.org\n" +
+				"1715641174.367201\tCxT124\t10.0.0.4\t52.12.0.4\tyoutube.com\n" +
+				"1715641234.367201\tCxT125\t10.0.0.5\t52.12.0.5\ttwitch.tv\n" +
+				"1715641234.367201\tCxT125\t10.0.0.5\t52.12.0.5\tmaps.google.com\n",
 			)
 		}
 		err := afero.WriteFile(afs, filepath.Join(directory, file), data, os.FileMode(0o775))
@@ -555,6 +757,32 @@ func TestWalkFiles(t *testing.T) {
 						importer.OpenHTTPPrefix: []string{"/logs/open_http.01:00:00-02:00:00.log"},
 						importer.SSLPrefix:      []string{"/logs/ssl.01:00:00-02:00:00.log"},
 						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.01:00:00-02:00:00.log"},
+					},
+				},
+			}),
+			expectedWalkErrors: nil,
+			expectedError:      nil,
+		},
+		{
+			name:                 "Hour Logs, Containing all Log Types - Corelight Format",
+			directory:            "/logs",
+			directoryPermissions: os.FileMode(0o775),
+			filePermissions:      os.FileMode(0o775),
+			files: []string{
+				"conn_red.00:00:00-01:00:00.log",
+				"conn_20240722_12:00:00-13:00:00+0000.log",
+			},
+			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
+				0: {
+					0: {
+						importer.ConnPrefix: []string{
+							"/logs/conn_red.00:00:00-01:00:00.log",
+						},
+					},
+					12: {
+						importer.ConnPrefix: []string{
+							"/logs/conn_20240722_12:00:00-13:00:00+0000.log",
+						},
 					},
 				},
 			}),
@@ -1065,6 +1293,24 @@ func TestParseHourFromFilename(t *testing.T) {
 			filename: "log.23:59",
 			wantHour: 23,
 			wantErr:  nil,
+		},
+		{
+			name:     "Valid Corelight Format",
+			filename: "conn_20240722_12:00:00-13:00:00+0000",
+			wantHour: 12,
+			wantErr:  nil,
+		},
+		{
+			name:     "Invalid Corelight Format - Bad Date",
+			filename: "conn_123456789_12:00:00-13:00:00",
+			wantHour: 0,
+			wantErr:  cmd.ErrInvalidLogHourFormat,
+		},
+		{
+			name:     "Invalid Corelight Format - Ending Period",
+			filename: "conn_20240722.12:00:00-13:00:00",
+			wantHour: 0,
+			wantErr:  cmd.ErrInvalidLogHourFormat,
 		},
 		{
 			name:     "Invalid Hour Range",
