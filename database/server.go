@@ -52,7 +52,7 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 	}
 
 	// set up metadatabase if it does not exist yet
-	err = server.createServerDBTables()
+	err = server.CreateServerDBTables()
 	if err != nil {
 		return nil, err
 	}

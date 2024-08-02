@@ -239,7 +239,7 @@ func TestTrimWildcards(t *testing.T) {
 	}
 }
 
-//nolint:unused // will be used in the future
+//lint:ignore U1000 // will be used in the future
 func validateCommandsExist(t *testing.T, commands []*cli.Command, expected []string) {
 	t.Helper()
 	expectedCmds := make(map[string]bool)

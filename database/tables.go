@@ -1575,7 +1575,7 @@ func (db *DB) createSensorDBTables() error {
 	return err
 }
 
-func (server *ServerConn) createServerDBTables() error {
+func (server *ServerConn) CreateServerDBTables() error {
 	err := server.createMetaDatabase()
 	if err != nil {
 		return err

@@ -263,6 +263,7 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 // CheckIfFilesWereAlreadyImported calls checkFileHashes for each log type
 func (db *DB) CheckIfFilesWereAlreadyImported(fileMap map[string][]string) (int, error) {
 	totalFileCount := 0
+	// loop over each log type in the hour's filemap
 	for logType, logList := range fileMap {
 		results, err := db.checkFileHashes(logList)
 		if err != nil {

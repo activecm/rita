@@ -4,13 +4,13 @@ networks:
   rita-network: {}
 services:
   rita:
-    # image: 
+    # image:
     build: .
     depends_on:
       - clickhouse
     volumes:
       - ${CONFIG_FILE:-/etc/rita/config.hjson}:/config.hjson
-      - ${CONFIG_DIR:-/etc/rita}/http_extensions_list.csv:/http_extensions_list.csv
+      - ${CONFIG_DIR:-/etc/rita}/http_extensions_list.csv:/deployment/http_extensions_list.csv
       - .env:/.env
       # - ${LOGS:?"You must provide a directory for logs to be read from"}:/logs:ro
     links:
