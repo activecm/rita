@@ -40,22 +40,20 @@ if [ "$install_target" = "localhost" -o "$install_target" = "127.0.0.1" -o "$ins
             exit 1
         fi
 	status "If asked for a 'BECOME password', that is your non-root sudo password on this machine ."
-	ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_pre.yml
-	ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_rita.yml
 	if [ "$_INSTALL_ZEEK" = 'true' ]; then
-		ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_zeek.yml
+		ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_pre.yml install_rita.yml install_zeek.yml install_post.yml
+	else
+		ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_pre.yml install_rita.yml install_post.yml
 	fi
-	ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_post.yml
 else
 	status "Setting up future ssh connections to $install_target .  You may be asked to provide your ssh password to $install_target ."		#================
 	./scripts/sshprep "$install_target"
 	status "If asked for a 'BECOME password', that is your non-root sudo password on $install_target ."
-	ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_pre.yml
-	ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_rita.yml
 	if [ "$_INSTALL_ZEEK" = 'true' ]; then
-		ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_zeek.yml
+		ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_pre.yml install_rita.yml install_zeek.yml install_post.yml
+	else
+		ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_pre.yml install_rita.yml install_post.yml
 	fi
-	ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_post.yml
 fi
 
 
