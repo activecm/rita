@@ -33,6 +33,7 @@ type MixtapeResult struct {
 	FirstSeenScore           float32             `ch:"first_seen_score"`
 	Prevalence               float32             `ch:"prevalence"`
 	PrevalenceScore          float32             `ch:"prevalence_score"`
+	PrevalenceTotal          uint64              `ch:"prevalence_total"`
 	Subdomains               uint64              `ch:"subdomains"`
 	PortProtoService         []string            `ch:"port_proto_service"`
 	C2OverDNSScore           float32             `ch:"c2_over_dns_score"`
@@ -115,7 +116,17 @@ func (i *Item) GetTotalDuration() string {
 	return renderIndicator(i.LongConnScore, time.Duration(i.TotalDuration*float32(time.Second)).Truncate(time.Second).String())
 }
 func (i *Item) GetPrevalence() string {
-	return renderIndicator(i.PrevalenceScore, fmt.Sprintf("%1.2f%%", i.Prevalence))
+	// prevalence = (prevalence_total / network_size)
+	// network_size = prevalence_total / prevalence
+	// calculate network size from prevalence and prevalence total since it isn't stored in the mixtape
+	networkSize := math.Round(float64(i.PrevalenceTotal) / float64(i.Prevalence))
+	// format prevalence as a percentage
+	prevalence := fmt.Sprintf("%1.0f%%", i.Prevalence*100)
+	// show two decimal points if the prevalence is less than 1% to avoid displaying 0%
+	if i.Prevalence < 0.01 {
+		prevalence = fmt.Sprintf("%1.2f%%", i.Prevalence*100)
+	}
+	return renderIndicator(i.PrevalenceScore, fmt.Sprintf("%d/%1.0f (%s)", i.PrevalenceTotal, networkSize, prevalence))
 }
 func (i *Item) GetSubdomains() string {
 	return renderIndicator(i.C2OverDNSScore, fmt.Sprintf("%d", i.Subdomains))
@@ -209,6 +220,7 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 		long_conn_score,
 		prevalence,
 		prevalence_score,
+		prevalence_total,
 		first_seen_historical,
 		first_seen_score,
 		threat_intel_score,
@@ -239,6 +251,7 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 			toFloat32(sum(long_conn_score)) as  long_conn_score,
 			toFloat32(sum(prevalence)) as prevalence,
 			toFloat32(sum(prevalence_score)) as prevalence_score,
+			sum(prevalence_total) as prevalence_total, 
 			max(first_seen_historical) as first_seen_historical,
 			toFloat32(sum(first_seen_score)) as first_seen_score,
 			toFloat32(sum(threat_intel_score)) as threat_intel_score,
