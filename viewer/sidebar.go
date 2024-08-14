@@ -220,11 +220,12 @@ func (m *sidebarModel) getModifiers() []modifier {
 
 	prevalence := "N/A"
 	if m.Data.Prevalence > 0 {
-		prevalence = fmt.Sprintf("%1.0f%%", m.Data.Prevalence*100)
-		// show two decimal points if the prevalence is less than 1% to avoid displaying 0%
-		if m.Data.Prevalence < 0.01 {
-			prevalence = fmt.Sprintf("%1.2f%%", m.Data.Prevalence*100)
-		}
+		// prevalence = fmt.Sprintf("%1.0f%%", m.Data.Prevalence*100)
+		// // show two decimal points if the prevalence is less than 1% to avoid displaying 0%
+		// if m.Data.Prevalence < 0.01 {
+		// 	prevalence = fmt.Sprintf("%1.2f%%", m.Data.Prevalence*100)
+		// }
+		prevalence = m.Data.GetPrevalence()
 	}
 	modifiers = append(modifiers, modifier{label: "Prevalence", value: prevalence, delta: m.Data.PrevalenceScore})
 

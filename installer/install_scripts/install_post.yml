@@ -1,0 +1,63 @@
+---
+# ansible install playbook for rita V2.
+# Version: 202408061413
+# sample runs:
+# 	Optional: Add the following block, without #'s  to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
+# The hosts must each be on their own line.  These can be full or short hostnames or a name following "Host" in ~/.ssh/config .
+#
+# [allritas]
+# ro810
+# ub2404
+#
+# 	Then run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
+#
+# 	ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '	#-C (no changes) means do a dry run
+# 	ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '
+
+# Many thanks to but-i-am-dominator for his help with this playbook.
+
+
+- name: "RITA Post: Reboot checks."
+  hosts: "{{  install_hosts  }}"
+  become: true
+
+  vars:
+    ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
+
+
+#Late tasks, including rebooting
+  post_tasks:
+    - name: "RITA Post: Check if reboot required on rpm-based systems."
+      command: needs-restarting -r
+      register: reboot_result
+      ignore_errors: true
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      tags:
+        - packages
+        - linux
+        - linuxrpm
+
+    - name: "RITA Post: Check if reboot required on Debian/Ubuntu-based systems."
+      register: reboot_required_file
+      stat:
+        path: /var/run/reboot-required
+        get_checksum: no
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+
+    - name: "RITA Post: Rebooting system if needed."
+      reboot:
+        reboot_timeout: 120
+      when: ( ansible_connection != 'local' and ( ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' ) and ( reboot_required_file.stat.exists ) ) or ( ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' ) and ( reboot_result.rc == 1 ) ) )
+      register: reboot_status
+      async: 1
+      poll: 0
+      ignore_errors: True		#If unable to reboot (as ansible refuses to do if installing to localhost) we leave the error at the end of the output but don't treat it as a failure.
+      tags:
+        - packages
+        - linux
+        - linuxdeb
+        - linuxrpm
