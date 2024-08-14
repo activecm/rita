@@ -226,9 +226,12 @@
 
 #Add repositories
     - name: "RITA Pre: Add Docker Ubuntu GPG apt key."
-      apt_key:
+      # Note that apt-key is deprecated and that directly downloading the key to trusted.gpg.d WITH A .asc EXTENSION is the correct way now.
+      get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+        dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
+        mode: '0644'
+        force: true
       when: ( ansible_distribution == 'Ubuntu' )
       tags:
         - packages
@@ -236,9 +239,11 @@
         - linuxdeb
 
     - name: "RITA Pre: Add Docker Debian GPG apt key."
-      apt_key:
+      get_url:
         url: https://download.docker.com/linux/debian/gpg
-        state: present
+        dest: /etc/apt/trusted.gpg.d/docker-debian.asc
+        mode: '0644'
+        force: true
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Zorin OS' )
       tags:
         - packages
