@@ -7,7 +7,8 @@ services:
     # image:
     build: .
     depends_on:
-      - clickhouse
+      clickhouse:
+        condition: service_healthy
     volumes:
       - ${CONFIG_FILE:-/etc/rita/config.hjson}:/config.hjson
       - ${CONFIG_DIR:-/etc/rita}/http_extensions_list.csv:/deployment/http_extensions_list.csv
@@ -41,8 +42,8 @@ services:
     container_name: clickhouse
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1
-      interval: 5s
-      start_period: 5s
+      interval: 3s
+      start_period: 1s
       retries: 30
     restart: unless-stopped
     ports:
