@@ -22,15 +22,12 @@ rm -rf "$BASE_DIR"
 # mkdir ./stage
 
 # create ansible subfolders
-# ANSIBLE_FILES=./stage/.ansible/files
 SCRIPTS="$BASE_DIR/scripts"
 ANSIBLE_FILES="$BASE_DIR/files"
-ANSIBLE_PLAYBOOKS="$BASE_DIR/.ansible/playbooks"
 
 mkdir "$BASE_DIR"
 mkdir -p "$ANSIBLE_FILES"
 mkdir -p "$SCRIPTS"
-mkdir -p "$ANSIBLE_PLAYBOOKS"
 
 # create subfolders (for files that installed RITA will contain)
 INSTALL_OPT="$ANSIBLE_FILES"/opt
@@ -42,6 +39,9 @@ mkdir "$ANSIBLE_FILES"/etc
 # copy files in base dir
 cp ./install_scripts/install_zeek.yml "$BASE_DIR"
 cp ./install_scripts/install_rita.yml "$BASE_DIR"
+cp ./install_scripts/install_pre.yml "$BASE_DIR"
+cp ./install_scripts/install_post.yml "$BASE_DIR"
+
 cp ./install_scripts/install_rita.sh "$BASE_DIR" # entrypoint
 
 # copy files to helper script folder
