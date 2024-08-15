@@ -3,13 +3,12 @@
 #V0.1.4
 
 #Run one of the following 3 command lines:
-#	curl -A Mozilla -fsSL https://thunt-level1.s3.amazonaws.com/install-rita-zeek-here.sh | sudo bash -
-#	wget -U Mozilla -q -O - https://thunt-level1.s3.amazonaws.com/install-rita-zeek-here.sh | sudo bash -
+#	curl -A Mozilla -fsSL https://github.com/activecm/rita/releases/latest/download/install-rita-zeek-here.sh | sudo bash -
+#	wget -U Mozilla -q -O - https://github.com/activecm/rita/releases/latest/download/install-rita-zeek-here.sh | sudo bash -
 #or download the above file and run:
 #	sudo bash install-rita-zeek-here.sh
 
 export RITA_VERSION="RITA_REPLACE_ME"
-# export rver='5.0.6'
 export zeek_release='latest'
 export PATH="$PATH:/usr/local/bin/"
 echo 'export PATH=$PATH:/usr/local/bin/' | sudo tee -a /etc/profile.d/localpath.sh
