@@ -2,7 +2,7 @@
 #Performs all the setup steps needed to connect to one or more hosts listed on the command line
 #Copyright 2022 William Stearns <william.l.stearns@gmail.com>
 #Released under the GPL 3.0
-#Version 0.1.5
+#Version 0.1.6
 
 
 
@@ -142,7 +142,7 @@ check_key() {
 	if [ ! -s "$HOME/.ssh/id_rsa" ] && [ ! -s "$HOME/.ssh/id_rsa.pub" ]; then
 		status "No SSH RSA keypair, creating one.  We strongly encourage you to provide a strong passphrase."
 		step "create ssh rsa keypair"
-		ssh-keygen -t rsa -b 4096 -f "$HOME/.ssh/id_rsa"		#We don't force the comment; "user@host" is the default
+		ssh-keygen -t rsa-sha2-512 -b 4096 -f "$HOME/.ssh/id_rsa"		#We don't force the comment; "user@host" is the default
 
 	elif [ -s "$HOME/.ssh/id_rsa" ] && [ ! -s "$HOME/.ssh/id_rsa.pub" ]; then
 		status "private key available but no public; we'll create the public key.  You will be asked for your id_rsa private key passphrase."
@@ -312,4 +312,3 @@ sshprep_main() {
 
 
 sshprep_main "$@"
-
