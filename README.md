@@ -18,6 +18,14 @@ The framework ingests [Zeek Logs](https://www.zeek.org/) in TSV or JSON format, 
 
  ## Quick Start
  Please see our recommended [System Requirements](docs/System%20Requirements.md).
+1. Log into the system on which you want rita and zeek as a non-root user and run:
+   ```
+   curl -fsSL https://github.com/activecm/rita/releases/latest/download/install-rita-zeek-here.sh | sudo bash -
+   ```
+
+
+ ## To allow remote installs
+ Please see our recommended [System Requirements](docs/System%20Requirements.md).
 
 1. Download the [RITA Installer](https://github.com/activecm/rita/releases) for the desired version.
 
@@ -50,17 +58,6 @@ The framework ingests [Zeek Logs](https://www.zeek.org/) in TSV or JSON format, 
 | Windows        |    | | ❌ |
 <!-- TODO: eventually add support -->
 <!-- | MacOS        |   `Sonoma`   | `intel\|arm` | ✅ | -->
-
-## Installing Zeek
-If you do not already have Zeek installed, it can be installed from [docker-zeek](https://github.com/activecm/docker-zeek).
-
-```
-sudo wget -O /usr/local/bin/zeek https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
-
-sudo chmod +x /usr/local/bin/zeek
-
-zeek start
-```
 
 ## Importing
 Import data into RITA using the `import` command:
