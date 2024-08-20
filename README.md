@@ -59,17 +59,6 @@ The framework ingests [Zeek Logs](https://www.zeek.org/) in TSV or JSON format, 
 <!-- TODO: eventually add support -->
 <!-- | MacOS        |   `Sonoma`   | `intel\|arm` | ✅ | -->
 
-## Installing Zeek
-If you do not already have Zeek installed, it can be installed from [docker-zeek](https://github.com/activecm/docker-zeek).
-
-```
-sudo wget -O /usr/local/bin/zeek https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
-
-sudo chmod +x /usr/local/bin/zeek
-
-zeek start
-```
-
 ## Importing
 Import data into RITA using the `import` command:
 ```
