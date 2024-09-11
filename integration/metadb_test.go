@@ -92,7 +92,7 @@ func TestImportTracking(t *testing.T) {
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// ROLLING IMPORT
 	// new import
@@ -165,8 +165,8 @@ func TestMinMaxTimestamps(t *testing.T) {
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	require.True(t, cfg.Filter.FilterExternalToInternal)
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	require.True(t, cfg.Filtering.FilterExternalToInternal)
 
 	// connect to clickhouse server
 	server, err := database.ConnectToServer(context.Background(), cfg)
@@ -302,7 +302,7 @@ func TestMetaDatabase(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// import a dataset
 	dbName := "test_metadb"

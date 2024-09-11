@@ -140,23 +140,23 @@ func formatHTTPRecord(cfg *config.Config, parseHTTP *zeektypes.HTTP, importTime 
 	// appearing as a destination, while still allowing for processing that
 	// data for the proxy modules
 
-	srcLocal := cfg.Filter.CheckIfInternal(srcIP)
-	dstLocal := cfg.Filter.CheckIfInternal(dstIP)
+	srcLocal := cfg.Filtering.CheckIfInternal(srcIP)
+	dstLocal := cfg.Filtering.CheckIfInternal(dstIP)
 
 	if dstIsProxy {
 
-		if cfg.Filter.FilterDomain(fqdn) || cfg.Filter.FilterSingleIP(srcIP) {
+		if cfg.Filtering.FilterDomain(fqdn) || cfg.Filtering.FilterSingleIP(srcIP) {
 
 			return nil, nil
 		}
 		fqdnAsIPAddress := net.ParseIP(fqdn)
 
-		if fqdnAsIPAddress != nil && dstLocal && cfg.Filter.FilterConnPair(srcIP, fqdnAsIPAddress) {
+		if fqdnAsIPAddress != nil && dstLocal && cfg.Filtering.FilterConnPair(srcIP, fqdnAsIPAddress) {
 			return nil, nil
 		}
-	} else if cfg.Filter.FilterDomain(fqdn) || cfg.Filter.FilterConnPair(srcIP, dstIP) ||
+	} else if cfg.Filtering.FilterDomain(fqdn) || cfg.Filtering.FilterConnPair(srcIP, dstIP) ||
 		// filter out connections where the src is external if the host isn't missing
-		(cfg.Filter.FilterSNIPair(srcIP) && parseHTTP.Host != "") {
+		(cfg.Filtering.FilterSNIPair(srcIP) && parseHTTP.Host != "") {
 		return nil, nil
 	}
 
@@ -299,7 +299,7 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 
 			switch {
 			case entry.Host == "":
-				ignore := importer.Cfg.Filter.FilterConnPair(entry.Src, entry.Dst)
+				ignore := importer.Cfg.Filtering.FilterConnPair(entry.Src, entry.Dst)
 				if ignore {
 					continue
 				}

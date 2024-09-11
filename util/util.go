@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	privateIPBlocks           []*net.IPNet
+	privateIPBlocks           []IPNet
 	PublicNetworkUUID         = uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 	PublicNetworkName         = "Public"
 	UnknownPrivateNetworkUUID = uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe")
@@ -134,7 +134,7 @@ func ValidFQDN(value string) bool {
 }
 
 // ContainsIP checks if a collection of subnets contains an IP
-func ContainsIP(subnets []*net.IPNet, ip net.IP) bool {
+func ContainsIP(subnets []IPNet, ip net.IP) bool {
 	// cache IPv4 conversion so it not performed every in every Contains call
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
@@ -149,8 +149,8 @@ func ContainsIP(subnets []*net.IPNet, ip net.IP) bool {
 }
 
 // ParseSubnets parses the provided subnets into net.IPNet format
-func ParseSubnets(subnets []string) ([]*net.IPNet, error) {
-	var parsedSubnets []*net.IPNet
+func ParseSubnets(subnets []string) ([]IPNet, error) {
+	var parsedSubnets []IPNet
 
 	for _, entry := range subnets {
 		// Try to parse out CIDR range
@@ -180,7 +180,7 @@ func ParseSubnets(subnets []string) ([]*net.IPNet, error) {
 		}
 
 		// Add CIDR range to the list
-		parsedSubnets = append(parsedSubnets, block)
+		parsedSubnets = append(parsedSubnets, IPNet{block})
 	}
 	return parsedSubnets, nil
 }

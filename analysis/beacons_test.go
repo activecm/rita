@@ -677,10 +677,10 @@ func TestGetDurationScore(t *testing.T) {
 		datasetMax            int64
 		histMin               int64
 		histMax               int64
-		totalBars             int
-		longestConsecutiveRun int
-		minHoursThreshold     int
-		idealConsistencyHours int
+		totalBars             int32
+		longestConsecutiveRun int32
+		minHoursThreshold     int32
+		idealConsistencyHours int32
 		expectedCoverage      float64
 		expectedConsistency   float64
 		expectedScore         float64
@@ -905,14 +905,14 @@ func TestGetHistogramScore(t *testing.T) {
 		datasetMax                 int64
 		tsList                     []uint32
 		modalSensitivity           float64
-		bimodalOutlierRemoval      int
-		minHoursForBimodalAnalysis int
-		beaconTimeSpan             int
+		bimodalOutlierRemoval      int32
+		minHoursForBimodalAnalysis int32
+		beaconTimeSpan             int32
 		expectedBinEdges           []float64
 		expectedHistogram          []int
 		expectedFreqCount          map[int32]int32
-		expectedTotalBars          int
-		expectedLongestRun         int
+		expectedTotalBars          int32
+		expectedLongestRun         int32
 		expectedScore              float64
 		expectedError              bool
 	}{
@@ -1419,7 +1419,7 @@ func TestComputeHistogramBins(t *testing.T) {
 		name             string
 		startTime        int64
 		endTime          int64
-		numBins          int
+		numBins          int32
 		expectedBinEdges []float64
 		expectedError    bool
 	}{
@@ -1618,9 +1618,9 @@ func TestCalculateBimodalFitScore(t *testing.T) {
 	tests := []struct {
 		name                       string
 		freqCount                  map[int32]int32
-		totalBars                  int
-		modalOutlierRemoval        int
-		minHoursForBimodalAnalysis int
+		totalBars                  int32
+		modalOutlierRemoval        int32
+		minHoursForBimodalAnalysis int32
 		expectedScore              float64
 		expectedError              bool
 	}{

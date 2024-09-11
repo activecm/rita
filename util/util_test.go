@@ -334,71 +334,71 @@ func TestValidFQDN(t *testing.T) {
 func TestContainsIP(t *testing.T) {
 	tests := []struct {
 		name      string
-		subnets   []*net.IPNet
+		subnets   []IPNet
 		ip        net.IP
 		contained bool
 	}{
 		{
 			name: "IP in subnet",
-			subnets: []*net.IPNet{
-				{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 			},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: true,
 		},
 		{
 			name: "IP not in subnet",
-			subnets: []*net.IPNet{
-				{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 			},
 			ip:        net.IP{10, 0, 0, 1},
 			contained: false,
 		},
 		{
 			name: "IP in multiple subnets",
-			subnets: []*net.IPNet{
-				{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)},
-				{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
+				{&net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)}},
 			},
 			ip:        net.IP{10, 0, 0, 1},
 			contained: true,
 		},
 		{
 			name: "IPv6 address in subnet",
-			subnets: []*net.IPNet{
-				{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(32, 128)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(32, 128)}},
 			},
 			ip:        net.ParseIP("2001:db8::1"),
 			contained: true,
 		},
 		{
 			name: "IPv6 address not in subnet",
-			subnets: []*net.IPNet{
-				{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(32, 128)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(32, 128)}},
 			},
 			ip:        net.ParseIP("2001:db9::1"),
 			contained: false,
 		},
 		{
 			name:      "Empty subnets list",
-			subnets:   []*net.IPNet{},
+			subnets:   []IPNet{},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: false,
 		},
 		{
 			name: "IP in overlapping subnets",
-			subnets: []*net.IPNet{
-				{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)},
-				{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 			},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: true,
 		},
 		{
 			name: "IP in smaller overlapping subnet",
-			subnets: []*net.IPNet{
-				{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)},
-				{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(28, 32)},
+			subnets: []IPNet{
+				{&net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(28, 32)}},
 			},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: true,

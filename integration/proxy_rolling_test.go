@@ -27,9 +27,9 @@ func TestProxyRolling(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
-	require.True(t, cfg.Filter.FilterExternalToInternal)
+	require.True(t, cfg.Filtering.FilterExternalToInternal)
 
 	// // import data
 	results, err := cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/proxy_rolling", "proxy_rolling", false, true)

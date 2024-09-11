@@ -128,8 +128,8 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	cfg.Filter.FilterExternalToInternal = false
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Filtering.FilterExternalToInternal = false
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "dnscat2_ja3_strobe_external", false, false)

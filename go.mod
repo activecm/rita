@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.3
 	github.com/charmbracelet/lipgloss v0.11.0
+	github.com/go-playground/validator/v10 v10.22.1
 	github.com/google/uuid v1.6.0
 	github.com/hjson/hjson-go/v4 v4.4.0
 	github.com/joho/godotenv v1.5.1
@@ -26,7 +27,13 @@ require (
 	golang.org/x/time v0.5.0
 )
 
-require github.com/google/go-querystring v1.1.0 // indirect
+require (
+	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
+	github.com/go-playground/locales v0.14.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/leodido/go-urn v1.4.0 // indirect
+)
 
 require (
 	dario.cat/mergo v1.0.0 // indirect

@@ -311,7 +311,7 @@ func (db *DB) ResetTemporaryTables() error {
 func ConnectToDB(ctx context.Context, db string, cfg *config.Config, cancel context.CancelFunc) (*DB, error) {
 	// connect to the database
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{cfg.DBConnection},
+		Addr: []string{cfg.Env.DBConnection},
 		Auth: clickhouse.Auth{
 			Database: db,
 			Username: "default",
@@ -327,7 +327,7 @@ func ConnectToDB(ctx context.Context, db string, cfg *config.Config, cancel cont
 			log.Println(format, v)
 		},
 		Settings: clickhouse.Settings{
-			"max_execution_time": cfg.MaxQueryExecutionTime,
+			"max_execution_time": cfg.RITA.MaxQueryExecutionTime,
 			"mutations_sync":     1,
 		},
 		Compression: &clickhouse.Compression{

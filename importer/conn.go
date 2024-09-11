@@ -153,7 +153,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		return nil, err
 	}
 
-	filtered := cfg.Filter.FilterConnPair(srcIP, dstIP)
+	filtered := cfg.Filtering.FilterConnPair(srcIP, dstIP)
 
 	entry := &ConnEntry{
 		ImportTime:  importTime,
@@ -173,8 +173,8 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		Proto:       parseConn.Proto,
 		Service:     parseConn.Service,
 		Duration:    parseConn.Duration,
-		SrcLocal:    cfg.Filter.CheckIfInternal(srcIP),
-		DstLocal:    cfg.Filter.CheckIfInternal(dstIP),
+		SrcLocal:    cfg.Filtering.CheckIfInternal(srcIP),
+		DstLocal:    cfg.Filtering.CheckIfInternal(dstIP),
 		ICMPType:    icmpType,
 		ICMPCode:    icmpCode,
 		SrcBytes:    parseConn.OrigBytes,
@@ -192,7 +192,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 	// it will never get populated
 	// Filter out from never included list before adding it to the uconn map to allow blocking subnets
 	// that could end up overcommitting memory
-	ignore := cfg.Filter.FilterConnPairForHTTP(srcIP, dstIP)
+	ignore := cfg.Filtering.FilterConnPairForHTTP(srcIP, dstIP)
 	if ignore {
 		return nil, nil
 	}

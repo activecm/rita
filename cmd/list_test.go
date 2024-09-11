@@ -8,6 +8,7 @@ import (
 
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/util"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -27,8 +28,8 @@ func (c *CmdTestSuite) TestFormatListTable() {
 	require.NoError(err)
 
 	// update config to include droplet subnet
-	c.cfg.Filter.InternalSubnets = append(c.cfg.Filter.InternalSubnets, dropletSubnet)
-	c.cfg.Filter.FilterExternalToInternal = false
+	c.cfg.Filtering.InternalSubnets = append(c.cfg.Filtering.InternalSubnets, util.IPNet{IPNet: dropletSubnet})
+	c.cfg.Filtering.FilterExternalToInternal = false
 
 	_, err = cmd.RunImportCmd(time.Now(), c.cfg, afero.NewOsFs(), "../test_data/missing_host/2024-04-19", "fake_rolling", true, true)
 	require.NoError(err, "importing fake_rolling data should not produce an error")

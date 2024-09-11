@@ -32,12 +32,12 @@ func (it *ThreatIntelSuite) SetupSuite() {
 }
 
 func (it *ThreatIntelSuite) SetupTest() {
-	err := it.cfg.ResetConfig()
+	err := it.cfg.Reset()
 	it.Require().NoError(err)
 }
 
 func (it *ThreatIntelSuite) TearDownSuite() {
-	err := it.cfg.ResetConfig()
+	err := it.cfg.Reset()
 	it.Require().NoError(err)
 }
 
@@ -65,7 +65,7 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 
 	cfg, err := config.ReadFileConfig(afs, "threat_intel_config.hjson")
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
 
 	fs := afero.NewOsFs()
@@ -114,8 +114,8 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 
 	cfg, err := config.ReadFileConfig(afs, "threat_intel_config.hjson")
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	require.Contains(t, cfg.ThreatIntel.OnlineFeeds, feedURL)
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	require.Contains(t, cfg.RITA.ThreatIntel.OnlineFeeds, feedURL)
 	it.cfg = cfg
 
 	fs := afero.NewOsFs()

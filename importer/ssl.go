@@ -119,7 +119,7 @@ func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime tim
 		return nil, fmt.Errorf("could not parse SSL connection %s -> %s: %w", src, dst, errServerNameEmpty)
 	}
 
-	ignore := cfg.Filter.FilterDomain(sni) || cfg.Filter.FilterConnPair(srcIP, dstIP) || cfg.Filter.FilterSNIPair(srcIP)
+	ignore := cfg.Filtering.FilterDomain(sni) || cfg.Filtering.FilterConnPair(srcIP, dstIP) || cfg.Filtering.FilterSNIPair(srcIP)
 	if ignore {
 		return nil, nil
 	}
@@ -148,8 +148,8 @@ func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime tim
 		DstNUID:          dstNUID,
 		SrcPort:          uint16(parseSSL.SourcePort),
 		DstPort:          uint16(parseSSL.DestinationPort),
-		SrcLocal:         cfg.Filter.CheckIfInternal(srcIP),
-		DstLocal:         cfg.Filter.CheckIfInternal(dstIP),
+		SrcLocal:         cfg.Filtering.CheckIfInternal(srcIP),
+		DstLocal:         cfg.Filtering.CheckIfInternal(dstIP),
 		Version:          parseSSL.Version,
 		Cipher:           parseSSL.Cipher,
 		Curve:            parseSSL.Curve,
