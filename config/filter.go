@@ -43,12 +43,12 @@ type Filter struct {
 // 	}
 // }
 
-func GetMandatoryNeverIncludeSubnets() []util.IPNet {
+func GetMandatoryNeverIncludeSubnets() []util.Subnet {
 	// s2 := make([]string, len(mandatoryNeverIncludeSubnets))
 
 	// _ = copy(s2, mandatoryNeverIncludeSubnets) // s2 is now an independent copy of s
 	// return s2
-	return []util.IPNet{
+	return []util.Subnet{
 		{IPNet: &net.IPNet{IP: net.IP{0, 0, 0, 0}.To16(), Mask: net.CIDRMask(128, 128)}},         //  0.0.0.0/32 current host
 		{IPNet: &net.IPNet{IP: net.IP{127, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},       // "127.0.0.0/8"       loopback
 		{IPNet: &net.IPNet{IP: net.IP{169, 254, 0, 0}.To16(), Mask: net.CIDRMask(112, 128)}},     // "169.254.0.0/16",     link local

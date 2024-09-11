@@ -28,7 +28,7 @@ func (c *CmdTestSuite) TestFormatListTable() {
 	require.NoError(err)
 
 	// update config to include droplet subnet
-	c.cfg.Filtering.InternalSubnets = append(c.cfg.Filtering.InternalSubnets, util.IPNet{IPNet: dropletSubnet})
+	c.cfg.Filtering.InternalSubnets = append(c.cfg.Filtering.InternalSubnets, util.Subnet{IPNet: dropletSubnet})
 	c.cfg.Filtering.FilterExternalToInternal = false
 
 	_, err = cmd.RunImportCmd(time.Now(), c.cfg, afero.NewOsFs(), "../test_data/missing_host/2024-04-19", "fake_rolling", true, true)

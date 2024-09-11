@@ -334,13 +334,13 @@ func TestValidFQDN(t *testing.T) {
 func TestContainsIP(t *testing.T) {
 	tests := []struct {
 		name      string
-		subnets   []IPNet
+		subnets   []Subnet
 		ip        net.IP
 		contained bool
 	}{
 		{
 			name: "IP in subnet",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 			},
 			ip:        net.IP{192, 168, 1, 1},
@@ -348,7 +348,7 @@ func TestContainsIP(t *testing.T) {
 		},
 		{
 			name: "IP not in subnet",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 			},
 			ip:        net.IP{10, 0, 0, 1},
@@ -356,7 +356,7 @@ func TestContainsIP(t *testing.T) {
 		},
 		{
 			name: "IP in multiple subnets",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 				{&net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)}},
 			},
@@ -365,7 +365,7 @@ func TestContainsIP(t *testing.T) {
 		},
 		{
 			name: "IPv6 address in subnet",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(32, 128)}},
 			},
 			ip:        net.ParseIP("2001:db8::1"),
@@ -373,7 +373,7 @@ func TestContainsIP(t *testing.T) {
 		},
 		{
 			name: "IPv6 address not in subnet",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.ParseIP("2001:db8::"), Mask: net.CIDRMask(32, 128)}},
 			},
 			ip:        net.ParseIP("2001:db9::1"),
@@ -381,13 +381,13 @@ func TestContainsIP(t *testing.T) {
 		},
 		{
 			name:      "Empty subnets list",
-			subnets:   []IPNet{},
+			subnets:   []Subnet{},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: false,
 		},
 		{
 			name: "IP in overlapping subnets",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}},
 				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
 			},
@@ -396,7 +396,7 @@ func TestContainsIP(t *testing.T) {
 		},
 		{
 			name: "IP in smaller overlapping subnet",
-			subnets: []IPNet{
+			subnets: []Subnet{
 				{&net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}},
 				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(28, 32)}},
 			},
@@ -752,55 +752,61 @@ func TestContainsDomain(t *testing.T) {
 	}
 }
 
-func TestEnsureSliceContainsAll(t *testing.T) {
+func TestIncludeMandatorySubnets(t *testing.T) {
 	tests := []struct {
 		name      string
-		data      []string
-		mandatory []string
-		expected  []string
+		data      []Subnet
+		mandatory []Subnet
+		expected  []Subnet
 	}{
 		{
 			name:      "All elements present",
-			data:      []string{"a", "b", "c"},
-			mandatory: []string{"a", "b"},
-			expected:  []string{"a", "b", "c"},
+			data:      NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
+			mandatory: NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64"}),
+			expected:  NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
 		},
 		{
 			name:      "Some elements missing",
-			data:      []string{"a", "b"},
-			mandatory: []string{"a", "b", "c"},
-			expected:  []string{"a", "b", "c"},
+			data:      NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64"}),
+			mandatory: NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
+			expected:  NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
 		},
 		{
 			name:      "No elements present",
-			data:      []string{},
-			mandatory: []string{"a", "b", "c"},
-			expected:  []string{"a", "b", "c"},
+			data:      []Subnet{},
+			mandatory: NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
+			expected:  NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
 		},
 		{
 			name:      "Empty mandatory list",
-			data:      []string{"a", "b", "c"},
-			mandatory: []string{},
-			expected:  []string{"a", "b", "c"},
+			data:      NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
+			mandatory: []Subnet{},
+			expected:  NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}),
 		},
 		{
 			name:      "No elements in both lists",
-			data:      []string{},
-			mandatory: []string{},
-			expected:  []string{},
+			data:      []Subnet{},
+			mandatory: []Subnet{},
+			expected:  []Subnet{},
 		},
 		{
 			name:      "Duplicate elements in mandatory list",
-			data:      []string{"a", "b"},
-			mandatory: []string{"b", "c", "c"},
-			expected:  []string{"a", "b", "c", "c"},
+			data:      NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64"}),
+			mandatory: NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "ffee::1/64", "10.55.100.100/24", "::ffff:10.55.100.100/120"}),
+			expected:  NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24", "10.55.100.100/24"}), // duplicate ipv4-mapped ipv6 address should be a duplicate of the original ipv4 address
+		},
+		{
+			name:      "Duplicate elements in mandatory list, compacted",
+			data:      NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64"}),
+			mandatory: CompactSubnets(NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "ffee::1/64", "10.55.100.100/24", "::ffff:10.55.100.100/120"})),
+			expected:  NewTestSubnetList(t, []string{"192.168.0.11/12", "ffee::1/64", "10.55.100.100/24"}), // duplicate ipv4-mapped ipv6 address should have been compacted
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := EnsureSliceContainsAll(test.data, test.mandatory)
-			require.ElementsMatch(t, test.expected, result, "resulting list should match expected value")
+			result := IncludeMandatorySubnets(test.data, test.mandatory)
+			require.ElementsMatch(t, test.expected, result, "resulting list should match expected value, expected: %v, got: %v", test.expected, result)
 		})
 	}
 }

@@ -9,22 +9,19 @@ import (
 )
 
 func TestFilterConnPair(t *testing.T) {
-	internalSubnetListEmpty := []util.IPNet{}
+	internalSubnetListEmpty := []util.Subnet{}
 
-	internalSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{11, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{120, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+	internalSubnetList := util.NewTestSubnetList(t, []string{
+		"11.0.0.0/8", "120.0.0.0/8",
+	})
 
-	alwaysIncludedSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{35, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{170, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+	alwaysIncludedSubnetList := util.NewTestSubnetList(t, []string{
+		"35.0.0.0/8", "170.0.0.0/8",
+	})
 
-	neverIncludedSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{12, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{150, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+	neverIncludedSubnetList := util.NewTestSubnetList(t, []string{
+		"12.0.0.0/8", "150.0.0.0/8",
+	})
 
 	// load config
 	cfg, err := GetDefaultConfig()
@@ -83,22 +80,19 @@ func TestFilterConnPair(t *testing.T) {
 }
 
 func TestFilterDNSPair(t *testing.T) {
-	internalSubnetListEmpty := []util.IPNet{}
+	internalSubnetListEmpty := []util.Subnet{}
 
-	internalSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{11, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{120, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+	internalSubnetList := util.NewTestSubnetList(t, []string{
+		"11.0.0.0/8", "120.0.0.0/8",
+	})
 
-	alwaysIncludedSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{35, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{170, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+	alwaysIncludedSubnetList := util.NewTestSubnetList(t, []string{
+		"35.0.0.0/8", "170.0.0.0/8",
+	})
 
-	neverIncludedSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{12, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{150, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+	neverIncludedSubnetList := util.NewTestSubnetList(t, []string{
+		"12.0.0.0/8", "150.0.0.0/8",
+	})
 
 	// load config
 	cfg, err := GetDefaultConfig()
@@ -151,15 +145,13 @@ func TestFilterDNSPair(t *testing.T) {
 
 func TestFilterSingleIP(t *testing.T) {
 
-	alwaysIncludedSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{35, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
-		{IPNet: &net.IPNet{IP: net.IP{170, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
-	}
+	alwaysIncludedSubnetList := util.NewTestSubnetList(t, []string{
+		"35.0.0.0/8", "170.0.0.0/8",
+	})
 
-	neverIncludedSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{12, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
-		{IPNet: &net.IPNet{IP: net.IP{150, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
-	}
+	neverIncludedSubnetList := util.NewTestSubnetList(t, []string{
+		"12.0.0.0/8", "150.0.0.0/8",
+	})
 
 	// load config
 	cfg, err := GetDefaultConfig()
@@ -237,10 +229,10 @@ func TestFilterNeverInclude(t *testing.T) {
 }
 
 func TestCheckIfInternal(t *testing.T) {
-	internalSubnetList := []util.IPNet{
-		{IPNet: &net.IPNet{IP: net.IP{11, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-		{IPNet: &net.IPNet{IP: net.IP{120, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}},
-	}
+
+	internalSubnetList := util.NewTestSubnetList(t, []string{
+		"11.0.0.0/8", "120.0.0.0/8",
+	})
 
 	// load config
 	cfg, err := GetDefaultConfig()

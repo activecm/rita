@@ -55,7 +55,7 @@ func TestMissingHost(t *testing.T) {
 
 	_, dropletSubnet, err := net.ParseCIDR("64.225.56.201/32")
 	require.NoError(t, err)
-	cfg.Filtering.InternalSubnets = append(cfg.Filtering.InternalSubnets, util.IPNet{IPNet: dropletSubnet})
+	cfg.Filtering.InternalSubnets = append(cfg.Filtering.InternalSubnets, util.Subnet{IPNet: dropletSubnet})
 	cfg.Filtering.FilterExternalToInternal = false
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 

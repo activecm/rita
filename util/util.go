@@ -23,7 +23,7 @@ import (
 )
 
 var (
-	privateIPBlocks           []IPNet
+	privateIPBlocks           []Subnet
 	PublicNetworkUUID         = uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 	PublicNetworkName         = "Public"
 	UnknownPrivateNetworkUUID = uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe")
@@ -134,7 +134,7 @@ func ValidFQDN(value string) bool {
 }
 
 // ContainsIP checks if a collection of subnets contains an IP
-func ContainsIP(subnets []IPNet, ip net.IP) bool {
+func ContainsIP(subnets []Subnet, ip net.IP) bool {
 	// cache IPv4 conversion so it not performed every in every Contains call
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
@@ -149,8 +149,8 @@ func ContainsIP(subnets []IPNet, ip net.IP) bool {
 }
 
 // ParseSubnets parses the provided subnets into net.IPNet format
-func ParseSubnets(subnets []string) ([]IPNet, error) {
-	var parsedSubnets []IPNet
+func ParseSubnets(subnets []string) ([]Subnet, error) {
+	var parsedSubnets []Subnet
 
 	for _, entry := range subnets {
 		// Try to parse out CIDR range
@@ -180,7 +180,7 @@ func ParseSubnets(subnets []string) ([]IPNet, error) {
 		}
 
 		// Add CIDR range to the list
-		parsedSubnets = append(parsedSubnets, IPNet{block})
+		parsedSubnets = append(parsedSubnets, Subnet{block})
 	}
 	return parsedSubnets, nil
 }
@@ -252,25 +252,6 @@ func ContainsDomain(domains []string, host string) bool {
 
 	}
 	return false
-}
-
-// EnsureSliceContainsAll ensures that a given slice contains all elements of a mandatory list
-func EnsureSliceContainsAll(data []string, mandatory []string) []string {
-	// create map to store elements of the given list
-	dataMap := make(map[string]bool)
-	for _, item := range data {
-		dataMap[item] = true
-	}
-
-	// check if all elements in the mandatory list exist in the given list
-	for _, item := range mandatory {
-		if !dataMap[item] {
-			data = append(data, item) // append missing element
-		}
-	}
-
-	return data
-
 }
 
 // UInt32sAreSorted returns true if a slice of uint32 is sorted in ascending order

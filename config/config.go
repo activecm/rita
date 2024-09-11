@@ -39,123 +39,97 @@ type (
 	Config struct {
 		Env Env
 		RITA
-		Filtering Filtering `json:"filtering"`
-		Scoring   Scoring
-		Modifiers Modifiers
+		Filtering Filtering `json:"filtering" validate:"required"`
+		Scoring   Scoring   `json:"scoring" validate:"required"`
+		Modifiers Modifiers `json:"modifiers"`
 	}
 
 	Env struct { // set by .env file
-		DBConnection           string `validate:"required,hostname_port"`
-		HTTPExtensionsFilePath string `json:"http_extensions_file_path" validate:"required,file"`
+		DBConnection                    string `validate:"required,hostname_port"` // DB_ADDRESS
+		HTTPExtensionsFilePath          string `validate:"required,filepath"`      // CONFIG_DIR/http_extensions_list.csv
+		LogLevel                        int8   `validate:"required,min=0,max=6"`   // LOG_LEVEL
+		ThreatIntelCustomFeedsDirectory string `validate:"required,dir"`           // CONFIG_DIR/threat_intel_feeds
 	}
 
 	RITA struct {
-		UpdateCheckEnabled              bool  `ch:"update_check_enabled" json:"update_check_enabled" validate:"boolean"` // required,
+		UpdateCheckEnabled              bool  `ch:"update_check_enabled" json:"update_check_enabled" validate:"boolean"`
 		BatchSize                       int32 `ch:"batch_size" json:"batch_size" validate:"gte=25000,lte=2000000"`
 		MaxQueryExecutionTime           int32 `ch:"max_query_execution_time" json:"max_query_execution_time" validate:"gte=1,lte=2000000"`
 		MonthsToKeepHistoricalFirstSeen int32 `ch:"months_to_keep_historical_first_seen" json:"months_to_keep_historical_first_seen" validate:"gte=1,lte=60"`
-		LogLevel                        int8  `ch:"log_level"` // TODO: question - should this be in the env struct?
-
-		// TODO: probably put these back into a separate struct for better unmarshal
-		ThreatIntel `json:"threat_intel"`
-		// ThreatIntelOnlineFeeds          []string `ch:"threat_intel_online_feeds" json:"threat_intel_online_feeds"`
-		// ThreatIntelCustomFeedsDirectory string   `ch:"threat_intel_custom_feeds_directory" json:"threat_intel_custom_feeds_directory" validate:"required"`
+		ThreatIntel                     `json:"threat_intel"`
 	}
 
 	ThreatIntel struct {
 		OnlineFeeds []string `ch:"threat_intel_online_feeds" json:"online_feeds" validate:"omitempty,dive,url"`
-		// TODO: should we do the dir validation? it verifies the directory exists, but do we want to do that now or later like we have been?
-		// It would probably be nice to do it here rather than after all the filewalk stuff, but it will fail on non-docker runs unless we create the directory by hand
-		// another option would be to just write a custom validator function that checks if the string has a slash or something..
-		CustomFeedsDirectory string `ch:"threat_intel_custom_feeds_directory" json:"custom_feeds_directory" validate:"required"`
 	}
 
 	Filtering struct {
-		// cannot use cidr validate tag because it doesn't support ipv4 mapped ipv6 addresses
-		// see: https://github.com/go-playground/validator/issues/1311
-		//required,
-		InternalSubnets          []util.IPNet `ch:"internal_subnets" json:"internal_subnets" validate:"internal_subnets"`
-		AlwaysIncludedSubnets    []util.IPNet `ch:"always_included_subnets" json:"always_included_subnets"`
-		AlwaysIncludedDomains    []string     `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,fqdn"`
-		NeverIncludedSubnets     []util.IPNet `ch:"never_included_subnets" json:"never_included_subnets"`
-		NeverIncludedDomains     []string     `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,fqdn"`
-		FilterExternalToInternal bool         `ch:"filter_external_to_internal" json:"filter_external_to_internal" validate:"boolean"`
+		// subnets do not need a validate tag because they are validated when they are unmarshalled
+		InternalSubnets          []util.Subnet `ch:"internal_subnets" json:"internal_subnets" validate:"required"`
+		AlwaysIncludedSubnets    []util.Subnet `ch:"always_included_subnets" json:"always_included_subnets"`
+		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,fqdn"`
+		NeverIncludedSubnets     []util.Subnet `ch:"never_included_subnets" json:"never_included_subnets"`
+		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,fqdn"`
+		FilterExternalToInternal bool          `ch:"filter_external_to_internal" json:"filter_external_to_internal" validate:"boolean"` // required tag doesn't work correctly on booleans
 	}
 
 	Scoring struct {
-		Beacon        BeaconScoring `json:"beacon" validate:"beacon_scoring"`
+		Beacon        BeaconScoring `json:"beacon" validate:"required,beacon_scoring"`
 		ThreatScoring               // see if this works
 	}
 
-	// TODO: is the required tag just for fields that must be filled out in the hjson file or is it fields that must be set, be it by default function or by user?
 	BeaconScoring struct {
-		UniqueConnectionThreshold         int64           `ch:"unique_connection_threshold" json:"unique_connection_threshold" validate:"gte=4"`
-		TimestampScoreWeight              float64         `ch:"timestamp_score_weight" json:"timestamp_score_weight" validate:"gte=0,lte=1"`
-		DatasizeScoreWeight               float64         `ch:"datasize_score_weight" json:"datasize_score_weight" validate:"gte=0,lte=1"`
-		DurationScoreWeight               float64         `ch:"duration_score_weight" json:"duration_score_weight" validate:"gte=0,lte=1"`
-		HistogramScoreWeight              float64         `ch:"histogram_score_weight" json:"histogram_score_weight" validate:"gte=0,lte=1"`
-		DurationMinHoursSeen              int32           `ch:"duration_min_hours_seen" json:"duration_min_hours_seen" validate:"gte=1"`
-		DurationConsistencyIdealHoursSeen int32           `ch:"duration_consistency_ideal_hours_seen" json:"duration_consistency_ideal_hours_seen" validate:"gte=1"`
-		HistogramModeSensitivity          float64         `ch:"histogram_mode_sensitivity" json:"histogram_mode_sensitivity" validate:"gte=0,lte=1"`
-		HistogramBimodalOutlierRemoval    int32           `ch:"histogram_bimodal_outlier_removal" json:"histogram_bimodal_outlier_removal" validate:"gte=0"`
-		HistogramBimodalMinHoursSeen      int32           `ch:"histogram_bimodal_min_hours_seen" json:"histogram_bimodal_min_hours_seen" validate:"gte=3,lte=24"`
+		UniqueConnectionThreshold         int64           `ch:"unique_connection_threshold" json:"unique_connection_threshold" validate:"required,gte=4"`
+		TimestampScoreWeight              float64         `ch:"timestamp_score_weight" json:"timestamp_score_weight" validate:"required,gte=0,lte=1"`
+		DatasizeScoreWeight               float64         `ch:"datasize_score_weight" json:"datasize_score_weight" validate:"required,gte=0,lte=1"`
+		DurationScoreWeight               float64         `ch:"duration_score_weight" json:"duration_score_weight" validate:"required,gte=0,lte=1"`
+		HistogramScoreWeight              float64         `ch:"histogram_score_weight" json:"histogram_score_weight" validate:"required,gte=0,lte=1"`
+		DurationMinHoursSeen              int32           `ch:"duration_min_hours_seen" json:"duration_min_hours_seen" validate:"required,gte=1"`
+		DurationConsistencyIdealHoursSeen int32           `ch:"duration_consistency_ideal_hours_seen" json:"duration_consistency_ideal_hours_seen" validate:"required,gte=1"`
+		HistogramModeSensitivity          float64         `ch:"histogram_mode_sensitivity" json:"histogram_mode_sensitivity" validate:"required,gte=0,lte=1"`
+		HistogramBimodalOutlierRemoval    int32           `ch:"histogram_bimodal_outlier_removal" json:"histogram_bimodal_outlier_removal" validate:"required,gte=0"`
+		HistogramBimodalMinHoursSeen      int32           `ch:"histogram_bimodal_min_hours_seen" json:"histogram_bimodal_min_hours_seen" validate:"required,gte=3,lte=24"`
 		ScoreThresholds                   ScoreThresholds `ch:"score_thresholds" json:"score_thresholds" validate:"score_thresholds=0 100"`
 	}
 
 	ThreatScoring struct {
-		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds" validate:"score_thresholds=1 86400"` // 24 * 3600
-
-		C2ScoreThresholds ScoreThresholds `json:"c2_score_thresholds" validate:"score_thresholds=1 -1"`
-
-		StrobeImpact ScoreImpact `json:"strobe_impact" validate:"impact_category"`
-
-		ThreatIntelImpact ScoreImpact `json:"threat_intel_impact" validate:"impact_category"`
+		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds" validate:"required,score_thresholds=1 86400"` // 24 * 3600
+		C2ScoreThresholds             ScoreThresholds `json:"c2_score_thresholds" validate:"required,score_thresholds=1 -1"`
+		StrobeImpact                  ScoreImpact     `ch:"strobe_impact_category" json:"strobe_impact" validate:"required,impact_category"`
+		ThreatIntelImpact             ScoreImpact     `ch:"threat_intel_impact_category" json:"threat_intel_impact" validate:"required,impact_category"`
 	}
 
-	// Scoring struct {
-	// 	LongConnectionBaseScoreThresh   int32  `ch:"long_connection_base_score_thresh" json:"long_connection_base_score_thresh" validate:"gt=0,ltfield=LongConnectionLowScoreThresh"`
-	// 	LongConnectionLowScoreThresh    int32  `ch:"long_connection_low_score_thresh" json:"long_connection_low_score_thresh" validate:"gt=0,ltfield=LongConnectionMediumScoreThresh"`
-	// 	LongConnectionMediumScoreThresh int32  `ch:"long_connection_medium_score_thresh" json:"long_connection_medium_score_thresh" validate:"gt=0,ltfield=LongConnectionHighScoreThresh"`
-	// 	LongConnectionHighScoreThresh   int32  `ch:"long_connection_high_score_thresh" json:"long_connection_high_score_thresh" validate:"gt=0,lte=86400"`
-	// 	C2BaseScoreThresh               int32  `ch:"c2_base_score_thresh" json:"c2_base_score_thresh" validate:"gt=0,ltfield=C2LowScoreThresh"`
-	// 	C2LowScoreThresh                int32  `ch:"c2_low_score_thresh" json:"c2_low_score_thresh" validate:"gt=0,ltfield=C2MediumScoreThresh"`
-	// 	C2MediumScoreThresh             int32  `ch:"c2_medium_score_thresh" json:"c2_medium_score_thresh" validate:"gt=0,ltfield=C2HighScoreThresh"`
-	// 	C2HighScoreThresh               int32  `ch:"c2_high_score_thresh" json:"c2_high_score_thresh" validate:"gt=0"`
-	// 	StrobeImpactCategory            string `ch:"strobe_impact_category" json:"strobe_impact_category" validate:"impact_category"`
-	// 	ThreatIntelImpactCategory       string `ch:"threat_intel_impact_category" json:"threat_intel_impact_category" validate:"impact_category"`
-	// }
-
 	Modifiers struct {
-		ThreatIntelScoreIncrease         float32 `ch:"threat_intel_score_increase" json:"threat_intel_score_increase" validate:"gte=0,lte=1"`
-		ThreatIntelDataSizeThreshold     int64   `ch:"threat_intel_datasize_threshold" json:"threat_intel_datasize_threshold"  validate:"gte=1"`
-		PrevalenceScoreIncrease          float32 `ch:"prevalence_score_increase" json:"prevalence_score_increase" validate:"gte=0,lte=1"`
-		PrevalenceIncreaseThreshold      float32 `ch:"prevalence_increase_threshold" json:"prevalence_increase_threshold" validate:"gte=0,lte=1"`
-		PrevalenceScoreDecrease          float32 `ch:"prevalence_score_decrease" json:"prevalence_score_decrease" validate:"gte=0,lte=1"`
-		PrevalenceDecreaseThreshold      float32 `ch:"prevalence_decrease_threshold" json:"prevalence_decrease_threshold" validate:"gte=0,lte=1,gtfield=PrevalenceIncreaseThreshold"`
-		FirstSeenScoreIncrease           float32 `ch:"first_seen_score_increase" json:"first_seen_score_increase" validate:"gte=0,lte=1"`
-		FirstSeenIncreaseThreshold       float32 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"gte=1"`
-		FirstSeenScoreDecrease           float32 `ch:"first_seen_score_decrease" json:"first_seen_score_decrease" validate:"gte=0,lte=1"`
-		FirstSeenDecreaseThreshold       float32 `ch:"first_seen_decrease_threshold" json:"first_seen_decrease_threshold" validate:"gte=1,lte=90,gtfield=FirstSeenIncreaseThreshold"`
-		MissingHostCountScoreIncrease    float32 `ch:"missing_host_count_score_increase" json:"missing_host_count_score_increase" validate:"gte=0,lte=1"`
-		RareSignatureScoreIncrease       float32 `ch:"rare_signature_score_increase" json:"rare_signature_score_increase" validate:"gte=0,lte=1"`
-		C2OverDNSDirectConnScoreIncrease float32 `ch:"c2_over_dns_direct_conn_score_increase" json:"c2_over_dns_direct_conn_score_increase" validate:"gte=0,lte=1"`
-		MIMETypeMismatchScoreIncrease    float32 `ch:"mime_type_mismatch_score_increase" json:"mime_type_mismatch_score_increase" validate:"gte=0,lte=1"`
+		ThreatIntelScoreIncrease         float32 `ch:"threat_intel_score_increase" json:"threat_intel_score_increase" validate:"required,gte=0,lte=1"`
+		ThreatIntelDataSizeThreshold     int64   `ch:"threat_intel_datasize_threshold" json:"threat_intel_datasize_threshold"  validate:"required,gte=1"`
+		PrevalenceScoreIncrease          float32 `ch:"prevalence_score_increase" json:"prevalence_score_increase" validate:"required,gte=0,lte=1"`
+		PrevalenceIncreaseThreshold      float32 `ch:"prevalence_increase_threshold" json:"prevalence_increase_threshold" validate:"required,gte=0,lte=1"`
+		PrevalenceScoreDecrease          float32 `ch:"prevalence_score_decrease" json:"prevalence_score_decrease" validate:"required,gte=0,lte=1"`
+		PrevalenceDecreaseThreshold      float32 `ch:"prevalence_decrease_threshold" json:"prevalence_decrease_threshold" validate:"required,gte=0,lte=1,gtfield=PrevalenceIncreaseThreshold"`
+		FirstSeenScoreIncrease           float32 `ch:"first_seen_score_increase" json:"first_seen_score_increase" validate:"required,gte=0,lte=1"`
+		FirstSeenIncreaseThreshold       float32 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"required,gte=1"`
+		FirstSeenScoreDecrease           float32 `ch:"first_seen_score_decrease" json:"first_seen_score_decrease" validate:"required,gte=0,lte=1"`
+		FirstSeenDecreaseThreshold       float32 `ch:"first_seen_decrease_threshold" json:"first_seen_decrease_threshold" validate:"required,gte=1,lte=90,gtfield=FirstSeenIncreaseThreshold"`
+		MissingHostCountScoreIncrease    float32 `ch:"missing_host_count_score_increase" json:"missing_host_count_score_increase" validate:"required,gte=0,lte=1"`
+		RareSignatureScoreIncrease       float32 `ch:"rare_signature_score_increase" json:"rare_signature_score_increase" validate:"required,gte=0,lte=1"`
+		C2OverDNSDirectConnScoreIncrease float32 `ch:"c2_over_dns_direct_conn_score_increase" json:"c2_over_dns_direct_conn_score_increase" validate:"required,gte=0,lte=1"`
+		MIMETypeMismatchScoreIncrease    float32 `ch:"mime_type_mismatch_score_increase" json:"mime_type_mismatch_score_increase" validate:"required,gte=0,lte=1"`
 	}
 
 	// ScoreThresholds is used for indicators that have prorated (graduated) values rather than
 	// binary outcomes. This allows for the definition of the severity of an indicator by categorizing
 	// it into one of several buckets (Base, Low, Med, High), each representing a range of values
 	ScoreThresholds struct {
-		Base int32 `json:"base"`
-		Low  int32 `json:"low"`
-		Med  int32 `json:"medium"`
-		High int32 `json:"high"`
+		Base int32 `json:"base" ch:"base" validate:"ltfield=Low"`
+		Low  int32 `json:"low" ch:"low" validate:"ltfield=Med"`
+		Med  int32 `json:"medium" ch:"med" validate:"ltfield=High"`
+		High int32 `json:"high" ch:"high"`
 	}
 
 	// ScoreImpact is used for indicators that have a binary outcomes but still need to express the
 	// impact of being true on the overall score.
 	ScoreImpact struct {
-		Category ImpactCategory `json:"category"`
+		Category ImpactCategory `json:"category" validate:"required"`
 		Score    float32
 	}
 
@@ -171,12 +145,83 @@ func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 		return nil, err
 	}
 	var cfg Config
-	// parse the JSON config file
-	if err := hjson.Unmarshal(contents, &cfg); err != nil {
-		return nil, err
+	// // parse the JSON config file
+	// if err := hjson.Unmarshal(contents, &cfg); err != nil {
+	// 	return nil, err
+	// }
+	if err := unmarshal(contents, &cfg, nil); err != nil {
+		return nil, fmt.Errorf("encountered an error while reading the config file, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", path, err)
 	}
+	// // set the environment variables
+	// if err := setEnv(&cfg); err != nil {
+	// 	return nil, fmt.Errorf("unable to set environment: %w", err)
+	// }
 
 	return &cfg, nil
+}
+
+// ReadConfigFromMemory reads the config from bytes already read into memory as opposed to reading from a file
+// It also provides its own environment struct that must already be completely set
+func ReadConfigFromMemory(data []byte, env Env) (*Config, error) {
+	var cfg *Config
+	if err := unmarshal(data, cfg, &env); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+
+}
+
+func setEnv(cfg *Config) error {
+	// get the database connection string
+	connection := os.Getenv("DB_ADDRESS")
+	if connection == "" {
+		return errors.New("environment variable DB_ADDRESS not set")
+	}
+	cfg.Env.DBConnection = connection
+
+	// get the log level
+	logLevelStr := os.Getenv("LOG_LEVEL")
+	if logLevelStr == "" {
+		return errors.New("environment variable LOG_LEVEL not set")
+	}
+	logLevel, err := strconv.Atoi(logLevelStr)
+	if err != nil {
+		return fmt.Errorf("unable to convert LOG_LEVEL to int: %w", err)
+	}
+	cfg.Env.LogLevel = int8(logLevel)
+
+	configDir := os.Getenv("CONFIG_DIR")
+	if configDir == "" {
+		return errors.New("environment variable CONFIG_DIR not set")
+	}
+	configDirFull, err := filepath.Abs(configDir)
+	if err != nil {
+		return fmt.Errorf("unable to get absolute path to CONFIG_DIR environment variable: %s, err: %w", configDir, err)
+	}
+	cfg.Env.HTTPExtensionsFilePath = filepath.Join(configDirFull, "http_extensions_list.csv")
+	cfg.Env.ThreatIntelCustomFeedsDirectory = filepath.Join(configDirFull, "threat_intel_feeds")
+	return nil
+}
+
+// unmarshal unmarshals the data into the config struct, sets the environment variables, and validates the values
+func unmarshal(data []byte, cfg *Config, env *Env) error {
+	if err := hjson.Unmarshal(data, &cfg); err != nil {
+		return err
+	}
+	if env == nil {
+		if err := setEnv(cfg); err != nil {
+			return fmt.Errorf("unable to set environment: %w", err)
+		}
+	} else {
+		cfg.Env = *env
+	}
+
+	// validate values
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // UnmarshalJSON unmarshals the JSON bytes into the config struct
@@ -209,16 +254,14 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// 	return err
 	// }
 
+	if len(cfg.Filtering.InternalSubnets) == 0 {
+		return fmt.Errorf("internal subnets must be provided")
+	}
+
 	cfg.Filtering.NeverIncludedSubnets = append(cfg.Filtering.NeverIncludedSubnets, GetMandatoryNeverIncludeSubnets()...)
 
 	// parse impact category scores
 	if err := cfg.parseImpactCategoryScores(); err != nil {
-		return err
-	}
-
-	// validate values
-	err = cfg.Validate()
-	if err != nil {
 		return err
 	}
 
@@ -237,23 +280,6 @@ func GetDefaultConfig() (Config, error) {
 
 	// set default config values
 	cfg := defaultConfig()
-
-	// get the database connection string
-	connection := os.Getenv("DB_ADDRESS")
-	if connection == "" {
-		return Config{}, errors.New("environment variable DB_ADDRESS not set")
-	}
-	cfg.Env.DBConnection = connection
-
-	configDir := os.Getenv("CONFIG_DIR")
-	if configDir == "" {
-		return Config{}, errors.New("environment variable CONFIG_DIR not set")
-	}
-	configDirFull, err := filepath.Abs(configDir)
-	if err != nil {
-		return Config{}, fmt.Errorf("unable to get absolute path to CONFIG_DIR environment variable: %s, err: %w", configDir, err)
-	}
-	cfg.Env.HTTPExtensionsFilePath = filepath.Join(configDirFull, "http_extensions_list.csv")
 
 	// set up the filter based on default values
 	// (must be done to convert strings in the default config variable to net.IPNet)
@@ -293,7 +319,7 @@ func (cfg *Config) Reset() error {
 
 // Validate validates the config struct values
 func (cfg *Config) Validate() error {
-	validate, err := newValidator()
+	validate, err := NewValidator()
 	if err != nil {
 		return err
 	}
@@ -302,10 +328,11 @@ func (cfg *Config) Validate() error {
 	if err := validate.Struct(cfg); err != nil {
 		return err
 	}
+
 	return nil
 }
 
-func newValidator() (*validator.Validate, error) {
+func NewValidator() (*validator.Validate, error) {
 	v := validator.New(validator.WithRequiredStructEnabled())
 
 	// register custom validation for impact category
@@ -332,13 +359,6 @@ func newValidator() (*validator.Validate, error) {
 		}
 		err := validateScoreThresholds(value, int32(min), int32(max))
 		return err == nil
-	}); err != nil {
-		return nil, err
-	}
-
-	if err := v.RegisterValidation("internal_subnets", func(fl validator.FieldLevel) bool {
-		return len(fl.Field().Interface().([]util.IPNet)) >= 1
-		// TODO: validate internal subnet cidrs
 	}); err != nil {
 		return nil, err
 	}
@@ -451,18 +471,17 @@ func defaultConfig() Config {
 			MaxQueryExecutionTime:           120,
 			MonthsToKeepHistoricalFirstSeen: 3,
 			ThreatIntel: ThreatIntel{
-				OnlineFeeds:          []string{},
-				CustomFeedsDirectory: "/etc/rita/threat_intel_feeds",
+				OnlineFeeds: []string{},
 			},
 		},
 		Filtering: Filtering{
-			InternalSubnets: []util.IPNet{
+			InternalSubnets: []util.Subnet{
 				{IPNet: &net.IPNet{IP: net.IP{10, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},    // "10.0.0.0/8"
 				{IPNet: &net.IPNet{IP: net.IP{172, 16, 0, 0}.To16(), Mask: net.CIDRMask(108, 128)}},  // "172.16.0.0/12"
 				{IPNet: &net.IPNet{IP: net.IP{192, 168, 0, 0}.To16(), Mask: net.CIDRMask(112, 128)}}, // "192.168.0.0/16"
 				{IPNet: &net.IPNet{IP: net.ParseIP("fd00::"), Mask: net.CIDRMask(8, 128)}},           // "fd00::/8"
 			},
-			AlwaysIncludedSubnets:    []util.IPNet{},
+			AlwaysIncludedSubnets:    []util.Subnet{},
 			NeverIncludedSubnets:     GetMandatoryNeverIncludeSubnets(),
 			AlwaysIncludedDomains:    []string{},
 			NeverIncludedDomains:     []string{},
@@ -531,4 +550,31 @@ func defaultConfig() Config {
 			MIMETypeMismatchScoreIncrease: 0.15, // +15% score for connections with mismatched MIME type/URI
 		},
 	}
+}
+
+func (s *ScoreThresholds) ToMap() map[string]int32 {
+	return map[string]int32{
+		"base": s.Base,
+		"low":  s.Low,
+		"med":  s.Med,
+		"high": s.High,
+	}
+
+}
+
+func (s ScoreImpact) String() string {
+	return string(s.Category)
+}
+
+func (s *ScoreImpact) Scan(src any) error {
+	if t, ok := src.(string); ok {
+		s.Category = ImpactCategory(t)
+		score, err := GetScoreFromImpactCategory(s.Category)
+		if err != nil {
+			return err
+		}
+		s.Score = score
+		return nil
+	}
+	return fmt.Errorf("cannot scan %T into ScoreImpact", src)
 }

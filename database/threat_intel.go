@@ -210,7 +210,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 func getThreatIntelFeeds(afs afero.Fs, cfg *config.Config) (map[string]threatIntelFeed, error) {
 	feeds := make(map[string]threatIntelFeed)
 	// add custom feed sources
-	if err := getCustomFeedsList(afs, feeds, cfg.RITA.ThreatIntel.CustomFeedsDirectory); err != nil {
+	if err := getCustomFeedsList(afs, feeds, cfg.Env.ThreatIntelCustomFeedsDirectory); err != nil {
 		return nil, err
 	}
 
