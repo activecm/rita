@@ -254,11 +254,18 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// 	return err
 	// }
 
+	// validate internal subnets
 	if len(cfg.Filtering.InternalSubnets) == 0 {
 		return fmt.Errorf("internal subnets must be provided")
 	}
+	cfg.Filtering.InternalSubnets = util.CompactSubnets(cfg.Filtering.InternalSubnets)
 
-	cfg.Filtering.NeverIncludedSubnets = append(cfg.Filtering.NeverIncludedSubnets, GetMandatoryNeverIncludeSubnets()...)
+	// validate never included subnets
+	cfg.Filtering.NeverIncludedSubnets = util.IncludeMandatorySubnets(cfg.Filtering.NeverIncludedSubnets, GetMandatoryNeverIncludeSubnets())
+	cfg.Filtering.NeverIncludedSubnets = util.CompactSubnets(cfg.Filtering.NeverIncludedSubnets)
+
+	// clean up always included subnets
+	cfg.Filtering.AlwaysIncludedSubnets = util.CompactSubnets(cfg.Filtering.AlwaysIncludedSubnets)
 
 	// parse impact category scores
 	if err := cfg.parseImpactCategoryScores(); err != nil {

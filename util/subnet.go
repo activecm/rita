@@ -15,6 +15,31 @@ type Subnet struct {
 	*net.IPNet
 }
 
+// NewSubnet creates a new Subnet struct from an IPNet pointer
+func NewSubnet(ipNet *net.IPNet) Subnet {
+	return Subnet{ipNet}
+}
+
+// NewSubnetList creates a list of Subnet structs from a list of strings
+func NewSubnetList(subnets []string) ([]Subnet, error) {
+	subnetList := []Subnet{}
+	for _, subnet := range subnets {
+		subnet, err := ParseSubnet(subnet)
+		if err != nil {
+			return nil, err
+		}
+		subnetList = append(subnetList, subnet)
+	}
+	return subnetList, nil
+}
+
+// NewTestSubnetList creates a list of Subnet structs from a list of strings, but asserts no error using testing library
+func NewTestSubnetList(t *testing.T, subnets []string) []Subnet {
+	subnetList, err := NewSubnetList(subnets)
+	require.NoError(t, err)
+	return subnetList
+}
+
 // UnmarshalJSON unmarshals the JSON bytes into the IPNet struct
 // overrides the default unmarshalling method to allow for custom parsing
 func (s *Subnet) UnmarshalJSON(bytes []byte) error {
@@ -35,9 +60,123 @@ func (s *Subnet) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+// MarshalJSON marshals the Subnet struct into JSON bytes
+func (s *Subnet) MarshalJSON() ([]byte, error) {
+
+	// convert the Subnet struct to a string
+	ip, err := s.ToIPString()
+	if err != nil {
+		return nil, err
+	}
+
+	// add cidr notation if the mask is less than 128
+	ones, _ := s.Mask.Size()
+	if ones < 128 {
+		ip += fmt.Sprintf("/%d", ones)
+	}
+	fmt.Println("ip", ip)
+	return json.Marshal(ip)
+
+}
+
+// ToIPString converts the Subnet struct to a string representation of the IP, assuming /32 mask
+func (s *Subnet) ToIPString() (string, error) {
+	if s.IP == nil {
+		return "", fmt.Errorf("ip is nil")
+	}
+
+	// convert the IP to a string
+	ip := s.IP.String()
+
+	// if the IP is an ipv4 address, convert it to ipv6
+	if s.IP.To4() != nil {
+		ip = "::ffff:" + ip
+		// using ipv4 will break the {cidr} part of the isIPAddressInRange func
+		// fmt.Printf("\t... this was an ipv4 address, so %s was converted to %s\n", s.IP.String(), ip)
+	}
+	return ip, nil
+}
+
+// ToString converts the Subnet struct to a proper string representation of the CIDR
+func (s *Subnet) ToString() string {
+	if s.IP == nil {
+		return ""
+	}
+
+	// convert the IP to a string
+	ip := s.IP.String()
+
+	mask, _ := s.Mask.Size()
+
+	// if the IP is an ipv4 address, convert it to ipv6
+	if s.IP.To4() != nil {
+		ip = s.IP.To4().Mask(net.CIDRMask(mask-96, 32)).String()
+		ip = "::ffff:" + ip
+	}
+
+	return fmt.Sprintf("%s/%d", ip, mask)
+}
+
+// Scan implements the sql.Scanner interface for the Subnet struct;
+// allows for scanning a Subnet struct from a database query
+func (s *Subnet) Scan(src any) error {
+	if t, ok := src.(string); ok {
+		ipNet, err := ParseSubnet(t)
+		if err != nil {
+			return err
+		}
+		*s = ipNet
+		return nil
+	}
+	return fmt.Errorf("cannot scan %T into Subnet", src)
+}
+
+// ParseSubnets parses the provided subnets into net.IPNet format
+func ParseSubnets(subnets []string) ([]Subnet, error) {
+
+	// TODO: do we want this function to return nil or an empty slice if
+	// subnets is empty? if we want it to return an empty slice we have to initialize it
+	var parsedSubnets []Subnet
+
+	for _, entry := range subnets {
+		// Try to parse out CIDR range
+		_, block, err := net.ParseCIDR(entry)
+
+		// If there was an error, check if entry was an IP
+		if err != nil {
+			ipAddr := net.ParseIP(entry)
+			if ipAddr == nil {
+				return parsedSubnets, fmt.Errorf("error parsing entry: %s", err.Error())
+			}
+
+			// Check if it's an IPv4 or IPv6 address and append the appropriate subnet mask
+			var subnetMask string
+			if ipAddr.To4() != nil {
+				subnetMask = "/32"
+			} else {
+				subnetMask = "/128"
+			}
+
+			// Append the subnet mask and parse as a CIDR range
+			_, block, err = net.ParseCIDR(entry + subnetMask)
+
+			if err != nil {
+				return parsedSubnets, fmt.Errorf("error parsing entry: %s", err.Error())
+			}
+		}
+
+		// Add CIDR range to the list
+		parsedSubnets = append(parsedSubnets, Subnet{block})
+	}
+	return parsedSubnets, nil
+}
+
 // ParseSubnet parses a CIDR string into a Subnet struct, which is formatted as IPv6
 // It supports both IPv4 and IPv6 CIDRs, as well as IPv4 in IPv6 CIDRs
 func ParseSubnet(str string) (Subnet, error) {
+	if str == "" {
+		return Subnet{}, fmt.Errorf("unable to parse CIDR as subnet, empty string")
+	}
 	var subnet Subnet
 	isIPv4CIDRInIPv6 := false
 	ipString := str
@@ -110,91 +249,11 @@ func ParseSubnet(str string) (Subnet, error) {
 	return subnet, nil
 }
 
-// NewSubnet creates a new Subnet struct from an IPNet pointer
-func NewSubnet(ipNet *net.IPNet) Subnet {
-	return Subnet{ipNet}
-}
-
-// NewSubnetList creates a list of Subnet structs from a list of strings
-func NewSubnetList(subnets []string) ([]Subnet, error) {
-	var subnetList []Subnet
-	for _, subnet := range subnets {
-		subnet, err := ParseSubnet(subnet)
-		if err != nil {
-			return nil, err
-		}
-		subnetList = append(subnetList, subnet)
-	}
-	return subnetList, nil
-}
-
-// NewTestSubnetList creates a list of Subnet structs from a list of strings, but asserts no error using testing library
-func NewTestSubnetList(t *testing.T, subnets []string) []Subnet {
-	subnetList, err := NewSubnetList(subnets)
-	require.NoError(t, err)
-	return subnetList
-}
-
-// MarshalJSON marshals the Subnet struct into JSON bytes
-func (s *Subnet) MarshalJSON() ([]byte, error) {
-
-	// convert the Subnet struct to a string
-	ip, err := s.ToIPString()
-	if err != nil {
-		return nil, err
-	}
-
-	// add cidr notation if the mask is less than 128
-	ones, _ := s.Mask.Size()
-	if ones < 128 {
-		ip += fmt.Sprintf("/%d", ones)
-	}
-	fmt.Println("ip", ip)
-	return json.Marshal(ip)
-
-}
-
-// ToIPString converts the Subnet struct to a string representation of the IP, assuming /32 mask
-func (s *Subnet) ToIPString() (string, error) {
-	if s.IP == nil {
-		return "", fmt.Errorf("ip is nil")
-	}
-
-	// convert the IP to a string
-	ip := s.IP.String()
-
-	// if the IP is an ipv4 address, convert it to ipv6
-	if s.IP.To4() != nil {
-		ip = "::ffff:" + ip
-		// using ipv4 will break the {cidr} part of the isIPAddressInRange func
-		// fmt.Printf("\t... this was an ipv4 address, so %s was converted to %s\n", s.IP.String(), ip)
-	}
-	return ip, nil
-}
-
-// ToString converts the Subnet struct to a proper string representation of the CIDR
-func (s *Subnet) ToString() string {
-	if s.IP == nil {
-		return ""
-	}
-
-	// convert the IP to a string
-	ip := s.IP.String()
-
-	mask, _ := s.Mask.Size()
-
-	// if the IP is an ipv4 address, convert it to ipv6
-	if s.IP.To4() != nil {
-		ip = s.IP.To4().Mask(net.CIDRMask(mask-96, 32)).String()
-		ip = "::ffff:" + ip
-	}
-
-	return fmt.Sprintf("%s/%d", ip, mask)
-}
-
 // CompactSubnets removes duplicate Subnets from a given slice
 func CompactSubnets(subnets []Subnet) []Subnet {
-	var freshSubnets []Subnet
+	// not initializing it and only declaring it with var returns a
+	// nil slice instead of an empty slice when subnets is empty 💀
+	freshSubnets := []Subnet{}
 	dataMap := make(map[string]bool)
 	for _, item := range subnets {
 		if !dataMap[item.ToString()] {
@@ -222,18 +281,4 @@ func IncludeMandatorySubnets(data []Subnet, mandatory []Subnet) []Subnet {
 
 	return data
 
-}
-
-// Scan implements the sql.Scanner interface for the Subnet struct;
-// allows for scanning a Subnet struct from a database query
-func (s *Subnet) Scan(src any) error {
-	if t, ok := src.(string); ok {
-		ipNet, err := ParseSubnet(t)
-		if err != nil {
-			return err
-		}
-		*s = ipNet
-		return nil
-	}
-	return fmt.Errorf("cannot scan %T into Subnet", src)
 }

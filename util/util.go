@@ -148,43 +148,6 @@ func ContainsIP(subnets []Subnet, ip net.IP) bool {
 	return false
 }
 
-// ParseSubnets parses the provided subnets into net.IPNet format
-func ParseSubnets(subnets []string) ([]Subnet, error) {
-	var parsedSubnets []Subnet
-
-	for _, entry := range subnets {
-		// Try to parse out CIDR range
-		_, block, err := net.ParseCIDR(entry)
-
-		// If there was an error, check if entry was an IP
-		if err != nil {
-			ipAddr := net.ParseIP(entry)
-			if ipAddr == nil {
-				return parsedSubnets, fmt.Errorf("error parsing entry: %s", err.Error())
-			}
-
-			// Check if it's an IPv4 or IPv6 address and append the appropriate subnet mask
-			var subnetMask string
-			if ipAddr.To4() != nil {
-				subnetMask = "/32"
-			} else {
-				subnetMask = "/128"
-			}
-
-			// Append the subnet mask and parse as a CIDR range
-			_, block, err = net.ParseCIDR(entry + subnetMask)
-
-			if err != nil {
-				return parsedSubnets, fmt.Errorf("error parsing entry: %s", err.Error())
-			}
-		}
-
-		// Add CIDR range to the list
-		parsedSubnets = append(parsedSubnets, Subnet{block})
-	}
-	return parsedSubnets, nil
-}
-
 // IPIsPubliclyRoutable checks if an IP address is publicly routable. See privateIPBlocks.
 func IPIsPubliclyRoutable(ip net.IP) bool {
 	// cache IPv4 conversion so it not performed every in every ip.IsXXX method

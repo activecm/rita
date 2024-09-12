@@ -40,11 +40,11 @@ func TestReadFileConfig(t *testing.T) {
 	tests := []struct {
 		name           string
 		configJSON     string
-		expectedConfig Config
+		expectedConfig *Config
 		expectedError  bool
 	}{
 		{
-			name: "valid config",
+			name: "Valid Config",
 			// create a JSON string to write to the temporary file
 			configJSON: `{	
 					update_check_enabled: false,
@@ -118,8 +118,8 @@ func TestReadFileConfig(t *testing.T) {
 						mime_type_mismatch_score_increase: 0.6
 					},
 			}`,
-			expectedConfig: func() Config {
-				cfg := Config{
+			expectedConfig: func() *Config {
+				cfg := &Config{
 					RITA: RITA{
 						UpdateCheckEnabled:              false,
 						BatchSize:                       75000,
@@ -131,18 +131,15 @@ func TestReadFileConfig(t *testing.T) {
 					},
 
 					Filtering: Filtering{
-						// InternalSubnetsJSON: []string{"11.0.0.0/8", "120.130.140.150/8"},
 						InternalSubnets: []util.Subnet{
 							{IPNet: &net.IPNet{IP: net.IP{11, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
 							{IPNet: &net.IPNet{IP: net.IP{120, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
 						},
-						// AlwaysIncludedSubnetsJSON: []string{"13.0.0.0/8", "160.140.150.160/8"},
 						AlwaysIncludedSubnets: []util.Subnet{
 							{IPNet: &net.IPNet{IP: net.IP{13, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
 							{IPNet: &net.IPNet{IP: net.IP{160, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
 						},
 						// mandatoryNeverIncludeSubnets are always apended to any neverIncludedSubnet entries
-						// NeverIncludedSubnetsJSON: append([]string{"12.0.0.0/8", "150.140.150.160/8"}, GetMandatoryNeverIncludeSubnets()...),
 						NeverIncludedSubnets: []util.Subnet{
 							{IPNet: &net.IPNet{IP: net.IP{12, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
 							{IPNet: &net.IPNet{IP: net.IP{150, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},
@@ -201,10 +198,18 @@ func TestReadFileConfig(t *testing.T) {
 						MIMETypeMismatchScoreIncrease:    0.6,
 					},
 				}
-				require.NoError(t, setEnv(&cfg))
+				require.NoError(t, setEnv(cfg))
 				return cfg
 			}(),
-			expectedError: false,
+		},
+		{
+			name:       "Empty Config",
+			configJSON: `{}`,
+			expectedConfig: func() *Config {
+				cfg := defaultConfig()
+				require.NoError(t, setEnv(&cfg))
+				return &cfg
+			}(),
 		},
 	}
 
@@ -223,91 +228,28 @@ func TestReadFileConfig(t *testing.T) {
 
 			// call function
 			cfg, err := ReadFileConfig(afs, configPath)
-			require.NoError(t, err, "expected no error when reading file config, got err=%v", err)
-			require.NotNil(t, cfg, "expected config to be non-nil")
+
+			if test.expectedError {
+				require.Error(t, err, "expected error when reading file config")
+			} else {
+				require.NoError(t, err, "expected no error when reading file config, got err=%v", err)
+				require.NotNil(t, cfg, "expected config to be non-nil")
+
+				// verify version got set
+				require.Equal(t, "dev", Version, "version should be 'dev'")
+			}
 
 			// verify that env variables are not overwritten by JSON
-			require.Equal(t, test.expectedConfig.Env.DBConnection, cfg.Env.DBConnection, "DBConnection should not be overwritten by JSON and should match the env variable")
-			require.Equal(t, test.expectedConfig.Env.HTTPExtensionsFilePath, cfg.Env.HTTPExtensionsFilePath, "HTTPExtensionsFilePath should match expected value")
-			require.Equal(t, test.expectedConfig.Env.ThreatIntelCustomFeedsDirectory, cfg.Env.ThreatIntelCustomFeedsDirectory, "ThreatIntelCustomFeedsDirectory should match expected value")
+			require.Equal(t, test.expectedConfig.Env, cfg.Env, "Env should match expected value")
 
-			// verify version
-			require.Equal(t, "dev", Version, "version should be 'dev'")
+			// verify that the retrived config matches the expected config (split up for easier debugging)
+			require.Equal(t, test.expectedConfig.RITA, cfg.RITA, "RITA should match expected value")
+			require.Equal(t, test.expectedConfig.Filtering, cfg.Filtering, "Filtering should match expected value")
+			require.Equal(t, test.expectedConfig.Scoring, cfg.Scoring, "Scoring should match expected value")
+			require.Equal(t, test.expectedConfig.Modifiers, cfg.Modifiers, "Modifiers should match expected value")
 
-			// // verify parsed values
-			// require.Equal(t, test.expectedConfig.RITA.UpdateCheckEnabled, cfg.RITA.UpdateCheckEnabled, "UpdateCheckEnabled should match expected value")
-
-			// require.ElementsMatch(t, test.expectedConfig.Filtering.InternalSubnets, cfg.Filtering.InternalSubnets, "InternalSubnets should match expected value, expected: %v, got: %v", test.expectedConfig.Filtering.InternalSubnets, cfg.Filtering.InternalSubnets)
-
-			// // require.ElementsMatch(t, test.expectedConfig.Filtering.AlwaysIncludedSubnetsJSON, cfg.Filtering.AlwaysIncludedSubnetsJSON, "AlwaysIncludedSubnetsJSON should match expected value")
-			// require.ElementsMatch(t, test.expectedConfig.Filtering.AlwaysIncludedSubnets, cfg.Filtering.AlwaysIncludedSubnets, "AlwaysIncludedSubnets should match expected value")
-
-			// // require.ElementsMatch(t, test.expectedConfig.Filtering.NeverIncludedSubnetsJSON, cfg.Filtering.NeverIncludedSubnetsJSON, "NeverIncludedSubnetsJSON should match expected value")
-			// require.ElementsMatch(t, test.expectedConfig.Filtering.NeverIncludedSubnets, cfg.Filtering.NeverIncludedSubnets, "NeverIncludedSubnets should match expected value, expected: %v, got: %v", test.expectedConfig.Filtering.NeverIncludedSubnets, cfg.Filtering.NeverIncludedSubnets)
-
-			// require.ElementsMatch(t, test.expectedConfig.Filtering.AlwaysIncludedDomains, cfg.Filtering.AlwaysIncludedDomains, "AlwaysIncludedDomains should match expected value")
-			// require.ElementsMatch(t, test.expectedConfig.Filtering.NeverIncludedDomains, cfg.Filtering.NeverIncludedDomains, "NeverIncludedDomains should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Filtering.FilterExternalToInternal, cfg.Filtering.FilterExternalToInternal, "FilterExternalToInternal should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Env.HTTPExtensionsFilePath, cfg.Env.HTTPExtensionsFilePath, "HTTPExtensionsFilePath should match expected value")
-
-			// require.Equal(t, test.expectedConfig.RITA.BatchSize, cfg.RITA.BatchSize, "BatchSize should match expected value")
-			// require.Equal(t, test.expectedConfig.RITA.MaxQueryExecutionTime, cfg.RITA.MaxQueryExecutionTime, "MaxQuertExecutionTime should match expected value")
-
-			// require.Equal(t, test.expectedConfig.RITA.MonthsToKeepHistoricalFirstSeen, cfg.RITA.MonthsToKeepHistoricalFirstSeen, "MonthsToKeepHistoricalFirstSeen should match expected value")
-
-			// require.Equal(t, test.expectedConfig.RITA.ThreatIntel.OnlineFeeds, cfg.RITA.ThreatIntel.OnlineFeeds, "OnlineFeeds should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.UniqueConnectionThreshold, cfg.Scoring.Beacon.UniqueConnectionThreshold, "BeaconUniqueConnectionThreshold should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.Beacon.TimestampScoreWeight, cfg.Scoring.Beacon.TimestampScoreWeight, 0.00001, "BeaconTsWeight should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.Beacon.DatasizeScoreWeight, cfg.Scoring.Beacon.DatasizeScoreWeight, 0.00001, "BeaconDsWeight should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.Beacon.DurationScoreWeight, cfg.Scoring.Beacon.DurationScoreWeight, 0.00001, "BeaconDurWeight should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.Beacon.HistogramScoreWeight, cfg.Scoring.Beacon.HistogramScoreWeight, 0.00001, "BeaconHistWeight should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.DurationMinHoursSeen, cfg.Scoring.Beacon.DurationMinHoursSeen, "BeaconDurMinHoursSeen should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.DurationConsistencyIdealHoursSeen, cfg.Scoring.Beacon.DurationConsistencyIdealHoursSeen, "BeaconDurConsistencyIdealHoursSeen should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.Beacon.HistogramModeSensitivity, cfg.Scoring.Beacon.HistogramModeSensitivity, 0.00001, "BeaconHistModeSensitivity should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.HistogramBimodalOutlierRemoval, cfg.Scoring.Beacon.HistogramBimodalOutlierRemoval, "BeaconHistBimodalOutlierRemoval should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.HistogramBimodalMinHoursSeen, cfg.Scoring.Beacon.HistogramBimodalMinHoursSeen, "BeaconHistBimodalMinHoursSeen should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.ScoreThresholds.Base, cfg.Scoring.Beacon.ScoreThresholds.Base, "BeaconScoreThresholds.Base should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.ScoreThresholds.Low, cfg.Scoring.Beacon.ScoreThresholds.Low, "BeaconScoreThresholds.Low should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.ScoreThresholds.Med, cfg.Scoring.Beacon.ScoreThresholds.Med, "BeaconScoreThresholds.Med should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.Beacon.ScoreThresholds.High, cfg.Scoring.Beacon.ScoreThresholds.High, "BeaconScoreThresholds.High should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Scoring.LongConnectionScoreThresholds.Base, cfg.Scoring.LongConnectionScoreThresholds.Base, "LongConnectionScoreThresholds.Base should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.LongConnectionScoreThresholds.Low, cfg.Scoring.LongConnectionScoreThresholds.Low, "LongConnectionScoreThresholds.Low should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.LongConnectionScoreThresholds.Med, cfg.Scoring.LongConnectionScoreThresholds.Med, "LongConnectionScoreThresholds.Med should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.LongConnectionScoreThresholds.High, cfg.Scoring.LongConnectionScoreThresholds.High, "LongConnectionScoreThresholds.High should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Scoring.C2ScoreThresholds.Base, cfg.Scoring.C2ScoreThresholds.Base, "C2ScoreThresholds.Base should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.C2ScoreThresholds.Low, cfg.Scoring.C2ScoreThresholds.Low, "C2ScoreThresholds.Low should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.C2ScoreThresholds.Med, cfg.Scoring.C2ScoreThresholds.Med, "C2ScoreThresholds.Med should match expected value")
-			// require.Equal(t, test.expectedConfig.Scoring.C2ScoreThresholds.High, cfg.Scoring.C2ScoreThresholds.High, "C2ScoreThresholds.High should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Scoring.StrobeImpact.Category, cfg.Scoring.StrobeImpact.Category, "StrobeImpact.Category should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.StrobeImpact.Score, cfg.Scoring.StrobeImpact.Score, 0.00001, "StrobeImpact.Score should match expected value")
-
-			// require.Equal(t, test.expectedConfig.Scoring.ThreatIntelImpact.Category, cfg.Scoring.ThreatIntelImpact.Category, "ThreatIntelImpact.Category should match expected value")
-			// require.InDelta(t, test.expectedConfig.Scoring.ThreatIntelImpact.Score, cfg.Scoring.ThreatIntelImpact.Score, 0.00001, "ThreatIntelImpact.Score to be %v, got %v", test.expectedConfig.Scoring.ThreatIntelImpact.Score, cfg.Scoring.ThreatIntelImpact.Score)
-
-			// require.InDelta(t, test.expectedConfig.Modifiers.ThreatIntelScoreIncrease, cfg.Modifiers.ThreatIntelScoreIncrease, 0.00001, "ThreatIntelScoreIncrease should match expected value")
-			// require.Equal(t, test.expectedConfig.Modifiers.ThreatIntelDataSizeThreshold, cfg.Modifiers.ThreatIntelDataSizeThreshold, "ThreatIntelDataSizeThreshold should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.PrevalenceScoreIncrease, cfg.Modifiers.PrevalenceScoreIncrease, 0.00001, "PrevalenceScoreIncrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.PrevalenceIncreaseThreshold, cfg.Modifiers.PrevalenceIncreaseThreshold, 0.00001, "PrevalenceIncreaseThreshold should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.PrevalenceScoreDecrease, cfg.Modifiers.PrevalenceScoreDecrease, 0.00001, "PrevalenceScoreDecrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.PrevalenceDecreaseThreshold, cfg.Modifiers.PrevalenceDecreaseThreshold, 0.00001, "PrevalenceDecreaseThreshold should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.FirstSeenScoreIncrease, cfg.Modifiers.FirstSeenScoreIncrease, 0.00001, "FirstSeenScoreIncrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.FirstSeenIncreaseThreshold, cfg.Modifiers.FirstSeenIncreaseThreshold, 0.00001, "FirstSeenIncreaseThreshold should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.FirstSeenScoreDecrease, cfg.Modifiers.FirstSeenScoreDecrease, 0.00001, "FirstSeenScoreDecrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.FirstSeenDecreaseThreshold, cfg.Modifiers.FirstSeenDecreaseThreshold, 0.00001, "FirstSeenDecreaseThreshold should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.MissingHostCountScoreIncrease, cfg.Modifiers.MissingHostCountScoreIncrease, 0.00001, "MissingHostCountScoreIncrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.RareSignatureScoreIncrease, cfg.Modifiers.RareSignatureScoreIncrease, 0.00001, "RareSignatureScoreIncrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.C2OverDNSDirectConnScoreIncrease, cfg.Modifiers.C2OverDNSDirectConnScoreIncrease, 0.00001, "C2OverDNSDirectConnScoreIncrease should match expected value")
-			// require.InDelta(t, test.expectedConfig.Modifiers.MIMETypeMismatchScoreIncrease, cfg.Modifiers.MIMETypeMismatchScoreIncrease, 0.00001, "MIMETypeMismatchScoreIncrease should match expected value")
-
-			// clean up after the test
-			// err = afs.Remove(configPath)
-			// require.NoError(t, err, "removing temporary file should not produce an error")
+			// all together
+			require.Equal(t, test.expectedConfig, cfg, "config should match expected value")
 		})
 	}
 
