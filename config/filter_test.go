@@ -24,8 +24,7 @@ func TestFilterConnPair(t *testing.T) {
 	})
 
 	// load config
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err)
+	cfg := GetDefaultConfig()
 
 	// set config filter for external to internal to false
 	cfg.Filtering.FilterExternalToInternal = false
@@ -95,8 +94,7 @@ func TestFilterDNSPair(t *testing.T) {
 	})
 
 	// load config
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err)
+	cfg := GetDefaultConfig()
 
 	// set config filter for external to internal to false
 	cfg.Filtering.FilterExternalToInternal = false
@@ -154,8 +152,7 @@ func TestFilterSingleIP(t *testing.T) {
 	})
 
 	// load config
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err)
+	cfg := GetDefaultConfig()
 
 	// AlwaysInclude list test
 	t.Run("AlwaysInclude list test", func(t *testing.T) {
@@ -184,8 +181,7 @@ func TestFilterDomain(t *testing.T) {
 	}
 
 	// load config
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err)
+	cfg := GetDefaultConfig()
 
 	// AlwaysInclude list test
 	t.Run("AlwaysInclude list test", func(t *testing.T) {
@@ -204,8 +200,7 @@ func TestFilterDomain(t *testing.T) {
 
 func TestFilterNeverInclude(t *testing.T) {
 	// load config
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err)
+	cfg := GetDefaultConfig()
 
 	t.Run("Value not in NeverInclude list", func(t *testing.T) {
 		filtered := cfg.Filtering.FilterSingleIP(net.IP{65, 0, 0, 0})
@@ -235,8 +230,7 @@ func TestCheckIfInternal(t *testing.T) {
 	})
 
 	// load config
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err)
+	cfg := GetDefaultConfig()
 
 	// set internal subnets
 	cfg.Filtering.InternalSubnets = internalSubnetList

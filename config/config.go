@@ -239,16 +239,13 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 
 	type tmpConfig Config
 	// init default config
-	defaultCfg, err := GetDefaultConfig()
-	if err != nil {
-		return err
-	}
+	defaultCfg := GetDefaultConfig()
 
 	// set the default config to a variable of the temporary type
 	tmpCfg := tmpConfig(defaultCfg)
 
 	// unmarshal json into the default config struct
-	err = hjson.Unmarshal(bytes, &tmpCfg)
+	err := hjson.Unmarshal(bytes, &tmpCfg)
 	if err != nil {
 		return err
 	}
@@ -281,7 +278,7 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 }
 
 // GetDefaultConfig returns a Config object with default values
-func GetDefaultConfig() (Config, error) {
+func GetDefaultConfig() Config {
 	// set version to dev if not set
 	if Version == "" {
 		Version = "dev"
@@ -290,7 +287,7 @@ func GetDefaultConfig() (Config, error) {
 	// set default config values
 	cfg := defaultConfig()
 
-	return cfg, nil
+	return cfg
 }
 
 // Reset resets the config values to default
@@ -300,10 +297,8 @@ func (cfg *Config) Reset() error {
 	env := cfg.Env
 
 	// get the default config
-	newConfig, err := GetDefaultConfig()
-	if err != nil {
-		return err
-	}
+	newConfig := GetDefaultConfig()
+
 	*cfg = newConfig
 	cfg.Env = env
 

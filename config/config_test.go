@@ -482,8 +482,7 @@ func TestConfig_Validate(t *testing.T) {
 			for _, tc := range test.cases {
 				t.Run(tc.name, func(t *testing.T) {
 					// get default config
-					cfg, err := GetDefaultConfig()
-					require.NoError(t, err)
+					cfg := GetDefaultConfig()
 
 					// set env
 					require.NoError(t, cfg.setEnv())
@@ -491,7 +490,7 @@ func TestConfig_Validate(t *testing.T) {
 					// apply the test case config updates
 					tc.config(&cfg)
 
-					err = cfg.Validate()
+					err := cfg.Validate()
 
 					if len(tc.expectedErrs) == 0 {
 						require.NoError(t, err)
@@ -546,8 +545,7 @@ func TestConfig_Reset(t *testing.T) {
 		{
 			name: "Valid Confgig - No Env Changes",
 			cfg: func() *Config {
-				cfg, err := GetDefaultConfig()
-				require.NoError(t, err)
+				cfg := GetDefaultConfig()
 				require.NoError(t, cfg.setEnv())
 				cfg.RITA = RITA{false, 25000, 1, 1, ThreatIntel{[]string{"https://chickenstrip.com"}}}
 				cfg.Filtering.InternalSubnets = []util.Subnet{util.NewSubnet(&net.IPNet{IP: net.IP{10, 0, 0, 0}.To16(), Mask: net.CIDRMask(8+96, 128)})}
@@ -565,8 +563,7 @@ func TestConfig_Reset(t *testing.T) {
 		{
 			name: "Invalid Config - No Env Changes",
 			cfg: func() *Config {
-				cfg, err := GetDefaultConfig()
-				require.NoError(t, err)
+				cfg := GetDefaultConfig()
 				require.NoError(t, cfg.setEnv())
 				cfg.RITA = RITA{false, 0, 0, 0, ThreatIntel{[]string{"invalid"}}}
 				cfg.Filtering = Filtering{}
@@ -577,8 +574,7 @@ func TestConfig_Reset(t *testing.T) {
 		{
 			name: "Valid Config - Valid Env Changes",
 			cfg: func() *Config {
-				cfg, err := GetDefaultConfig()
-				require.NoError(t, err)
+				cfg := GetDefaultConfig()
 				require.NoError(t, cfg.setEnv())
 				cfg.Env.DBConnection = "chickenstrip:9999"
 				cfg.Env.LogLevel = 6
@@ -592,8 +588,7 @@ func TestConfig_Reset(t *testing.T) {
 		{
 			name: "Invalid Config - Invalid Env Changes",
 			cfg: func() *Config {
-				cfg, err := GetDefaultConfig()
-				require.NoError(t, err)
+				cfg := GetDefaultConfig()
 				require.NoError(t, cfg.setEnv())
 				cfg.Env.DBConnection = "invalid"
 				cfg.Env.LogLevel = 10
@@ -607,8 +602,7 @@ func TestConfig_Reset(t *testing.T) {
 		{
 			name: "Invalid Config - Valid Env Changes",
 			cfg: func() *Config {
-				cfg, err := GetDefaultConfig()
-				require.NoError(t, err)
+				cfg := GetDefaultConfig()
 				require.NoError(t, cfg.setEnv())
 				cfg.Env.DBConnection = "chickenstrip:9999"
 				cfg.Env.LogLevel = 6
@@ -639,8 +633,7 @@ func TestConfig_Reset(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 
 			// get default config
-			origConfig, err := GetDefaultConfig()
-			require.NoError(t, err)
+			origConfig := GetDefaultConfig()
 			require.NoError(t, origConfig.setEnv())
 
 			// get the modified test config
@@ -650,7 +643,7 @@ func TestConfig_Reset(t *testing.T) {
 			env := cfg.Env
 
 			// reset the config
-			err = cfg.Reset()
+			err := cfg.Reset()
 			if tc.expectedErr {
 				require.Error(t, err, "resetting config should produce an error")
 			} else {
@@ -691,8 +684,7 @@ func TestGetDefaultConfig(t *testing.T) {
 	require.NoError(t, origCfg.Validate(), "config should be valid")
 
 	// get the default config object from the function
-	cfg, err := GetDefaultConfig()
-	require.NoError(t, err, "getDefaultConfig should not produce an error")
+	cfg := GetDefaultConfig()
 	require.NotNil(t, cfg, "config should not be nil")
 
 	// set env variables
