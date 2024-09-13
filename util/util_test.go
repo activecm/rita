@@ -21,10 +21,10 @@ import (
 
 func TestNewFixedStringHash(t *testing.T) {
 	tests := []struct {
-		name      string
-		args      []string
-		expected  FixedString
-		expectErr bool
+		name        string
+		args        []string
+		expected    FixedString
+		expectedErr bool
 	}{
 		{
 			name: "Single string",
@@ -33,7 +33,7 @@ func TestNewFixedStringHash(t *testing.T) {
 				// #nosec G401 : this md5 is used for hashing, not for security
 				Data: md5.Sum([]byte("hello")),
 			},
-			expectErr: false,
+			expectedErr: false,
 		},
 		{
 			name: "Multiple strings",
@@ -41,7 +41,7 @@ func TestNewFixedStringHash(t *testing.T) {
 			expected: FixedString{
 				Data: md5.Sum([]byte("helloworld")), // #nosec G401
 			},
-			expectErr: false,
+			expectedErr: false,
 		},
 
 		{
@@ -50,7 +50,7 @@ func TestNewFixedStringHash(t *testing.T) {
 			expected: FixedString{
 				Data: md5.Sum([]byte("foobarbaz")), // #nosec G401
 			},
-			expectErr: false,
+			expectedErr: false,
 		},
 		{
 			name: "Whitespace strings",
@@ -58,7 +58,7 @@ func TestNewFixedStringHash(t *testing.T) {
 			expected: FixedString{
 				Data: md5.Sum([]byte("  ")), // #nosec G401
 			},
-			expectErr: false,
+			expectedErr: false,
 		},
 		{
 			name: "Empty string",
@@ -66,7 +66,7 @@ func TestNewFixedStringHash(t *testing.T) {
 			expected: FixedString{
 				Data: md5.Sum([]byte("")), // #nosec G401
 			},
-			expectErr: true,
+			expectedErr: true,
 		},
 		{
 			name: "Multiple empty strings",
@@ -74,20 +74,20 @@ func TestNewFixedStringHash(t *testing.T) {
 			expected: FixedString{
 				Data: md5.Sum([]byte("")), // #nosec G401
 			},
-			expectErr: true,
+			expectedErr: true,
 		},
 		{
-			name:      "No arguments",
-			args:      []string{},
-			expected:  FixedString{},
-			expectErr: true,
+			name:        "No arguments",
+			args:        []string{},
+			expected:    FixedString{},
+			expectedErr: true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			result, err := NewFixedStringHash(test.args...)
-			if test.expectErr {
+			if test.expectedErr {
 				require.Error(t, err, "error was expected")
 			} else {
 				require.NoError(t, err, "generating hash should not produce an error")
@@ -341,7 +341,7 @@ func TestContainsIP(t *testing.T) {
 		{
 			name: "IP in subnet",
 			subnets: []Subnet{
-				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}.To16(), Mask: net.CIDRMask(24+96, 128)}},
 			},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: true,
@@ -349,7 +349,7 @@ func TestContainsIP(t *testing.T) {
 		{
 			name: "IP not in subnet",
 			subnets: []Subnet{
-				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}.To16(), Mask: net.CIDRMask(24+96, 128)}},
 			},
 			ip:        net.IP{10, 0, 0, 1},
 			contained: false,
@@ -357,8 +357,8 @@ func TestContainsIP(t *testing.T) {
 		{
 			name: "IP in multiple subnets",
 			subnets: []Subnet{
-				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
-				{&net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.CIDRMask(8, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}.To16(), Mask: net.CIDRMask(24+96, 128)}},
+				{&net.IPNet{IP: net.IP{10, 0, 0, 0}.To16(), Mask: net.CIDRMask(8+96, 128)}},
 			},
 			ip:        net.IP{10, 0, 0, 1},
 			contained: true,
@@ -388,8 +388,8 @@ func TestContainsIP(t *testing.T) {
 		{
 			name: "IP in overlapping subnets",
 			subnets: []Subnet{
-				{&net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}},
-				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(24, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 0, 0}.To16(), Mask: net.CIDRMask(16+96, 128)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}.To16(), Mask: net.CIDRMask(24+96, 128)}},
 			},
 			ip:        net.IP{192, 168, 1, 1},
 			contained: true,
@@ -397,9 +397,15 @@ func TestContainsIP(t *testing.T) {
 		{
 			name: "IP in smaller overlapping subnet",
 			subnets: []Subnet{
-				{&net.IPNet{IP: net.IP{192, 168, 0, 0}, Mask: net.CIDRMask(16, 32)}},
-				{&net.IPNet{IP: net.IP{192, 168, 1, 0}, Mask: net.CIDRMask(28, 32)}},
+				{&net.IPNet{IP: net.IP{192, 168, 0, 0}.To16(), Mask: net.CIDRMask(16+96, 128)}},
+				{&net.IPNet{IP: net.IP{192, 168, 1, 0}.To16(), Mask: net.CIDRMask(28+96, 128)}},
 			},
+			ip:        net.IP{192, 168, 1, 1},
+			contained: true,
+		},
+		{
+			name:      "IP in IPv4 mapped IPv6 address",
+			subnets:   NewTestSubnetList(t, []string{"::ffff:192.168.0.0/112", "::ffff:192.168.1.0/124"}),
 			ip:        net.IP{192, 168, 1, 1},
 			contained: true,
 		},
@@ -804,6 +810,24 @@ func TestValidateTimestamp(t *testing.T) {
 	}
 }
 
+func TestGetRelativeFirstSeenTimestamp(t *testing.T) {
+
+	t.Run("Use Current Time", func(t *testing.T) {
+		// make random max time
+		maxTime := time.Now().UTC().Add(-5 * time.Hour)
+		currentTime := time.Now()
+		ts := GetRelativeFirstSeenTimestamp(true, maxTime)
+		require.WithinDuration(t, currentTime, ts, time.Second)
+		require.NotEqual(t, maxTime, ts)
+	})
+
+	t.Run("Use Max Time", func(t *testing.T) {
+		maxTime := time.Now().UTC().Add(-5 * time.Hour)
+		ts := GetRelativeFirstSeenTimestamp(false, maxTime)
+		require.Equal(t, maxTime, ts)
+	})
+}
+
 func TestParseRelativePath(t *testing.T) {
 	home, err := os.UserHomeDir()
 	require.NoError(t, err)
@@ -814,54 +838,79 @@ func TestParseRelativePath(t *testing.T) {
 	currentDir := path.Dir(path.Join(workingDir))
 
 	tests := []struct {
-		name      string
-		path      string
-		expected  string
-		expectErr error
+		name               string
+		path               string
+		mockGetUserHomeDir func() (string, error)
+		mockGetWorkingDir  func() (string, error)
+		expected           string
+		expectedErr        error
 	}{
 		{
-			name:      "Home directory",
-			path:      "~/data",
-			expected:  home + "/data",
-			expectErr: nil,
+			name:     "Home directory",
+			path:     "~/data",
+			expected: home + "/data",
 		},
 		{
 			name:     "Current directory path",
 			path:     "./",
 			expected: workingDir,
 			// 	expectedPath:  filepath.Join(currentDir, "./mydir"),
-			expectErr: nil,
 		},
 		{
-			name:      "Relative directory - 1 deep",
-			path:      "./data",
-			expected:  workingDir + "/data",
-			expectErr: nil,
+			name:     "Relative directory - 1 deep",
+			path:     "./data",
+			expected: workingDir + "/data",
 		},
 		{
-			name:      "Relative directory - 2 deep",
-			path:      "../data",
-			expected:  currentDir + "/data",
-			expectErr: nil,
+			name:     "Relative directory - 2 deep",
+			path:     "../data",
+			expected: currentDir + "/data",
 		},
 		{
-			name:      "Absolute path",
-			path:      "/home/logs",
-			expected:  "/home/logs",
-			expectErr: nil,
+			name:     "Absolute path",
+			path:     "/home/logs",
+			expected: "/home/logs",
 		},
 		{
-			name:      "Empty path",
-			expected:  "",
-			expectErr: ErrInvalidPath,
+			name:        "Empty path",
+			expected:    "",
+			expectedErr: ErrInvalidPath,
+		},
+		{
+			name: "Error Getting User Home Directory",
+			path: "~/data",
+			mockGetUserHomeDir: func() (string, error) {
+				return "", fmt.Errorf("forced get user home dir error")
+			},
+			expectedErr: fmt.Errorf("forced get user home dir error"),
+		},
+		{
+			name: "Error Getting Working Directory",
+			path: "./data",
+			mockGetWorkingDir: func() (string, error) {
+				return "", fmt.Errorf("forced get working dir error")
+			},
+			expectedErr: fmt.Errorf("forced get working dir error"),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// restore the original functions after the test
+			origGetUserHomeDir := getUserHomeDir
+			origGetWorkingDir := getWorkingDir
+			defer func() { getUserHomeDir = origGetUserHomeDir; getWorkingDir = origGetWorkingDir }()
+			// mock functions if needed
+			if test.mockGetUserHomeDir != nil {
+				getUserHomeDir = test.mockGetUserHomeDir
+			}
+			if test.mockGetWorkingDir != nil {
+				getWorkingDir = test.mockGetWorkingDir
+			}
+
 			result, err := ParseRelativePath(test.path)
-			if test.expectErr != nil {
-				require.EqualError(t, err, test.expectErr.Error(), "error should match expected value")
+			if test.expectedErr != nil {
+				require.EqualError(t, err, test.expectedErr.Error(), "error should match expected value")
 			} else {
 				require.NoError(t, err, "parsing relative path should not produce an error")
 				require.Equal(t, test.expected, result, "relative path should match expected value, got: %s, expected: %s", result, test.expected)
@@ -872,10 +921,11 @@ func TestParseRelativePath(t *testing.T) {
 
 func TestValidateDirectory(t *testing.T) {
 	tests := []struct {
-		name          string
-		setup         func(afs afero.Fs)
-		dir           string
-		expectedError error
+		name           string
+		setup          func(afs afero.Fs)
+		dir            string
+		mockPathExists func(fs afero.Fs, path string) (bool, error)
+		expectedError  error
 	}{
 		{
 			name: "Directory is Valid",
@@ -908,10 +958,28 @@ func TestValidateDirectory(t *testing.T) {
 			dir:           "/emptydir",
 			expectedError: ErrDirIsEmpty,
 		},
+		{
+			name:  "Validate Path Error",
+			setup: func(afs afero.Fs) {},
+			dir:   "/some/path",
+			mockPathExists: func(fs afero.Fs, path string) (bool, error) {
+				return false, fmt.Errorf("forced existence check error")
+			},
+			expectedError: fmt.Errorf("forced existence check error"),
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// restore the original functions after the test
+			origPathExists := pathExists
+			defer func() { pathExists = origPathExists }()
+
+			// mock functions if needed
+			if test.mockPathExists != nil {
+				pathExists = test.mockPathExists
+			}
+
 			afs := afero.NewMemMapFs()
 			test.setup(afs)
 
@@ -928,18 +996,18 @@ func TestValidateDirectory(t *testing.T) {
 
 func TestValidateFile(t *testing.T) {
 	tests := []struct {
-		name          string
-		setup         func(afs afero.Fs)
-		file          string
-		expectedError error
+		name           string
+		setup          func(afs afero.Fs)
+		file           string
+		mockPathExists func(fs afero.Fs, path string) (bool, error)
+		expectedError  error
 	}{
 		{
 			name: "File is Valid",
 			setup: func(afs afero.Fs) {
 				require.NoError(t, afero.WriteFile(afs, "/file.txt", []byte("content"), 0644))
 			},
-			file:          "/file.txt",
-			expectedError: nil,
+			file: "/file.txt",
 		},
 		{
 			name: "File is Empty",
@@ -963,10 +1031,28 @@ func TestValidateFile(t *testing.T) {
 			file:          "/directory",
 			expectedError: ErrPathIsDir,
 		},
+		{
+			name:  "Validate Path Error",
+			setup: func(afs afero.Fs) {},
+			file:  "/some/path",
+			mockPathExists: func(fs afero.Fs, path string) (bool, error) {
+				return false, fmt.Errorf("forced existence check error")
+			},
+			expectedError: fmt.Errorf("forced existence check error"),
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// restore the original functions after the test
+			origPathExists := pathExists
+			defer func() { pathExists = origPathExists }()
+
+			// mock functions if needed
+			if test.mockPathExists != nil {
+				pathExists = test.mockPathExists
+			}
+
 			afs := afero.NewMemMapFs()
 			test.setup(afs)
 
@@ -983,11 +1069,14 @@ func TestValidateFile(t *testing.T) {
 
 func TestValidatePath(t *testing.T) {
 	tests := []struct {
-		name          string
-		setup         func(afs afero.Fs)
-		path          string
-		expected      [3]bool // exists, isDir, isEmpty
-		expectedError error
+		name            string
+		setup           func(afs afero.Fs)
+		path            string
+		mockPathExists  func(fs afero.Fs, path string) (bool, error)
+		mockIsDirectory func(fs afero.Fs, path string) (bool, error)
+		mockIsEmpty     func(fs afero.Fs, path string) (bool, error)
+		expected        [3]bool // exists, isDir, isEmpty
+		expectedError   error
 	}{
 		{
 			name: "Path is Valid Non-Empty File",
@@ -1031,7 +1120,7 @@ func TestValidatePath(t *testing.T) {
 			setup:         func(_ afero.Fs) {},
 			path:          "/nonexistent",
 			expected:      [3]bool{false, false, false},
-			expectedError: nil,
+			expectedError: nil, // no error, just not found
 		},
 		{
 			name:          "Empty Path",
@@ -1045,12 +1134,53 @@ func TestValidatePath(t *testing.T) {
 			setup:         func(_ afero.Fs) {},
 			path:          "/some/path",
 			expected:      [3]bool{false, false, false},
-			expectedError: fmt.Errorf("filesystem is nil"),
+			expectedError: ErrFileSystemIsNil,
+		},
+		{
+			name:           "Path Existece Check Error",
+			setup:          func(_ afero.Fs) {},
+			path:           "/some/path",
+			mockPathExists: func(fs afero.Fs, path string) (bool, error) { return false, fmt.Errorf("existence check forced error") },
+			expected:       [3]bool{false, false, false},
+			expectedError:  fmt.Errorf("existence check forced error"),
+		},
+		{
+			name:            "Is Directory Check Error",
+			setup:           func(afs afero.Fs) { require.NoError(t, afs.Mkdir("/emptydir", 0755)) },
+			path:            "/emptydir",
+			mockIsDirectory: func(fs afero.Fs, path string) (bool, error) { return false, fmt.Errorf("isDir check forced error") },
+			expected:        [3]bool{false, false, false},
+			expectedError:   fmt.Errorf("isDir check forced error"),
+		},
+		{
+			name:          "Is Empty Check Error",
+			setup:         func(afs afero.Fs) { require.NoError(t, afs.Mkdir("/emptydir", 0755)) },
+			path:          "/emptydir",
+			mockIsEmpty:   func(fs afero.Fs, path string) (bool, error) { return false, fmt.Errorf("isEmpty check forced error") },
+			expected:      [3]bool{true, true, false},
+			expectedError: fmt.Errorf("isEmpty check forced error"),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			// restore the original functions after the test
+			origPathExists := pathExists
+			origIsDirectory := isDirectory
+			origIsEmpty := isEmpty
+			defer func() { pathExists = origPathExists; isDirectory = origIsDirectory; isEmpty = origIsEmpty }()
+
+			// mock functions if needed
+			if test.mockPathExists != nil {
+				pathExists = test.mockPathExists
+			}
+			if test.mockIsDirectory != nil {
+				isDirectory = test.mockIsDirectory
+			}
+			if test.mockIsEmpty != nil {
+				isEmpty = test.mockIsEmpty
+			}
+
 			var afs afero.Fs
 			if test.name != "Nil filesystem" {
 				afs = afero.NewMemMapFs()
@@ -1060,7 +1190,7 @@ func TestValidatePath(t *testing.T) {
 			exists, isDir, isEmpty, err := validatePath(afs, test.path)
 
 			if test.expectedError != nil {
-				// require.Error(t, err)
+				require.Error(t, err)
 				require.ErrorContains(t, err, test.expectedError.Error(), "error should contain expected value")
 			} else {
 				require.NoError(t, err, "validating path should not produce an error")
@@ -1072,41 +1202,116 @@ func TestValidatePath(t *testing.T) {
 	}
 }
 
+func TestGetFileContents(t *testing.T) {
+	// define test cases
+	tests := []struct {
+		name          string
+		path          string
+		fileContents  []byte
+		mockReadFile  func(afero.Fs, string) ([]byte, error)
+		expectedError error
+	}{
+		{
+			name:         "Valid Generated file",
+			path:         "/valid/file/path",
+			fileContents: []byte("file contents"),
+		},
+		{
+			name:          "Empty File",
+			path:          "/invalid/file/path",
+			fileContents:  []byte(""),
+			expectedError: ErrFileIsEmtpy,
+		},
+		{
+			name:          "Invalid File Path",
+			path:          "/missing/file/path",
+			expectedError: ErrFileDoesNotExist,
+		},
+		{
+			name:         "Read File Error",
+			path:         "/valid/file/path",
+			fileContents: []byte("file contents"),
+			mockReadFile: func(_ afero.Fs, _ string) ([]byte, error) {
+				return nil, fmt.Errorf("forced read file error")
+			},
+			expectedError: fmt.Errorf("forced read file error"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// restore the original function after the test
+			originalReadFileFunc := readFile
+			defer func() { readFile = originalReadFileFunc }()
+
+			// mock the readFile function
+			if test.mockReadFile != nil {
+				readFile = test.mockReadFile
+			}
+
+			// create a new memory filesystem
+			afs := afero.NewMemMapFs()
+
+			// create the file if the test case specifies contents
+			if test.fileContents != nil {
+				require.NoError(t, afero.WriteFile(afs, test.path, test.fileContents, 0644), "failed to create file")
+			}
+
+			// call readFile and check the results
+			result, err := GetFileContents(afs, test.path)
+
+			// validate results
+			if test.expectedError != nil {
+				require.Error(t, err, "expected an error but got none")
+				require.ErrorContains(t, err, test.expectedError.Error(), "error should contain expected value")
+
+			} else {
+				require.NoError(t, err, "did not expect an error but got one")
+				require.Equal(t, test.fileContents, result, "file contents should match expected value")
+			}
+
+		})
+	}
+
+}
+
 func TestCheckForNewerVersion(t *testing.T) {
 	tests := []struct {
 		name           string
 		latestVersion  string
 		currentVersion string
 		expectedNewer  bool
-		expectedError  bool
+		expectedError  error
 	}{
 		{
 			name:           "Newer version available",
 			latestVersion:  "v1.1.0",
 			currentVersion: "v1.0.0",
 			expectedNewer:  true,
-			expectedError:  false,
 		},
 		{
 			name:           "No newer version",
 			latestVersion:  "v1.0.0",
 			currentVersion: "v1.0.0",
 			expectedNewer:  false,
-			expectedError:  false,
 		},
 		{
 			name:           "Invalid current version",
 			latestVersion:  "v1.1.0",
 			currentVersion: "invalid-version",
 			expectedNewer:  false,
-			expectedError:  true,
+			expectedError:  ErrParsingCurrentVersion,
 		},
 		{
 			name:           "Invalid latest version",
 			latestVersion:  "invalid-version",
 			currentVersion: "v1.0.0",
 			expectedNewer:  false,
-			expectedError:  true,
+			expectedError:  ErrParsingLatestVersion,
+		},
+		{
+			name:          "Error Fetching Latest Release",
+			expectedError: ErrFetchingLatestRelease,
 		},
 	}
 
@@ -1114,7 +1319,11 @@ func TestCheckForNewerVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				fmt.Fprintf(w, `{"tag_name": "%s"}`, tt.latestVersion)
+				if tt.expectedError == ErrFetchingLatestRelease {
+					http.Error(w, "error", http.StatusInternalServerError)
+				} else {
+					fmt.Fprintf(w, `{"tag_name": "%s"}`, tt.latestVersion)
+				}
 			}))
 			defer ts.Close()
 
@@ -1128,8 +1337,9 @@ func TestCheckForNewerVersion(t *testing.T) {
 			newer, version, err := CheckForNewerVersion(client, tt.currentVersion)
 
 			// Check for expected error
-			if tt.expectedError {
+			if tt.expectedError != nil {
 				require.Error(t, err, "error was expected")
+				require.ErrorContains(t, err, tt.expectedError.Error(), "error should contain expected value")
 			} else {
 				require.NoError(t, err, "checking for newer version should not produce an error")
 
@@ -1148,7 +1358,7 @@ func TestGetLatestReleaseVersion(t *testing.T) {
 		repo          string
 		latestVersion string
 		expected      string
-		expectedError bool
+		expectedError error
 	}{
 		{
 			name:          "Valid Latest Release",
@@ -1156,14 +1366,13 @@ func TestGetLatestReleaseVersion(t *testing.T) {
 			repo:          "rita",
 			latestVersion: "v2.0.0",
 			expected:      "v2.0.0",
-			expectedError: false,
 		},
 		{
 			name:          "Error Fetching Latest Release",
 			owner:         "activecm",
 			repo:          "rita",
 			expected:      "",
-			expectedError: true,
+			expectedError: ErrFetchingLatestRelease,
 		},
 	}
 
@@ -1171,7 +1380,7 @@ func TestGetLatestReleaseVersion(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// Create a test server
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				if test.expectedError {
+				if test.expectedError != nil {
 					http.Error(w, "error", http.StatusInternalServerError)
 				} else {
 					fmt.Fprintf(w, `{"tag_name": "%s"}`, test.latestVersion)
@@ -1187,9 +1396,9 @@ func TestGetLatestReleaseVersion(t *testing.T) {
 
 			result, err := GetLatestReleaseVersion(client, test.owner, test.repo)
 
-			if test.expectedError {
+			if test.expectedError != nil {
 				require.Error(t, err, "error should not be nil")
-				require.ErrorContains(t, err, "error fetching latest release", "error should contain expected value")
+				require.ErrorContains(t, err, test.expectedError.Error(), "error should contain expected value")
 			} else {
 				require.NoError(t, err, "fetching latest release should not produce an error")
 				require.Equal(t, test.expected, result, "the result should match the expected value")
