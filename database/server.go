@@ -351,10 +351,10 @@ func (server *ServerConn) checkRolling(dbName string, rollingFlag bool, rebuildF
 }
 
 type ImportDatabase struct {
-	Name    string    `ch:"database"`
-	Rolling bool      `ch:"rolling"`
-	MinTS   time.Time `ch:"min_ts"`
-	MaxTS   time.Time `ch:"max_ts"`
+	Name    string    `ch:"database" json:"name"`
+	Rolling bool      `ch:"rolling" json:"rolling"`
+	MinTS   time.Time `ch:"min_ts" json:"minTS"`
+	MaxTS   time.Time `ch:"max_ts" json:"maxTS"`
 }
 
 func (server *ServerConn) ListImportDatabases() ([]ImportDatabase, error) {
