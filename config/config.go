@@ -74,7 +74,7 @@ type (
 	}
 
 	Scoring struct {
-		Beacon        BeaconScoring `json:"beacon" validate:"required,beacon_scoring"`
+		Beacon        BeaconScoring `json:"beacon" validate:"required"`
 		ThreatScoring `validate:"required"`
 	}
 
@@ -357,14 +357,16 @@ func NewValidator() (*validator.Validate, error) {
 		return nil, err
 	}
 
-	if err := v.RegisterValidation("beacon_scoring", func(fl validator.FieldLevel) bool {
-		value := fl.Field().Interface().(BeaconScoring)
-		// verify that sum of weights is 1
+	v.RegisterStructValidation(func(sl validator.StructLevel) {
+		value := sl.Current().Interface().(BeaconScoring)
 		totalWeight := value.TimestampScoreWeight + value.DatasizeScoreWeight + value.DurationScoreWeight + value.HistogramScoreWeight
-		return totalWeight == 1
-	}); err != nil {
-		return nil, err
-	}
+		if totalWeight != 1 {
+			sl.ReportError(value, "TimestampScoreWeight", "BeaconScoring", "beacon_weights", "")
+			sl.ReportError(value, "DatasizeScoreWeight", "BeaconScoring", "beacon_weights", "")
+			sl.ReportError(value, "DurationScoreWeight", "BeaconScoring", "beacon_weights", "")
+			sl.ReportError(value, "HistogramScoreWeight", "BeaconScoring", "beacon_weights", "")
+		}
+	}, BeaconScoring{})
 
 	return v, nil
 }

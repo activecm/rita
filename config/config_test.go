@@ -397,7 +397,12 @@ func TestConfig_Validate(t *testing.T) {
 			{name: "HistogramScoreWeight < Range", config: func(cfg *Config) {
 				cfg.Scoring.Beacon = BeaconScoring{4, 0.25, 0.25, 0.75, -0.25, 10, 15, 0.08, 2, 15, ScoreThresholds{50, 75, 90, 100}}
 			}, expectedErrs: []string{"'HistogramScoreWeight' failed on the 'gte' tag"}},
-			{name: "Score Weight Sum != 1", config: func(cfg *Config) { cfg.Scoring.Beacon.TimestampScoreWeight = 1 }, expectedErrs: []string{"'Beacon' failed on the 'beacon_scoring' tag"}},
+			{name: "Score Weight Sum != 1", config: func(cfg *Config) {
+				cfg.Scoring.Beacon.TimestampScoreWeight = 0.1
+				cfg.Scoring.Beacon.DatasizeScoreWeight = 0.1
+				cfg.Scoring.Beacon.DurationScoreWeight = 0.1
+				cfg.Scoring.Beacon.HistogramScoreWeight = 0.1
+			}, expectedErrs: []string{"'TimestampScoreWeight' failed on the 'beacon_weights' tag", "'DatasizeScoreWeight' failed on the 'beacon_weights' tag", "'DurationScoreWeight' failed on the 'beacon_weights' tag", "'HistogramScoreWeight' failed on the 'beacon_weights' tag"}},
 			{name: "DurationMinHoursSeen < Range", config: func(cfg *Config) { cfg.Scoring.Beacon.DurationMinHoursSeen = 0 }, expectedErrs: []string{"'DurationMinHoursSeen' failed on the 'gte' tag"}},
 			{name: "DurationMinHoursSeen > Range", config: func(cfg *Config) { cfg.Scoring.Beacon.DurationMinHoursSeen = 25 }, expectedErrs: []string{"'DurationMinHoursSeen' failed on the 'lte' tag"}},
 			{name: "DurationConsistencyIdealHoursSeen < Range", config: func(cfg *Config) { cfg.Scoring.Beacon.DurationConsistencyIdealHoursSeen = 0 }, expectedErrs: []string{"'DurationConsistencyIdealHoursSeen' failed on the 'gte' tag"}},
