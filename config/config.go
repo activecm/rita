@@ -89,12 +89,12 @@ type (
 		HistogramModeSensitivity          float64         `ch:"histogram_mode_sensitivity" json:"histogram_mode_sensitivity" validate:"gte=0,lte=1"`
 		HistogramBimodalOutlierRemoval    int32           `ch:"histogram_bimodal_outlier_removal" json:"histogram_bimodal_outlier_removal" validate:"gte=0,lte=24"`
 		HistogramBimodalMinHoursSeen      int32           `ch:"histogram_bimodal_min_hours_seen" json:"histogram_bimodal_min_hours_seen" validate:"gte=3,lte=24"`
-		ScoreThresholds                   ScoreThresholds `ch:"score_thresholds" json:"score_thresholds" validate:"score_thresholds=0 100"`
+		ScoreThresholds                   ScoreThresholds `ch:"score_thresholds" json:"score_thresholds" validate:"score_thresholds_range=0 100"`
 	}
 
 	ThreatScoring struct {
-		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds" validate:"score_thresholds=1 86400"` // 24 * 3600
-		C2ScoreThresholds             ScoreThresholds `json:"c2_score_thresholds" validate:"score_thresholds=1 -1"`
+		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds" validate:"score_thresholds_range=1 86400"` // 24 * 3600
+		C2ScoreThresholds             ScoreThresholds `json:"c2_score_thresholds" validate:"score_thresholds_range=1 -1"`
 		StrobeImpact                  ScoreImpact     `ch:"strobe_impact_category" json:"strobe_impact" validate:"impact_category"`
 		ThreatIntelImpact             ScoreImpact     `ch:"threat_intel_impact_category" json:"threat_intel_impact" validate:"impact_category"`
 	}
@@ -107,7 +107,7 @@ type (
 		PrevalenceScoreDecrease          float32 `ch:"prevalence_score_decrease" json:"prevalence_score_decrease" validate:"gte=0,lte=1"`
 		PrevalenceDecreaseThreshold      float32 `ch:"prevalence_decrease_threshold" json:"prevalence_decrease_threshold" validate:"gte=0,lte=1,gtfield=PrevalenceIncreaseThreshold"`
 		FirstSeenScoreIncrease           float32 `ch:"first_seen_score_increase" json:"first_seen_score_increase" validate:"gte=0,lte=1"`
-		FirstSeenIncreaseThreshold       float32 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"gte=1"`
+		FirstSeenIncreaseThreshold       float32 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"gte=1,lte=90"`
 		FirstSeenScoreDecrease           float32 `ch:"first_seen_score_decrease" json:"first_seen_score_decrease" validate:"gte=0,lte=1"`
 		FirstSeenDecreaseThreshold       float32 `ch:"first_seen_decrease_threshold" json:"first_seen_decrease_threshold" validate:"gte=1,lte=90,gtfield=FirstSeenIncreaseThreshold"`
 		MissingHostCountScoreIncrease    float32 `ch:"missing_host_count_score_increase" json:"missing_host_count_score_increase" validate:"gte=0,lte=1"`
@@ -118,7 +118,8 @@ type (
 
 	// ScoreThresholds is used for indicators that have prorated (graduated) values rather than
 	// binary outcomes. This allows for the definition of the severity of an indicator by categorizing
-	// it into one of several buckets (Base, Low, Med, High), each representing a range of values
+	// it into one of several buckets (Base, Low, Med, High), each representing a range of values. These
+	// values must be in increasing order and unique.
 	ScoreThresholds struct {
 		Base int32 `json:"base" ch:"base" validate:"ltfield=Low"`
 		Low  int32 `json:"low" ch:"low" validate:"ltfield=Med"`
@@ -339,7 +340,7 @@ func NewValidator() (*validator.Validate, error) {
 		return nil, err
 	}
 
-	if err := v.RegisterValidation("score_thresholds", func(fl validator.FieldLevel) bool {
+	if err := v.RegisterValidation("score_thresholds_range", func(fl validator.FieldLevel) bool {
 		value := fl.Field().Interface().(ScoreThresholds)
 		// get the param string and parse it into two integers (min and max)
 		params := strings.Split(fl.Param(), " ")
@@ -351,7 +352,7 @@ func NewValidator() (*validator.Validate, error) {
 		if err1 != nil || err2 != nil {
 			return false
 		}
-		err := validateScoreThresholds(value, int32(min), int32(max))
+		err := validateScoreThresholdsRange(value, int32(min), int32(max))
 		return err == nil
 	}); err != nil {
 		return nil, err
@@ -371,13 +372,9 @@ func NewValidator() (*validator.Validate, error) {
 	return v, nil
 }
 
-// validateScoreThresholds validates the score thresholds based on the provided min and max values
-func validateScoreThresholds(s ScoreThresholds, min int32, max int32) error {
-	// check if values are in increasing order and unique
-	if s.Base >= s.Low || s.Low >= s.Med || s.Med >= s.High {
-		return fmt.Errorf("score thresholds must be in increasing order and unique: %v", s)
-	}
-
+// validateScoreThresholdsRange validates that the score thresholds are in range based on the provided min and max values.
+// A value of -1 for either min or max indicates the lack of that boundary.
+func validateScoreThresholdsRange(s ScoreThresholds, min int32, max int32) error {
 	// validate that base is in range (if min is provided)
 	if min > -1 && s.Base < min {
 		return fmt.Errorf("base score threshold must be greater than or equal to %d", min)

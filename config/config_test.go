@@ -413,36 +413,36 @@ func TestConfig_Validate(t *testing.T) {
 			{name: "HistogramBimodalOutlierRemoval > Range", config: func(cfg *Config) { cfg.Scoring.Beacon.HistogramBimodalOutlierRemoval = 25 }, expectedErrs: []string{"'HistogramBimodalOutlierRemoval' failed on the 'lte' tag"}},
 			{name: "HistogramBimodalMinHoursSeen < Range", config: func(cfg *Config) { cfg.Scoring.Beacon.HistogramBimodalMinHoursSeen = 2 }, expectedErrs: []string{"'HistogramBimodalMinHoursSeen' failed on the 'gte' tag"}},
 			{name: "HistogramBimodalMinHoursSeen > Range", config: func(cfg *Config) { cfg.Scoring.Beacon.HistogramBimodalMinHoursSeen = 25 }, expectedErrs: []string{"'HistogramBimodalMinHoursSeen' failed on the 'lte' tag"}},
-			{name: "ScoreThresholds Base < Min", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds.Base = -1 }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds High > Max", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds.High = 101 }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds Base == Low", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{75, 75, 90, 100} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds Base > Low", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{76, 75, 90, 100} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds Low > Med", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 91, 90, 100} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds Low == Med", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 90, 90, 100} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds Med > High", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 75, 91, 90} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "ScoreThresholds Med == High", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 75, 90, 90} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "Empty ScoreThresholds", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{} }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds' tag"}},
+			{name: "ScoreThresholds Base < Min", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds.Base = -1 }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds_range' tag"}},
+			{name: "ScoreThresholds High > Max", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds.High = 101 }, expectedErrs: []string{"'ScoreThresholds' failed on the 'score_thresholds_range' tag"}},
+			{name: "ScoreThresholds Base == Low", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{75, 75, 90, 100} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag"}},
+			{name: "ScoreThresholds Base > Low", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{76, 75, 90, 100} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag"}},
+			{name: "ScoreThresholds Low > Med", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 91, 90, 100} }, expectedErrs: []string{"'Low' failed on the 'ltfield' tag"}},
+			{name: "ScoreThresholds Low == Med", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 90, 90, 100} }, expectedErrs: []string{"'Low' failed on the 'ltfield' tag"}},
+			{name: "ScoreThresholds Med > High", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 75, 91, 90} }, expectedErrs: []string{"'Med' failed on the 'ltfield' tag"}},
+			{name: "ScoreThresholds Med == High", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{50, 75, 90, 90} }, expectedErrs: []string{"'Med' failed on the 'ltfield' tag"}},
+			{name: "Empty ScoreThresholds", config: func(cfg *Config) { cfg.Scoring.Beacon.ScoreThresholds = ScoreThresholds{} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag", "'Low' failed on the 'ltfield' tag", "'Med' failed on the 'ltfield' tag"}},
 			{name: "Empty Struct", config: func(cfg *Config) { cfg.Scoring.Beacon = BeaconScoring{} }, expectedErrs: []string{"'Beacon' failed on the 'required' tag"}},
 		}},
 		{"Threat Scoring", []testCase{
-			{name: "LongConnectionScoreThresholds Base < Min", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds.Base = 0 }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds High > Max", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds.High = (24 * 3600) + 1 }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds Base == Low", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{75, 75, 90, 100} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds Base > Low", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{76, 75, 90, 100} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds Low > Med", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 91, 90, 100} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds Low == Med", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 90, 90, 100} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds Med > High", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 75, 91, 90} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "LongConnectionScoreThresholds Med == High", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 75, 90, 90} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "Empty LongConnectionScoreThresholds", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "C2ScoreThresholds Base < Min", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds.Base = 0 }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
+			{name: "LongConnectionScoreThresholds Base < Min", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds.Base = 0 }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds_range' tag"}},
+			{name: "LongConnectionScoreThresholds High > Max", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds.High = (24 * 3600) + 1 }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds_range' tag"}},
+			{name: "LongConnectionScoreThresholds Base == Low", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{75, 75, 90, 100} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag"}},
+			{name: "LongConnectionScoreThresholds Base > Low", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{76, 75, 90, 100} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag"}},
+			{name: "LongConnectionScoreThresholds Low > Med", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 91, 90, 100} }, expectedErrs: []string{"'Low' failed on the 'ltfield' tag"}},
+			{name: "LongConnectionScoreThresholds Low == Med", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 90, 90, 100} }, expectedErrs: []string{"'Low' failed on the 'ltfield' tag"}},
+			{name: "LongConnectionScoreThresholds Med > High", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 75, 91, 90} }, expectedErrs: []string{"'Med' failed on the 'ltfield' tag"}},
+			{name: "LongConnectionScoreThresholds Med == High", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{50, 75, 90, 90} }, expectedErrs: []string{"'Med' failed on the 'ltfield' tag"}},
+			{name: "Empty LongConnectionScoreThresholds", config: func(cfg *Config) { cfg.Scoring.LongConnectionScoreThresholds = ScoreThresholds{} }, expectedErrs: []string{"'LongConnectionScoreThresholds' failed on the 'score_thresholds_range' tag"}},
+			{name: "C2ScoreThresholds Base < Min", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds.Base = 0 }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds_range' tag"}},
 			{name: "C2ScoreThresholds High Should Be Unlimited", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds.High = 2147483647 }}, // max int32
-			{name: "C2ScoreThresholds Base == Low", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{75, 75, 90, 100} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "C2ScoreThresholds Base > Low", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{76, 75, 90, 100} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "C2ScoreThresholds Low > Med", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 91, 90, 100} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "C2ScoreThresholds Low == Med", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 90, 90, 100} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "C2ScoreThresholds Med > High", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 75, 91, 90} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "C2ScoreThresholds Med == High", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 75, 90, 90} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
-			{name: "Empty C2ScoreThresholds", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds' tag"}},
+			{name: "C2ScoreThresholds Base == Low", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{75, 75, 90, 100} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag"}},
+			{name: "C2ScoreThresholds Base > Low", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{76, 75, 90, 100} }, expectedErrs: []string{"'Base' failed on the 'ltfield' tag"}},
+			{name: "C2ScoreThresholds Low > Med", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 91, 90, 100} }, expectedErrs: []string{"'Low' failed on the 'ltfield' tag"}},
+			{name: "C2ScoreThresholds Low == Med", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 90, 90, 100} }, expectedErrs: []string{"'Low' failed on the 'ltfield' tag"}},
+			{name: "C2ScoreThresholds Med > High", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 75, 91, 90} }, expectedErrs: []string{"'Med' failed on the 'ltfield' tag"}},
+			{name: "C2ScoreThresholds Med == High", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{50, 75, 90, 90} }, expectedErrs: []string{"'Med' failed on the 'ltfield' tag"}},
+			{name: "Empty C2ScoreThresholds", config: func(cfg *Config) { cfg.Scoring.C2ScoreThresholds = ScoreThresholds{} }, expectedErrs: []string{"'C2ScoreThresholds' failed on the 'score_thresholds_range' tag"}},
 			{name: "StrobeImpact Category Invalid", config: func(cfg *Config) { cfg.Scoring.StrobeImpact.Category = "invalid" }, expectedErrs: []string{"'StrobeImpact' failed on the 'impact_category' tag"}},
 			{name: "StrobeImpact Category Empty", config: func(cfg *Config) { cfg.Scoring.StrobeImpact.Category = "" }, expectedErrs: []string{"'StrobeImpact' failed on the 'impact_category' tag"}},
 			{name: "ThreatIntelImpact Category Invalid", config: func(cfg *Config) { cfg.Scoring.ThreatIntelImpact.Category = "invalid" }, expectedErrs: []string{"'ThreatIntelImpact' failed on the 'impact_category' tag"}},
@@ -705,7 +705,7 @@ func TestGetDefaultConfig(t *testing.T) {
 	require.Equal(t, origCfg, &cfg, "config should match expected value")
 }
 
-func TestValidateScoreThresholds(t *testing.T) {
+func TestValidateScoreThresholdsRange(t *testing.T) {
 	tests := []struct {
 		name          string
 		thresholds    ScoreThresholds
@@ -742,13 +742,6 @@ func TestValidateScoreThresholds(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "invalid thresholds (not in ascending order)",
-			thresholds:    ScoreThresholds{Base: 0, Low: 2, Med: 1, High: 3},
-			min:           0,
-			max:           10,
-			expectedError: true,
-		},
-		{
 			name:          "invalid thresholds (out of range - max)",
 			thresholds:    ScoreThresholds{Base: 0, Low: 1, Med: 2, High: 3},
 			min:           0,
@@ -762,19 +755,13 @@ func TestValidateScoreThresholds(t *testing.T) {
 			max:           10,
 			expectedError: true,
 		},
-		{
-			name:          "invalid thresholds (two thresholds equal)",
-			thresholds:    ScoreThresholds{Base: 0, Low: 1, Med: 1, High: 3},
-			min:           0,
-			max:           10,
-			expectedError: true,
-		},
+		// note: score thresholds being in increasing order and unique is validated by the ltfield tags in the struct
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			require := require.New(t)
-			err := validateScoreThresholds(test.thresholds, test.min, test.max)
+			err := validateScoreThresholdsRange(test.thresholds, test.min, test.max)
 			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 		})
 	}
