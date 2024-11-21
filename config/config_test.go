@@ -26,108 +26,15 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// func TestReadFile(t *testing.T) {
-// 	afs := afero.NewOsFs()
-// 	fileContents, err := readFile(afs, defaultConfigPath)
-// 	require.NoError(t, err)
-// 	assert.NotEmpty(t, fileContents)
-// }
-
-func TestReadFile(t *testing.T) {
-	tests := []struct {
-		name        string
-		filename    string
-		content     []byte
-		permissions os.FileMode
-		afs         afero.Fs
-		expected    []byte
-		expectErr   error
-	}{
-		// {
-		// 	name:        "Valid File",
-		// 	filename:    "/test/config.json",
-		// 	content:     []byte(`{"config": "value"}`),
-		// 	permissions: 0644,
-		// 	afs:         afero.NewMemMapFs(),
-		// 	expected:    []byte(`{"config": "value"}`),
-		// },
-		// {
-		// 	name:        "Empty File",
-		// 	filename:    "/test/empty.json",
-		// 	content:     []byte(``),
-		// 	permissions: 0644,
-		// 	afs:         afero.NewMemMapFs(),
-		// 	expectErr:   util.ErrFileIsEmtpy,
-		// },
-		// {
-		// 	name:        "File Not Found",
-		// 	filename:    "/nonexistent/file.json",
-		// 	content:     nil,
-		// 	permissions: 0644,
-		// 	afs:         afero.NewMemMapFs(),
-		// 	expectErr:   util.ErrFileDoesNotExist,
-		// },
-		{
-			name:        "Invalid Content",
-			filename:    "/invalid/config.json",
-			content:     []byte(`invalid content`),
-			permissions: 0644,
-			afs:         afero.NewMemMapFs(),
-			expectErr:   fmt.Errorf("encountered an error while reading the config file, located by default at '/invalid/config.json', please correct the issue in the config and try again"),
-		},
-		// {
-		// 	name:        "Invalid File (Validation Error)",
-		// 	filename:    "/invalid/config.json",
-		// 	content:     []byte(`invalid content`),
-		// 	permissions: 0000, // Unreadable file permissions
-		// 	afs:         afero.NewOsFs(),
-		// 	expected:    nil,
-		// 	expectErr:   true,
-		// },
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			// defer func() {
-			// 	if test.name != "File Not Found" {
-			// 		require.NoError(t, test.afs.Remove(test.filename))
-			// 	}
-			// }()
-
-			// // write the file to the afero in-memory file system if content is provided
-			// if test.name != "File Not Found" {
-			// 	err := afero.WriteFile(test.afs, test.filename, test.content, test.permissions)
-			// 	require.NoError(t, err)
-			// }
-
-			// // call readFile
-			// result, err := readFile(test.afs, test.filename)
-			// if test.expectErr != nil {
-			// 	require.Error(t, err)
-			// 	require.ErrorContains(t, err, test.expectErr.Error())
-			// } else {
-			// 	require.NoError(t, err)
-			// 	require.Equal(t, test.expected, result)
-			// }
-		})
-	}
-
-	// separate so that no changes in the tests above can accidentally delete the default config file
-	// t.Run("Default Config File", func(t *testing.T) {
-	// 	afs := afero.NewOsFs()
-	// 	fileContents, err := readFile(afs, defaultConfigPath)
-	// 	require.NoError(t, err)
-	// 	require.NotEmpty(t, fileContents)
-	// })
-}
-
-func TestRead2FileConfig(t *testing.T) {
+func TestReadFileConfig(t *testing.T) {
+	dfCfg := defaultConfig()
+	require.NoError(t, dfCfg.setEnv())
 
 	tests := []struct {
 		name           string
 		configJSON     string
 		expectedConfig *Config
-		expectedError  bool
+		expectedErrs   []string
 	}{
 		{
 			name: "Valid Config",
@@ -289,18 +196,80 @@ func TestRead2FileConfig(t *testing.T) {
 			}(),
 		},
 		{
-			name:       "Empty Config",
-			configJSON: `{}`,
-			expectedConfig: func() *Config {
-				cfg := defaultConfig()
-				require.NoError(t, cfg.setEnv())
-				return &cfg
-			}(),
+			name:         "Invalid JSON",
+			configJSON:   `{filtering: { internal_subnets: }}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), "check your syntax"},
+		},
+		{
+			name:           "Empty Categories",
+			configJSON:     `{Env: {}, RITA: {}, Filtering: {}, Scoring: {}, Modifiers: {}}`,
+			expectedConfig: &dfCfg,
+		},
+		{
+			name:           "Empty Config Object",
+			configJSON:     `{}`,
+			expectedConfig: &dfCfg,
+		},
+		{
+			name:         "Empty File",
+			configJSON:   ``,
+			expectedErrs: []string{util.ErrFileIsEmtpy.Error()},
+		},
+		{
+			name:         "File Not Found",
+			expectedErrs: []string{util.ErrFileDoesNotExist.Error()},
+		},
+		// the following tests ensure validation for subnets, since those checks are done outside of the validator package and cannot
+		// be vetted with the other validation tests
+		{
+			name:         "Internal Subnets - Invalid IPv4",
+			configJSON:   `{filtering: { internal_subnets: ["bingbong", "chickenstrip"]}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), util.ErrParseCIDRInvalidIP.Error()},
+		},
+		{
+			name:         "Internal Subnets - Invalid IPv6",
+			configJSON:   `{filtering: { internal_subnets: [ "2001:db8::chickenstrip"]}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), util.ErrParseCIDRInvalidIP.Error()},
+		},
+		{
+			name:         "Internal Subnets - Invalid IPv4-Mapped IPv6",
+			configJSON:   `{filtering: { internal_subnets: ["::ffff:beepboop"]}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), util.ErrParseCIDRInvalidIP.Error()},
+		},
+		{
+			name:         "Internal Subnets - Invalid IPv4 Mask",
+			configJSON:   `{filtering: { internal_subnets: ["bingbong.com/33"]}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), (&net.ParseError{Type: "CIDR address", Text: ""}).Error()},
+		},
+		{
+			name:         "Internal Subnets - Invalid IPv4-Mapped IPv6 Mask",
+			configJSON:   `{filtering: { internal_subnets: ["::ffff:192.168.1.0/b"]}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), util.ErrParseCIDRInvalidMask.Error()},
+		},
+		{
+			name:         "Internal Subnets - Invalid IPv6 Mask",
+			configJSON:   `{filtering: { internal_subnets: ["2001:db8::1/a"]}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), (&net.ParseError{Type: "CIDR address", Text: ""}).Error()},
+		},
+		{
+			name:         "Internal Subnets Empty",
+			configJSON:   `{filtering: { internal_subnets: []}}`,
+			expectedErrs: []string{errReadingConfigFile.Error(), "'InternalSubnets' failed on the 'gt' tag"},
+		},
+		{
+			name:           "Never Included Subnets Empty",
+			configJSON:     `{filtering: { never_included_subnets: []}}`,
+			expectedConfig: &dfCfg, // mandatory never include will ensure they are never empty
+		},
+		{
+			name:           "Always Included Subnets Empty",
+			configJSON:     `{filtering: { always_included_subnets: []}}`,
+			expectedConfig: &dfCfg, // always included subnets are optional
 		},
 	}
 
-	for i, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for i, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
 
 			// create mock file system in memory
 			afs := afero.NewMemMapFs()
@@ -309,33 +278,47 @@ func TestRead2FileConfig(t *testing.T) {
 			configPath := fmt.Sprintf("test-config-%d.hjson", i)
 
 			// create file
-			require.NoError(t, afero.WriteFile(afs, configPath, []byte(test.configJSON), 0o775))
-			defer func() { require.NoError(t, afs.Remove(configPath)) }()
+			if tc.name != "File Not Found" {
+				require.NoError(t, afero.WriteFile(afs, configPath, []byte(tc.configJSON), 0o775))
+				defer func() { require.NoError(t, afs.Remove(configPath)) }()
+			}
 
 			// call function
 			cfg, err := ReadFileConfig(afs, configPath)
 
-			if test.expectedError {
-				require.Error(t, err, "expected error when reading file config")
-			} else {
-				require.NoError(t, err, "expected no error when reading file config, got err=%v", err)
-				require.NotNil(t, cfg, "expected config to be non-nil")
+			if len(tc.expectedErrs) == 0 {
+				require.NoError(t, err)
+
+				// need this so the test doesn't just crash on the next lines if something isn't working as expected
+				require.NotNil(t, cfg, "Config should not be nil")
+				require.NotNil(t, tc.expectedConfig, "Expected config should not be nil")
 
 				// verify version got set
 				require.Equal(t, "dev", Version, "version should be 'dev'")
+
+				// verify that env variables are not overwritten by JSON
+				require.Equal(t, tc.expectedConfig.Env, cfg.Env, "Env should match expected value")
+
+				// verify that the retrived config matches the expected config (split up for easier debugging)
+				require.Equal(t, tc.expectedConfig.RITA, cfg.RITA, "RITA should match expected value")
+				require.Equal(t, tc.expectedConfig.Filtering, cfg.Filtering, "Filtering should match expected value")
+				require.Equal(t, tc.expectedConfig.Scoring, cfg.Scoring, "Scoring should match expected value")
+				require.Equal(t, tc.expectedConfig.Modifiers, cfg.Modifiers, "Modifiers should match expected value")
+
+				// all together
+				require.Equal(t, tc.expectedConfig, cfg, "config should match expected value")
+
+			} else {
+				// verify that error was received
+				require.Error(t, err)
+
+				// check validation errors
+				checkValidationErrs(t, tc.expectedErrs, err.Error())
+
+				// check that the config is nil
+				require.Nil(t, cfg, "Config should be nil")
 			}
 
-			// verify that env variables are not overwritten by JSON
-			require.Equal(t, test.expectedConfig.Env, cfg.Env, "Env should match expected value")
-
-			// verify that the retrived config matches the expected config (split up for easier debugging)
-			require.Equal(t, test.expectedConfig.RITA, cfg.RITA, "RITA should match expected value")
-			require.Equal(t, test.expectedConfig.Filtering, cfg.Filtering, "Filtering should match expected value")
-			require.Equal(t, test.expectedConfig.Scoring, cfg.Scoring, "Scoring should match expected value")
-			require.Equal(t, test.expectedConfig.Modifiers, cfg.Modifiers, "Modifiers should match expected value")
-
-			// all together
-			require.Equal(t, test.expectedConfig, cfg, "config should match expected value")
 		})
 	}
 
@@ -374,6 +357,12 @@ func TestConfig_Validate(t *testing.T) {
 			{name: "Empty Struct", config: func(cfg *Config) { cfg.RITA = RITA{} }, expectedErrs: []string{"'RITA' failed on the 'required' tag"}},
 		}},
 		{"Filtering", []testCase{
+			// should never be set to empty
+			{name: "InternalSubnets Nil", config: func(cfg *Config) { cfg.Filtering.InternalSubnets = nil }, expectedErrs: []string{"'InternalSubnets' failed on the 'required' tag"}},
+			{name: "InternalSubnets Empty", config: func(cfg *Config) { cfg.Filtering.InternalSubnets = []util.Subnet{} }, expectedErrs: []string{"'InternalSubnets' failed on the 'gt' tag"}},
+			// should never be empty after mandatory subnets are added
+			{name: "NeverIncludedSubnets Nil", config: func(cfg *Config) { cfg.Filtering.NeverIncludedSubnets = nil }, expectedErrs: []string{"'NeverIncludedSubnets' failed on the 'required' tag"}},
+			{name: "NeverIncludedSubnets Empty", config: func(cfg *Config) { cfg.Filtering.NeverIncludedSubnets = []util.Subnet{} }, expectedErrs: []string{"'NeverIncludedSubnets' failed on the 'gt' tag"}},
 			{name: "AlwaysIncludedDomains Not Domains", config: func(cfg *Config) { cfg.Filtering.AlwaysIncludedDomains = []string{"notadomain"} }, expectedErrs: []string{"'AlwaysIncludedDomains[0]' failed on the 'fqdn' tag"}},
 			{name: "AlwaysIncludedDomains Mixed Validity", config: func(cfg *Config) { cfg.Filtering.AlwaysIncludedDomains = []string{"valid.com", "notadomain"} }, expectedErrs: []string{"'AlwaysIncludedDomains[1]' failed on the 'fqdn' tag"}},
 			{name: "NeverIncludedDomains Not Domains", config: func(cfg *Config) { cfg.Filtering.NeverIncludedDomains = []string{"notadomain"} }, expectedErrs: []string{"'NeverIncludedDomains[0]' failed on the 'fqdn' tag"}},
@@ -997,6 +986,8 @@ func TestScoreImpact_Scan(t *testing.T) {
 
 func checkValidationErrs(t *testing.T, errs []string, response string) {
 	t.Helper()
+
+	require.NotEmpty(t, response, "error response should not be empty")
 
 	// split the response by newlines
 	responseErrs := strings.Split(response, "\n")

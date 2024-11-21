@@ -21,6 +21,7 @@ var Version string
 const DefaultConfigPath = "./config.hjson"
 
 var errInvalidImpactCategory = errors.New("invalid impact category: must be 'critical', 'high', 'medium', 'low', or 'none'")
+var errReadingConfigFile = errors.New("encountered an error while reading the config file")
 
 const (
 	NONE_CATEGORY_SCORE   = 0.2
@@ -65,10 +66,10 @@ type (
 
 	Filtering struct {
 		// subnets do not need a validate tag because they are validated when they are unmarshalled
-		InternalSubnets          []util.Subnet `ch:"internal_subnets" json:"internal_subnets"`
+		InternalSubnets          []util.Subnet `ch:"internal_subnets" json:"internal_subnets" validate:"required,gt=0"`
 		AlwaysIncludedSubnets    []util.Subnet `ch:"always_included_subnets" json:"always_included_subnets"`
 		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,fqdn"`
-		NeverIncludedSubnets     []util.Subnet `ch:"never_included_subnets" json:"never_included_subnets"`
+		NeverIncludedSubnets     []util.Subnet `ch:"never_included_subnets" json:"never_included_subnets" validate:"required,gt=0"`
 		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,fqdn"`
 		FilterExternalToInternal bool          `ch:"filter_external_to_internal" json:"filter_external_to_internal" validate:"boolean"`
 	}
@@ -145,13 +146,14 @@ func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("contents:", contents)
 	var cfg Config
 	// // parse the JSON config file
 	// if err := hjson.Unmarshal(contents, &cfg); err != nil {
 	// 	return nil, err
 	// }
 	if err := unmarshal(contents, &cfg, nil); err != nil {
-		return nil, fmt.Errorf("encountered an error while reading the config file, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", path, err)
+		return nil, fmt.Errorf("%w, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", errReadingConfigFile, path, err)
 	}
 	// // set the environment variables
 	// if err := setEnv(&cfg); err != nil {
@@ -211,6 +213,7 @@ func unmarshal(data []byte, cfg *Config, env *Env) error {
 	if err := hjson.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
+	fmt.Println("unmarshalled config:", cfg)
 	// set the environment struct
 	// this MUST be done before validating the values, because the
 	// validation checks for the presence of the environment variables
@@ -237,9 +240,7 @@ func unmarshal(data []byte, cfg *Config, env *Env) error {
 func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// create temporary config struct to unmarshal into
 	// not doing this would result in an infinite unmarshalling loop
-
 	type tmpConfig Config
-	// init default config
 	defaultCfg := GetDefaultConfig()
 
 	// set the default config to a variable of the temporary type
@@ -254,10 +255,9 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// convert the temporary config struct to a config struct
 	cfg := Config(tmpCfg)
 
+	fmt.Println("convert the temporary config:", cfg)
+
 	// validate internal subnets
-	if len(cfg.Filtering.InternalSubnets) == 0 {
-		return fmt.Errorf("internal subnets must be provided")
-	}
 	cfg.Filtering.InternalSubnets = util.CompactSubnets(cfg.Filtering.InternalSubnets)
 
 	// validate never included subnets
@@ -313,6 +313,8 @@ func (cfg *Config) Reset() error {
 
 // Validate validates the config struct values
 func (cfg *Config) Validate() error {
+	fmt.Println("validating:", cfg)
+	// create a new validator
 	validate, err := NewValidator()
 	if err != nil {
 		return err

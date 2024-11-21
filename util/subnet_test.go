@@ -161,7 +161,7 @@ func (s *SubnetSuite) TestSubnet_UnmarshalJSON() {
 		{
 			name:          "Invalid IP",
 			input:         `"invalidIP"`,
-			expectedError: errParseCIDRInvalidIP,
+			expectedError: ErrParseCIDRInvalidIP,
 		},
 	}
 
@@ -602,12 +602,12 @@ func (s *SubnetSuite) TestParseSubnet() {
 		{
 			name:          "Invalid IPv4-Mapped IPv6 CIDR - Invalid IP",
 			input:         "::ffff:---/b",
-			expectedError: errParseCIDRInvalidIP,
+			expectedError: ErrParseCIDRInvalidIP,
 		},
 		{
 			name:          "Invalid IPv4-Mapped IPv6 CIDR - Invalid Mask",
 			input:         "::ffff:192.168.1.0/b",
-			expectedError: errParseCIDRInvalidMask,
+			expectedError: ErrParseCIDRInvalidMask,
 		},
 		{
 			name:          "Invalid IPv4-Mapped IPv6 CIDR - Invalid Numerical Mask",
@@ -617,7 +617,7 @@ func (s *SubnetSuite) TestParseSubnet() {
 		{
 			name:          "Invalid IP",
 			input:         "invalidIP",
-			expectedError: errParseCIDRInvalidIP,
+			expectedError: ErrParseCIDRInvalidIP,
 		},
 		{
 			name:          "Empty Input",

@@ -13,8 +13,8 @@ import (
 
 var (
 	errParseCIDREmptyString    = fmt.Errorf("unable to parse CIDR as subnet, empty string")
-	errParseCIDRInvalidIP      = fmt.Errorf("unable to parse CIDR as subnet, invalid IP address")
-	errParseCIDRInvalidMask    = fmt.Errorf("unable to parse CIDR as subnet, invalid mask")
+	ErrParseCIDRInvalidIP      = fmt.Errorf("unable to parse CIDR as subnet, invalid IP address")
+	ErrParseCIDRInvalidMask    = fmt.Errorf("unable to parse CIDR as subnet, invalid mask")
 	errParseCIDRInvalidNumMask = fmt.Errorf("unable to parse CIDR as subnet, invalid numerical value for cidr mask")
 	ErrIPIsNIl                 = fmt.Errorf("ip is nil")
 )
@@ -175,12 +175,12 @@ func ParseSubnet(str string) (Subnet, error) {
 		if len(ipParts) == 2 {
 			ip := net.ParseIP(ipParts[0])
 			if ip == nil {
-				return subnet, fmt.Errorf("%w: %s", errParseCIDRInvalidIP, ipParts[0])
+				return subnet, fmt.Errorf("%w: %s", ErrParseCIDRInvalidIP, ipParts[0])
 			}
 			// parse cidr mask as a number
 			cidrMask, err := strconv.Atoi(ipParts[1])
 			if err != nil {
-				return subnet, fmt.Errorf("%w: %s", errParseCIDRInvalidMask, ipParts[1])
+				return subnet, fmt.Errorf("%w: %s", ErrParseCIDRInvalidMask, ipParts[1])
 			}
 			// verify that mask is within the valid range for a IPv6 cidr mask
 			if cidrMask < 96 || cidrMask > 128 {
@@ -220,7 +220,7 @@ func ParseSubnet(str string) (Subnet, error) {
 
 			// if still an error, return the error
 			if ip == nil {
-				return subnet, fmt.Errorf("%w: %s", errParseCIDRInvalidIP, ipString)
+				return subnet, fmt.Errorf("%w: %s", ErrParseCIDRInvalidIP, ipString)
 			}
 
 			// set the IPNet struct as a single IP
