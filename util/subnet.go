@@ -74,19 +74,22 @@ func (s *Subnet) UnmarshalJSON(bytes []byte) error {
 
 // MarshalJSON marshals the Subnet struct into JSON bytes
 func (s *Subnet) MarshalJSON() ([]byte, error) {
-
 	// convert the Subnet struct to a string
-	ip, err := s.ToIPString()
-	if err != nil {
-		return nil, err
-	}
+	// ip, err := s.ToIPString()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	ip := s.IP.String()
 
 	// add cidr notation if the mask is less than 128
 	ones, _ := s.Mask.Size()
 	if ones < 128 {
+		if s.IP.To4() != nil {
+			ones -= 96
+		}
 		ip += fmt.Sprintf("/%d", ones)
 	}
-	// fmt.Println("ip", ip)
 	return json.Marshal(ip)
 
 }
