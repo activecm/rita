@@ -266,7 +266,7 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			times_used_fqdn AggregateFunction(uniqExact, String)
 		)
 		ENGINE = AggregatingMergeTree()
-		PRIMARY KEY (src_nuid, src, dst, dst_nuid, fqdn, signature )
+		PRIMARY KEY (hour, src_nuid, src, dst, dst_nuid, fqdn, signature )
 	`)
 
 	if err != nil {
@@ -287,7 +287,7 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			uniqExactState(dst) as times_used_dst,
 			uniqExactState(host) as times_used_fqdn
 		FROM {database:Identifier}.http
-		WHERE length(useragent) > 0
+		WHERE length(useragent) > 0 AND length(host) > 0
 		GROUP BY (import_hour, hour, src, src_nuid, fqdn, signature, is_ja3)
 	`)
 
