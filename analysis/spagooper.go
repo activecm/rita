@@ -34,8 +34,8 @@ type AnalysisResult struct {
 	TSList              []uint32         `ch:"ts_list"`
 	TotalDuration       float64          `ch:"total_duration"`
 	OpenTotalDuration   float64          `ch:"open_total_duration"`
-	BytesList           []float64        `ch:"bytes"`
-	TotalBytes          int64            `ch:"total_bytes"`
+	BytesList           []float64        `ch:"bytes"` //TODO: do we need to change this since bytes are now uint64?
+	TotalBytes          uint64           `ch:"total_bytes"`
 	PortProtoService    []string         `ch:"port_proto_service"`
 	FirstSeenHistorical time.Time        `ch:"first_seen_historical"`
 	LastSeen            time.Time        `ch:"last_seen"`

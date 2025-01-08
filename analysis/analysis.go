@@ -260,7 +260,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 
 			// Threat Intel Data Size Score
 			if entry.OnThreatIntel {
-				if entry.TotalBytes >= analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold {
+				if entry.TotalBytes >= uint64(analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold) {
 					mixtape.ThreatIntelDataSizeScore = analyzer.Config.Modifiers.ThreatIntelScoreIncrease
 				}
 			}

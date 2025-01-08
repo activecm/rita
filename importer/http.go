@@ -35,12 +35,12 @@ type HTTPEntry struct {
 	Duration     float64          `ch:"duration"`
 	SrcLocal     bool             `ch:"src_local"`
 	DstLocal     bool             `ch:"dst_local"`
-	SrcBytes     int64            `ch:"src_bytes"`
-	DstBytes     int64            `ch:"dst_bytes"`
-	SrcIPBytes   int64            `ch:"src_ip_bytes"`
-	DstIPBytes   int64            `ch:"dst_ip_bytes"`
-	SrcPackets   int64            `ch:"src_packets"`
-	DstPackets   int64            `ch:"dst_packets"`
+	SrcBytes     uint64           `ch:"src_bytes"`
+	DstBytes     uint64           `ch:"dst_bytes"`
+	SrcIPBytes   uint64           `ch:"src_ip_bytes"`
+	DstIPBytes   uint64           `ch:"dst_ip_bytes"`
+	SrcPackets   uint64           `ch:"src_packets"`
+	DstPackets   uint64           `ch:"dst_packets"`
 	Proto        string           `ch:"proto"`
 	Service      string           `ch:"service"`
 	ConnState    string           `ch:"conn_state"`

@@ -42,14 +42,14 @@ type ConnEntry struct {
 	DstLocal             bool             `ch:"dst_local"`
 	ICMPType             int              `ch:"icmp_type"`
 	ICMPCode             int              `ch:"icmp_code"`
-	SrcBytes             int64            `ch:"src_bytes"`
-	DstBytes             int64            `ch:"dst_bytes"`
-	SrcIPBytes           int64            `ch:"src_ip_bytes"`
-	DstIPBytes           int64            `ch:"dst_ip_bytes"`
-	SrcPackets           int64            `ch:"src_packets"`
-	DstPackets           int64            `ch:"dst_packets"`
+	SrcBytes             uint64           `ch:"src_bytes"`
+	DstBytes             uint64           `ch:"dst_bytes"`
+	SrcIPBytes           uint64           `ch:"src_ip_bytes"`
+	DstIPBytes           uint64           `ch:"dst_ip_bytes"`
+	SrcPackets           uint64           `ch:"src_packets"`
+	DstPackets           uint64           `ch:"dst_packets"`
 	ConnState            string           `ch:"conn_state"`
-	MissedBytes          int64            `ch:"missed_bytes"`
+	MissedBytes          uint64           `ch:"missed_bytes"`
 	ZeekHistory          string           `ch:"zeek_history"`
 }
 
@@ -71,12 +71,12 @@ type ZeekUIDRecord struct {
 	LinkedToHTTPEntry bool
 	NumUsedByHTTP     int
 	Duration          float64
-	SrcBytes          int64
-	DstBytes          int64
-	SrcIPBytes        int64
-	DstIPBytes        int64
-	SrcPackets        int64
-	DstPackets        int64
+	SrcBytes          uint64
+	DstBytes          uint64
+	SrcIPBytes        uint64
+	DstIPBytes        uint64
+	SrcPackets        uint64
+	DstPackets        uint64
 	ConnState         string
 	Proto             string
 	Service           string

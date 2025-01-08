@@ -124,13 +124,13 @@ func (it *ValidDatasetTestSuite) TestUconn() {
 		localSrc          bool
 		localDst          bool
 		count             int64
-		totalSrcBytes     int64
-		totalDstBytes     int64
-		totalSrcIPBytes   int
-		totalDstIPBytes   int
-		totalIPBytes      int
-		totalSrcPackets   int
-		totalDstPackets   int
+		totalSrcBytes     uint64
+		totalDstBytes     uint64
+		totalSrcIPBytes   uint64
+		totalDstIPBytes   uint64
+		totalIPBytes      uint64
+		totalSrcPackets   uint64
+		totalDstPackets   uint64
 		totalDuration     float64
 		tsListLen         int
 		srcIPBytesListLen int
@@ -285,7 +285,7 @@ func (it *ValidDatasetTestSuite) TestUconn() {
 					importer.ConnEntry
 					LocalSrc     bool   `ch:"src_local"`
 					LocalDst     bool   `ch:"dst_local"`
-					TotalIPBytes int64  `ch:"total_ip_bytes"`
+					TotalIPBytes uint64 `ch:"total_ip_bytes"`
 					TSListLen    uint64 `ch:"ts_list_len"`
 					BytesListLen uint64 `ch:"bytes_list_len"`
 					Count        uint64 `ch:"count"`
@@ -370,13 +370,13 @@ func (it *ValidDatasetTestSuite) TestUSNI() {
 		count             int
 		httpCount         int
 		sslCount          int
-		totalSrcBytes     int
-		totalDstBytes     int
-		totalSrcIPBytes   int
-		totalDstIPBytes   int
-		totalIPBytes      int
-		totalSrcPackets   int
-		totalDstPackets   int
+		totalSrcBytes     uint64
+		totalDstBytes     uint64
+		totalSrcIPBytes   uint64
+		totalDstIPBytes   uint64
+		totalIPBytes      uint64
+		totalSrcPackets   uint64
+		totalDstPackets   uint64
 		totalDuration     float64
 		firstSeen         int
 		lastSeen          int
@@ -591,13 +591,13 @@ func (it *ValidDatasetTestSuite) TestUSNI() {
 		Count             uint64   `ch:"count"`
 		LocalSrc          bool     `ch:"src_local"`
 		LocalDst          bool     `ch:"dst_local"`
-		TotalSrcIPBytes   int64    `ch:"total_src_ip_bytes"`
-		TotalDstIPBytes   int64    `ch:"total_dst_ip_bytes"`
-		TotalIPBytes      int64    `ch:"total_ip_bytes"`
-		TotalSrcBytes     int64    `ch:"total_src_bytes"`
-		TotalDstBytes     int64    `ch:"total_dst_bytes"`
-		TotalSrcPackets   int64    `ch:"total_src_packets"`
-		TotalDstPackets   int64    `ch:"total_dst_packets"`
+		TotalSrcIPBytes   uint64   `ch:"total_src_ip_bytes"`
+		TotalDstIPBytes   uint64   `ch:"total_dst_ip_bytes"`
+		TotalIPBytes      uint64   `ch:"total_ip_bytes"`
+		TotalSrcBytes     uint64   `ch:"total_src_bytes"`
+		TotalDstBytes     uint64   `ch:"total_dst_bytes"`
+		TotalSrcPackets   uint64   `ch:"total_src_packets"`
+		TotalDstPackets   uint64   `ch:"total_dst_packets"`
 		TotalDuration     float64  `ch:"total_duration"`
 		TSListLen         uint64   `ch:"ts_list_len"`
 		UniqueTSListLen   uint64   `ch:"unique_ts_list_len"`

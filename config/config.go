@@ -20,7 +20,7 @@ var Version string
 
 const DefaultConfigPath = "./config.hjson"
 
-var errInvalidImpactCategory = errors.New("invalid impact category: must be 'critical', 'high', 'medium', 'low', or 'none'")
+var errInvalidImpactCategory = errors.New("invalid impact category: must be 'high', 'medium', 'low', or 'none'")
 var errReadingConfigFile = errors.New("encountered an error while reading the config file")
 
 const (
@@ -335,7 +335,6 @@ func NewValidator() (*validator.Validate, error) {
 	// register custom validation for impact category
 	if err := v.RegisterValidation("impact_category", func(fl validator.FieldLevel) bool {
 		value := fl.Field().Interface().(ScoreImpact)
-		// cat := ImpactCategory(value)
 		err := ValidateImpactCategory(value.Category)
 		return err == nil
 	}); err != nil {

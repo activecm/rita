@@ -502,8 +502,8 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	type protoInfo struct {
 		PortProtoService string `ch:"port_proto_service"`
 		ConnCount        uint64 `ch:"conn_count"`
-		BytesSent        int64  `ch:"bytes_sent"`
-		BytesReceived    int64  `ch:"bytes_received"`
+		BytesSent        uint64 `ch:"bytes_sent"`
+		BytesReceived    uint64 `ch:"bytes_received"`
 	}
 
 	type testData struct {
@@ -626,7 +626,7 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	type foundEntry struct {
 		PortProtoService string
 		ConnCount        uint64
-		TotalBytes       int64
+		TotalBytes       uint64
 	}
 	type resData struct {
 		src          string
