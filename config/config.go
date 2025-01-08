@@ -68,9 +68,9 @@ type (
 		// subnets do not need a validate tag because they are validated when they are unmarshalled
 		InternalSubnets          []util.Subnet `ch:"internal_subnets" json:"internal_subnets" validate:"required,gt=0"`
 		AlwaysIncludedSubnets    []util.Subnet `ch:"always_included_subnets" json:"always_included_subnets"`
-		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,fqdn"`
+		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,wildcard_fqdn"`
 		NeverIncludedSubnets     []util.Subnet `ch:"never_included_subnets" json:"never_included_subnets" validate:"required,gt=0"`
-		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,fqdn"`
+		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,wildcard_fqdn"`
 		FilterExternalToInternal bool          `ch:"filter_external_to_internal" json:"filter_external_to_internal" validate:"boolean"`
 	}
 
@@ -208,12 +208,11 @@ func (c *Config) setEnv() error {
 
 // unmarshal unmarshals the data into the config struct, sets the environment variables, and validates the values
 func unmarshal(data []byte, cfg *Config, env *Env) error {
-	// fmt.Println("unmarshalling")
 	// unmarshal the JSON config file
 	if err := hjson.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
-	// fmt.Println("unmarshalled config:", cfg)
+
 	// set the environment struct
 	// this MUST be done before validating the values, because the
 	// validation checks for the presence of the environment variables
@@ -255,7 +254,7 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// convert the temporary config struct to a config struct
 	cfg := Config(tmpCfg)
 
-	fmt.Println("convert the temporary config:", cfg)
+	// fmt.Println("convert the temporary config:", cfg)
 
 	// validate internal subnets
 	cfg.Filtering.InternalSubnets = util.CompactSubnets(cfg.Filtering.InternalSubnets)
@@ -369,6 +368,16 @@ func NewValidator() (*validator.Validate, error) {
 			sl.ReportError(value, "HistogramScoreWeight", "BeaconScoring", "beacon_weights", "")
 		}
 	}, BeaconScoring{})
+
+	// validate fqdns and fqdns with wildcards
+	if err := v.RegisterValidation("wildcard_fqdn", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Interface().(string)
+		// If it starts with "*.", strip it out
+		value = strings.TrimPrefix(value, "*.")
+		return v.Var(value, "fqdn") == nil
+	}); err != nil {
+		return nil, err
+	}
 
 	return v, nil
 }
@@ -571,4 +580,38 @@ func defaultConfig() Config {
 			MIMETypeMismatchScoreIncrease: 0.15, // +15% score for connections with mismatched MIME type/URI
 		},
 	}
+}
+
+// ONLY TO BE CALLED IN TESTS
+// helper function to set the env variables that are reliant on paths since tests use the path of the package
+func (c *Config) SetTestEnv() {
+	fmt.Println(c)
+	c.setEnv()
+	c.Env.HTTPExtensionsFilePath = "../deployment/http_extensions_list.csv"
+	c.Env.ThreatIntelCustomFeedsDirectory = "../deployment/threat_intel_feeds"
+}
+
+// ReadTestFileConfig is for TESTS only
+func ReadTestFileConfig(afs afero.Fs, path string) (*Config, error) {
+	// read the config file
+	contents, err := util.GetFileContents(afs, path)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a temporary config just to generate the environment
+	var tmpCfg Config
+	if err := tmpCfg.setEnv(); err != nil {
+		return nil, fmt.Errorf("unable to set environment variables for TEST environment")
+	}
+	// override path based variables since tests use their package directory
+	tmpCfg.Env.HTTPExtensionsFilePath = "../deployment/http_extensions_list.csv"
+	tmpCfg.Env.ThreatIntelCustomFeedsDirectory = "../deployment/threat_intel_feeds"
+
+	var cfg Config
+	if err := unmarshal(contents, &cfg, &tmpCfg.Env); err != nil {
+		return nil, fmt.Errorf("%w, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", errReadingConfigFile, path, err)
+	}
+
+	return &cfg, nil
 }

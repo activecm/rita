@@ -53,13 +53,13 @@ func TestMissingHost(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	_, dropletSubnet, err := net.ParseCIDR("64.225.56.201/32")
+	dropletSubnet, err := util.ParseSubnet("64.225.56.201/32")
 	require.NoError(t, err)
-	cfg.Filtering.InternalSubnets = append(cfg.Filtering.InternalSubnets, util.Subnet{IPNet: dropletSubnet})
+	cfg.Filtering.InternalSubnets = append(cfg.Filtering.InternalSubnets, dropletSubnet)
 	cfg.Filtering.FilterExternalToInternal = false
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
-	require.Contains(t, cfg.Filtering.InternalSubnets, &net.IPNet{IP: net.IP{64, 225, 56, 201}, Mask: net.IPMask{255, 255, 255, 255}})
+	require.Contains(t, cfg.Filtering.InternalSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{64, 225, 56, 201}, Mask: net.IPMask{255, 255, 255, 255}}))
 	require.False(t, cfg.Filtering.FilterExternalToInternal)
 
 	// // import data
