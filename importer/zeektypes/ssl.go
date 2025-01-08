@@ -13,11 +13,11 @@ type SSL struct {
 	// Source is the source address for this connection
 	Source string `zeek:"id.orig_h" zeektype:"addr" json:"id.orig_h"`
 	// SourcePort is the source port of this connection
-	SourcePort int `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
+	SourcePort uint32 `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
 	// Destination is the destination of the connection
 	Destination string `zeek:"id.resp_h" zeektype:"addr" json:"id.resp_h"`
 	// DestinationPort is the port at the destination host
-	DestinationPort int `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
+	DestinationPort uint32 `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
 	// VersionNum  : Numeric SSL/TLS version that the server chose
 	VersionNum int `zeek:"version_num" zeektype:"count" json:"version_num"`
 	// Version : SSL/TLS version that the server chose

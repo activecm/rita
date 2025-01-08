@@ -146,7 +146,7 @@ func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("contents:", contents)
+	// fmt.Println("contents:", contents)
 	var cfg Config
 	// // parse the JSON config file
 	// if err := hjson.Unmarshal(contents, &cfg); err != nil {
@@ -208,12 +208,12 @@ func (c *Config) setEnv() error {
 
 // unmarshal unmarshals the data into the config struct, sets the environment variables, and validates the values
 func unmarshal(data []byte, cfg *Config, env *Env) error {
-	fmt.Println("unmarshalling")
+	// fmt.Println("unmarshalling")
 	// unmarshal the JSON config file
 	if err := hjson.Unmarshal(data, &cfg); err != nil {
 		return err
 	}
-	fmt.Println("unmarshalled config:", cfg)
+	// fmt.Println("unmarshalled config:", cfg)
 	// set the environment struct
 	// this MUST be done before validating the values, because the
 	// validation checks for the presence of the environment variables

@@ -352,15 +352,15 @@ func (db *DB) createPortInfoTable(ctx context.Context) error {
 			dst IPv6,
 			dst_nuid UUID,
 			fqdn String,
-			dst_port UInt16,
+			dst_port UInt32,
 			proto LowCardinality(String),
 			service LowCardinality(String),
-			icmp_type UInt16,
-			icmp_code UInt16,
+			icmp_type Int64,
+			icmp_code Int64,
 			conn_state LowCardinality(String),
 			count AggregateFunction(count, UInt64),
-			bytes_sent AggregateFunction(sum, Int64),
-			bytes_received AggregateFunction(sum, Int64)
+			bytes_sent AggregateFunction(sum, UInt64),
+			bytes_received AggregateFunction(sum, UInt64)
 		)
 		ENGINE = AggregatingMergeTree()
 		PRIMARY KEY (hour, hash, dst_port, proto, service, conn_state, icmp_type, icmp_code)

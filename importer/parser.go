@@ -480,13 +480,13 @@ func (header *ZeekHeader[Z]) parseField(value string, zeekType string, resultFie
 		if err != nil {
 			return fmt.Errorf("couldn't convert zeektype count: %v", err.Error())
 		}
-		resultField.SetInt(countInt)
+		resultField.SetUint(uint64(countInt))
 	case "port":
 		portInt, err := strconv.Atoi(strings.TrimSpace(value))
 		if err != nil {
 			return fmt.Errorf("couldn't convert zeektype port: %v", err.Error())
 		}
-		resultField.SetInt(int64(portInt))
+		resultField.SetUint(uint64(portInt))
 	case "bool":
 		boolCvt, err := strconv.ParseBool(value)
 		if err != nil {

@@ -56,7 +56,6 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 		},
 		threat_intel: {
 			online_feeds: ["https://feodotracker.abuse.ch/downloads/ipblocklist.txt"],
-			custom_feeds_directory: "./threat_intel_feeds"
 		},
 		http_extensions_file_path: "../deployment/http_extensions_list.csv"
 	}
@@ -66,6 +65,7 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 	cfg, err := config.ReadFileConfig(afs, "threat_intel_config.hjson")
 	require.NoError(t, err)
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.ThreatIntelCustomFeedsDirectory = "./threat_intel_feeds"
 	it.cfg = cfg
 
 	fs := afero.NewOsFs()

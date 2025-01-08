@@ -50,7 +50,7 @@ type (
 		Duration     float64  `json:"duration"`
 		OrigIPBytes  int64    `json:"orig_ip_bytes"`
 		RespIPBytes  int64    `json:"resp_ip_bytes"`
-		TransDepth   int      `json:"trans_depth"`
+		TransDepth   uint64   `json:"trans_depth"`
 		Method       string   `json:"method"`
 		Host         string   `json:"host"`
 		URI          string   `json:"uri"`

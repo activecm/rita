@@ -31,8 +31,8 @@ type ConnEntry struct {
 	Dst                  net.IP           `ch:"dst"`
 	SrcNUID              uuid.UUID        `ch:"src_nuid"`
 	DstNUID              uuid.UUID        `ch:"dst_nuid"`
-	SrcPort              uint16           `ch:"src_port"`
-	DstPort              uint16           `ch:"dst_port"`
+	SrcPort              uint32           `ch:"src_port"`
+	DstPort              uint32           `ch:"dst_port"`
 	MissingHostHeader    bool             `ch:"missing_host_header"`    // used to mark HTTP entries that have a missing host header
 	MissingHostUseragent string           `ch:"missing_host_useragent"` // useragent for connections that have a missing host header
 	Proto                string           `ch:"proto"`
@@ -40,8 +40,8 @@ type ConnEntry struct {
 	Duration             float64          `ch:"duration"`
 	SrcLocal             bool             `ch:"src_local"`
 	DstLocal             bool             `ch:"dst_local"`
-	ICMPType             int              `ch:"icmp_type"`
-	ICMPCode             int              `ch:"icmp_code"`
+	ICMPType             int64            `ch:"icmp_type"`
+	ICMPCode             int64            `ch:"icmp_code"`
 	SrcBytes             uint64           `ch:"src_bytes"`
 	DstBytes             uint64           `ch:"dst_bytes"`
 	SrcIPBytes           uint64           `ch:"src_ip_bytes"`
@@ -133,11 +133,11 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 	}
 
 	// check if the connection is an icmp connection
-	icmpType, icmpCode := -1, -1
+	icmpType, icmpCode := int64(-1), int64(-1)
 
 	if parseConn.Proto == "icmp" {
-		icmpType = parseConn.SourcePort
-		icmpCode = parseConn.DestinationPort
+		icmpType = int64(parseConn.SourcePort)
+		icmpCode = int64(parseConn.DestinationPort)
 	}
 
 	srcNUID := util.ParseNetworkID(srcIP, parseConn.AgentUUID)
@@ -166,8 +166,8 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		Dst:         dstIP,
 		SrcNUID:     srcNUID,
 		DstNUID:     dstNUID,
-		SrcPort:     uint16(parseConn.SourcePort),
-		DstPort:     uint16(parseConn.DestinationPort),
+		SrcPort:     parseConn.SourcePort,
+		DstPort:     parseConn.DestinationPort,
 		ZeekHistory: parseConn.History,
 		MissedBytes: parseConn.MissedBytes,
 		Proto:       parseConn.Proto,

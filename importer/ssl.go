@@ -32,8 +32,8 @@ type SSLEntry struct {
 	Dst              net.IP           `ch:"dst"`
 	SrcNUID          uuid.UUID        `ch:"src_nuid"`
 	DstNUID          uuid.UUID        `ch:"dst_nuid"`
-	SrcPort          uint16           `ch:"src_port"`
-	DstPort          uint16           `ch:"dst_port"`
+	SrcPort          uint32           `ch:"src_port"`
+	DstPort          uint32           `ch:"dst_port"`
 	Duration         float64          `ch:"duration"`
 	SrcLocal         bool             `ch:"src_local"`
 	DstLocal         bool             `ch:"dst_local"`
@@ -146,8 +146,8 @@ func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime tim
 		Dst:              dstIP,
 		SrcNUID:          srcNUID,
 		DstNUID:          dstNUID,
-		SrcPort:          uint16(parseSSL.SourcePort),
-		DstPort:          uint16(parseSSL.DestinationPort),
+		SrcPort:          parseSSL.SourcePort,
+		DstPort:          parseSSL.DestinationPort,
 		SrcLocal:         cfg.Filtering.CheckIfInternal(srcIP),
 		DstLocal:         cfg.Filtering.CheckIfInternal(dstIP),
 		Version:          parseSSL.Version,
