@@ -47,9 +47,11 @@ type (
 
 	Env struct { // set by .env file
 		DBConnection                    string `validate:"hostname_port"` // DB_ADDRESS
-		HTTPExtensionsFilePath          string `validate:"file"`          // CONFIG_DIR/http_extensions_list.csv
-		LogLevel                        int8   `validate:"min=0,max=6"`   // LOG_LEVEL
-		ThreatIntelCustomFeedsDirectory string `validate:"dir"`           // CONFIG_DIR/threat_intel_feeds
+		DBUsername                      string
+		DBPassword                      string
+		HTTPExtensionsFilePath          string `validate:"file"`        // CONFIG_DIR/http_extensions_list.csv
+		LogLevel                        int8   `validate:"min=0,max=6"` // LOG_LEVEL
+		ThreatIntelCustomFeedsDirectory string `validate:"dir"`         // CONFIG_DIR/threat_intel_feeds
 	}
 
 	RITA struct {
@@ -181,6 +183,16 @@ func (c *Config) setEnv() error {
 		return errors.New("environment variable DB_ADDRESS not set")
 	}
 	c.Env.DBConnection = connection
+
+	dbUsername := os.Getenv("CLICKHOUSE_USERNAME")
+	if dbUsername == "" {
+		return errors.New("environment variable CLICKHOUSE_USERNAME not set")
+	}
+	c.Env.DBUsername = dbUsername
+	fmt.Println("I AM CH USER", dbUsername)
+	dbPassword := os.Getenv("CLICKHOUSE_PASSWORD")
+	// don't check if CLICKHOUSE_PASSWORD is set because it can be empty
+	c.Env.DBPassword = dbPassword
 
 	// get the log level
 	logLevelStr := os.Getenv("LOG_LEVEL")

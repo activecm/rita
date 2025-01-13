@@ -456,14 +456,15 @@ func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, erro
 		Addr: []string{cfg.Env.DBConnection}, // read from env instead
 		Auth: clickhouse.Auth{
 			Database: "default",
-			Username: "default",
-			Password: "",
+			Username: cfg.Env.DBUsername,
+			Password: cfg.Env.DBPassword,
 		},
 	})
 
 	if err != nil {
 		logger.Err(err).Str("database", "default").
 			Str("database connection", cfg.Env.DBConnection).
+			Str("user", cfg.Env.DBUsername).
 			Msg("failed to connect to ClickHouse server")
 		return nil, err
 	}

@@ -314,8 +314,8 @@ func ConnectToDB(ctx context.Context, db string, cfg *config.Config, cancel cont
 		Addr: []string{cfg.Env.DBConnection},
 		Auth: clickhouse.Auth{
 			Database: db,
-			Username: "default",
-			Password: "",
+			Username: cfg.Env.DBUsername,
+			Password: cfg.Env.DBPassword,
 		},
 		DialContext: func(ctx context.Context, addr string) (net.Conn, error) {
 			// dialCount++
