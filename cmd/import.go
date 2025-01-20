@@ -96,6 +96,7 @@ var ImportCommand = &cli.Command{
 			return err
 		}
 
+		// TODO: do we need to move this into RunImportCmd?
 		// set the number of workers based on the number of CPUs
 		numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
 		numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))

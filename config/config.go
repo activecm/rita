@@ -168,11 +168,11 @@ func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 // ReadConfigFromMemory reads the config from bytes already read into memory as opposed to reading from a file
 // It also provides its own environment struct that must already be completely set
 func ReadConfigFromMemory(data []byte, env Env) (*Config, error) {
-	var cfg *Config
-	if err := unmarshal(data, cfg, &env); err != nil {
+	var cfg Config
+	if err := unmarshal(data, &cfg, &env); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return &cfg, nil
 
 }
 
@@ -222,6 +222,7 @@ func (c *Config) setEnv() error {
 func unmarshal(data []byte, cfg *Config, env *Env) error {
 	// unmarshal the JSON config file
 	if err := hjson.Unmarshal(data, &cfg); err != nil {
+		// fmt.Println("UNMARSHAL HAS ERROR :(", string(data))
 		return err
 	}
 
@@ -242,12 +243,11 @@ func unmarshal(data []byte, cfg *Config, env *Env) error {
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// UnmarshalJSON unmarshals the JSON bytes into the config struct
-// overrides the default unmarshalling method to allow for custom parsing
+// // UnmarshalJSON unmarshals the JSON bytes into the config struct
+// // overrides the default unmarshalling method to allow for custom parsing
 func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// create temporary config struct to unmarshal into
 	// not doing this would result in an infinite unmarshalling loop
@@ -265,9 +265,6 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 
 	// convert the temporary config struct to a config struct
 	cfg := Config(tmpCfg)
-
-	// fmt.Println("convert the temporary config:", cfg)
-
 	// validate internal subnets
 	cfg.Filtering.InternalSubnets = util.CompactSubnets(cfg.Filtering.InternalSubnets)
 
