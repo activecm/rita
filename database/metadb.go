@@ -371,7 +371,7 @@ func (server *ServerConn) clearDatabaseFromMetaDB(database string) error {
 	}
 
 	if err := server.Conn.Exec(ctx, `
-		DELETE FROM metadatabase.sample_dbs WHERE database = {database:String}
+		DELETE FROM metadatabase.sample_dbs WHERE name = {database:String}
 	`, database); err != nil {
 		return fmt.Errorf("unable to delete database from metadatabase.sample_dbs: %w", err)
 	}
