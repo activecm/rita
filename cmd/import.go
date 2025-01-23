@@ -97,10 +97,6 @@ var ImportCommand = &cli.Command{
 		}
 
 		// TODO: do we need to move this into RunImportCmd?
-		// set the number of workers based on the number of CPUs
-		numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
-		numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
-		numWriters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
 
 		// set the import start time in microseconds
 		startTime := time.Now()
@@ -133,6 +129,10 @@ type ImportResults struct {
 }
 
 func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir string, dbName string, rolling bool, rebuild bool) (ImportResults, error) {
+	// set the number of workers based on the number of CPUs
+	numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
+	numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
+	numWriters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
 
 	var importResults ImportResults
 	logger := zlog.GetLogger()

@@ -36,40 +36,37 @@ type MetaDBImportRecord struct {
 
 // createMetaDatabase creates the metadatabase and its tables if any part of it doesn't exist
 func (server *ServerConn) createMetaDatabase() error {
-	err := server.Conn.Exec(server.ctx, `
+	if err := server.Conn.Exec(server.ctx, `
 		CREATE DATABASE IF NOT EXISTS metadatabase
-	`)
-	if err != nil {
+	`); err != nil {
 		return err
 	}
 
-	err = server.createMetaDatabaseImportsTable()
-	if err != nil {
+	if err := server.createMetaDatabaseImportsTable(); err != nil {
 		return err
 	}
 
-	err = server.createMetaDatabaseFilesTable()
-	if err != nil {
+	if err := server.createMetaDatabaseFilesTable(); err != nil {
 		return err
 	}
 
-	err = server.createMetaDatabaseMinMaxTable()
-	if err != nil {
+	if err := server.createMetaDatabaseMinMaxTable(); err != nil {
 		return err
 	}
 
-	err = server.createThreatIntelTables()
-	if err != nil {
+	if err := server.createMetaDatabaseSampleDBsTable(); err != nil {
 		return err
 	}
 
-	err = server.createValidMIMETypeTable()
-	if err != nil {
+	if err := server.createThreatIntelTables(); err != nil {
 		return err
 	}
 
-	err = server.createHistoricalFirstSeenTable()
-	if err != nil {
+	if err := server.createValidMIMETypeTable(); err != nil {
+		return err
+	}
+
+	if err := server.createHistoricalFirstSeenTable(); err != nil {
 		return err
 	}
 
@@ -164,6 +161,20 @@ func (server *ServerConn) createMetaDatabaseMinMaxTable() error {
 	// 	return err
 	// }
 	return nil
+}
+
+// createMetaDatabaseFilesTable creates the metadatabase.files table
+func (server *ServerConn) createMetaDatabaseSampleDBsTable() error {
+	err := server.Conn.Exec(server.ctx, `
+		CREATE TABLE IF NOT EXISTS metadatabase.sample_dbs (
+			name String,
+		)
+		ENGINE = ReplacingMergeTree()
+		PRIMARY KEY (name)
+		ORDER BY (name)
+	`)
+
+	return err
 }
 
 // MarkFileImportedInMetaDB adds the given path to the metadatabase.files table to mark it as being used
@@ -353,8 +364,16 @@ func (server *ServerConn) clearImportedFilesFromMetaDB(database string) error {
 
 func (server *ServerConn) clearDatabaseFromMetaDB(database string) error {
 	ctx := clickhouse.Context(server.ctx, clickhouse.WithParameters(clickhouse.Parameters{"database": database}))
-	err := server.Conn.Exec(ctx, `
+	if err := server.Conn.Exec(ctx, `
 		DELETE FROM metadatabase.min_max WHERE database = {database:String}
-	`, database)
-	return err
+	`, database); err != nil {
+		return fmt.Errorf("unable to delete database from metadatabase.min_max: %w", err)
+	}
+
+	if err := server.Conn.Exec(ctx, `
+		DELETE FROM metadatabase.sample_dbs WHERE database = {database:String}
+	`, database); err != nil {
+		return fmt.Errorf("unable to delete database from metadatabase.sample_dbs: %w", err)
+	}
+	return nil
 }
