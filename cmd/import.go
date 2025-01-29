@@ -244,7 +244,9 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 
 			minTS, maxTS, _, useCurrentTime, err := db.GetTrueMinMaxTimestamps()
 			if err != nil {
-				return importResults, fmt.Errorf("could not find imported data. Be sure to include your internal subnets in 'filter.internal_subnets' in config.hjson.\n(err: %w)", err)
+				logger.Error().Err(err).Int("day", day).Int("hour", hour).Msg("could not find imported data. Be sure to include your internal subnets in 'filter.internal_subnets' in config.hjson.")
+				continue
+				// return importResults, fmt.Errorf("could not find imported data. Be sure to include your internal subnets in 'filter.internal_subnets' in config.hjson.\n(err: %w)", err)
 			}
 
 			importResults.ImportTimestamps = append(importResults.ImportTimestamps, ImportTimestamps{
