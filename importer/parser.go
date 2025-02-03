@@ -476,7 +476,7 @@ func (header *ZeekHeader[Z]) parseField(value string, zeekType string, resultFie
 	case "addr":
 		resultField.SetString(value)
 	case "count":
-		countInt, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+		countInt, err := strconv.ParseUint(strings.TrimSpace(value), 10, 64)
 		if err != nil {
 			return fmt.Errorf("couldn't convert zeektype count: %v", err.Error())
 		}
