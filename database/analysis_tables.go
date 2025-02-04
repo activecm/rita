@@ -29,10 +29,6 @@ func (db *DB) createThreatMixtapeTable(ctx context.Context) error {
 			proxy_count UInt64,
 			open_count UInt64,
 
-			-- c2 over dns connection info
-			direct_conns Array(IPv6),
-			queried_by Array(IPv6),
-
 			-- **** THREAT INDICATORS ****
 			-- BEACONING
 			beacon_type LowCardinality(String),
