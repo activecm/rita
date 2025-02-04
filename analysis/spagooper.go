@@ -44,8 +44,7 @@ type AnalysisResult struct {
 	MissingHostCount    uint64           `ch:"missing_host_count"`
 
 	// C2 OVER DNS Connection Info
-	DirectConns []net.IP `ch:"direct_conns"`
-	QueriedBy   []net.IP `ch:"queried_by"`
+	HasC2OverDNSDirectConnectionsModifier bool `ch:"has_c2_direct_conns_mod"`
 
 	// Prevalence
 	PrevalenceTotal uint64  `ch:"prevalence_total"`
@@ -663,23 +662,29 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			WHERE day >= toStartOfDay(fromUnixTimestamp({min_ts:Int64}))
 		-- get all source ips that made a connection to the resolved ips
 		), direct_connections AS (
-			SELECT tld, groupUniqArray(src) as direct_conns FROM uconn u
+			SELECT tld, src as direct_conn FROM uconn u
 			RIGHT JOIN resolved_ips r ON u.dst = r.resolved_ip
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			GROUP BY tld
 		-- get all systems that performed a dns query to the tld
 		), queried_by AS (
-			SELECT tld, groupUniqArray(src) as queried FROM udns
+			SELECT tld, src as queried FROM udns
 			INNER JOIN sussy_subdomains USING tld
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			GROUP BY tld
 		-- keep tlds which had zero non-dns-server ips in direct connections
-		),
-		historical AS (
-			SELECT min(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
-			FROM metadatabase.historical_first_seen
-			LEFT JOIN exploded_dns USING tld
+		), queried_by_count AS (
+			SELECT tld, count() as qcount FROM queried_by
 			GROUP BY tld
+		), direct_conns_modifier AS (
+			-- tld has modifier if queried count == 0 or if 
+			SELECT ddx.tld AS tld, greatest(if(qc.qcount > 0, 0, 1), 1 - inverse_has_mod) AS has_mod FROM (
+				-- direct conns mod checks if there are any IPs in queried that are not also in direct_conns
+				-- if there is an IP in queried that isn't in direct_conns, then q.queried is empty
+				-- max will return 1 if there was at least 1 ip that wasn't in direct conns
+				SELECT d.tld AS tld, max(empty(q.queried)) AS inverse_has_mod FROM direct_connections d
+				LEFT JOIN queried_by q ON d.tld = q.tld AND d.direct_conn = q.queried
+				GROUP BY tld
+			) ddx
+			LEFT JOIN queried_by_count qc ON qc.tld = ddx.tld
 		),
 		totaled_exploded AS (
 			SELECT tld, uniqExactMerge(subdomains) AS subdomain_count
@@ -687,12 +692,19 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
 			GROUP BY tld
 			HAVING subdomain_count >= {subdomain_threshold:Int32}
+		),
+		historical AS (
+			SELECT min(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
+			FROM metadatabase.historical_first_seen
+			INNER JOIN totaled_exploded USING tld
+			GROUP BY tld
 		)
 		-- get the subdomain counts and the last seen count for each tld
 		SELECT e.tld AS tld, e.subdomain_count as subdomain_count, 
 			'dns' AS beacon_type,
-			d.direct_conns as direct_conns, q.queried as queried_by, u.last_seen as last_seen,
+			 u.last_seen as last_seen,
 			prevalence_total, 
+			if(dm.has_mod > 0, true, false) as has_c2_direct_conns_mod,
 			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
 			-- use the historical first seen value if this dataset is rolling
 			if({rolling:Bool}, h.first_seen, u.first_seen) AS first_seen_historical,
@@ -701,8 +713,7 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 		INNER JOIN unique_dns u ON e.tld = u.tld
 		LEFT JOIN prevalence_counts p ON e.tld = p.tld
 		LEFT JOIN historical h ON e.tld = h.tld
-		LEFT JOIN direct_connections d ON e.tld = d.tld
-		LEFT JOIN queried_by q ON e.tld = q.tld
+		LEFT JOIN direct_conns_modifier dm ON e.tld = dm.tld
 		LEFT JOIN metadatabase.threat_intel t ON e.tld = cutToFirstSignificantSubdomain(t.fqdn)	
 	`)
 	if err != nil {
