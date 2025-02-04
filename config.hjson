@@ -25,10 +25,10 @@
             "duration_min_hours_seen": 6,
             "duration_consistency_ideal_hours_seen": 12,
             "score_thresholds": {
-                "base": 0,
-                "low": 1,
-                "medium": 2,
-                "high": 3
+                "base": 50,
+                "low": 70,
+                "medium": 90,
+                "high": 100
             }
         }
     },
