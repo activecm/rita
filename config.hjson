@@ -15,22 +15,5 @@
         ],
         "custom_feeds_directory": "./deployment/threat_intel_feeds"
     },
-    "scoring": {
-        "beacon": {
-            "unique_connection_threshold": 4,
-            "timestamp_score_weight": 0.25,
-            "datasize_score_weight": 0.25,
-            "duration_score_weight": 0.25,
-            "histogram_score_weight": 0.25,
-            "duration_min_hours_seen": 6,
-            "duration_consistency_ideal_hours_seen": 12,
-            "score_thresholds": {
-                "base": 50,
-                "low": 70,
-                "medium": 90,
-                "high": 100
-            }
-        }
-    },
     "http_extensions_file_path": "./deployment/http_extensions_list.csv"
 }
