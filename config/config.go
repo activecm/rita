@@ -455,7 +455,7 @@ func GetScoreFromImpactCategory(category ImpactCategory) (float32, error) {
 	return 0, errInvalidImpactCategory
 }
 
-func GetImpactCategoryFromScore(score float32) ImpactCategory {
+func GetImpactCategoryFromScore(score float64) ImpactCategory {
 	switch {
 	// >80%
 	case score > MEDIUM_CATEGORY_SCORE:

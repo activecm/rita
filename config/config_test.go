@@ -840,7 +840,7 @@ func TestGetScoreFromImpactCategory(t *testing.T) {
 func TestGetImpactCategoryFromScore(t *testing.T) {
 	tests := []struct {
 		name           string
-		score          float32
+		score          float64
 		expectedImpact ImpactCategory
 	}{
 		{

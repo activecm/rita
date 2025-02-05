@@ -215,7 +215,7 @@ func Truncate(str string, style *lipgloss.Style) string {
 }
 
 func renderIndicator(score float32, displayText string) string {
-	category := config.GetImpactCategoryFromScore(score)
+	category := config.GetImpactCategoryFromScore(float64(score))
 	style := lipgloss.NewStyle()
 
 	switch category {

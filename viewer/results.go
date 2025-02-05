@@ -160,7 +160,7 @@ func (i *Item) GetSeverity(color bool) string {
 		}
 
 	} else {
-		severity = config.GetImpactCategoryFromScore(i.FinalScore)
+		severity = config.GetImpactCategoryFromScore(float64(i.FinalScore))
 		if DebugMode {
 			return renderIndicator(i.FinalScore, fmt.Sprintf("%1.2f%%", i.FinalScore*100))
 		}
