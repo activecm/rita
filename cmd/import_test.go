@@ -633,6 +633,7 @@ func TestWalkFiles(t *testing.T) {
 		files                []string
 		expectedFiles        []cmd.HourlyZeekLogs
 		expectedWalkErrors   []cmd.WalkError
+		rolling              bool
 		expectedError        error
 	}{
 		{
@@ -1194,6 +1195,24 @@ func TestWalkFiles(t *testing.T) {
 			expectedWalkErrors:   nil,
 			expectedError:        util.ErrDirIsEmpty,
 		},
+		{
+			name:                 "Rolling Logs - Old",
+			directory:            "/logs",
+			directoryPermissions: os.FileMode(0o775),
+			filePermissions:      os.FileMode(0o775),
+			rolling:              true,
+			expectedWalkErrors:   nil,
+			expectedError:        nil,
+		},
+		{
+			name:                 "Rolling Logs - New",
+			directory:            "/logs",
+			directoryPermissions: os.FileMode(0o775),
+			filePermissions:      os.FileMode(0o775),
+			rolling:              true,
+			expectedWalkErrors:   nil,
+			expectedError:        nil,
+		},
 	}
 
 	for _, test := range tests {
@@ -1205,9 +1224,48 @@ func TestWalkFiles(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			for _, subdirectory := range test.subdirectories {
-				err := afs.MkdirAll(filepath.Join(test.directory, subdirectory), test.directoryPermissions)
-				require.NoError(t, err)
+			if !test.rolling {
+				for _, subdirectory := range test.subdirectories {
+					err := afs.MkdirAll(filepath.Join(test.directory, subdirectory), test.directoryPermissions)
+					require.NoError(t, err)
+				}
+			} else {
+				today := time.Now().Truncate(24 * time.Hour)
+				files := []string{"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log"}
+				switch test.name {
+				case "Rolling Logs - Old":
+					// test should keep all 11 days because none were in the past 2 weeks
+					for i := -cmd.RollingLogDaysToKeep * 2; i < -cmd.RollingLogDaysToKeep; i++ {
+						subdirectory := today.Add(time.Duration(i) * 24 * time.Hour).Format("2006-01-02")
+						require.NoError(t, afs.MkdirAll(filepath.Join(test.directory, subdirectory), test.directoryPermissions))
+						fullPath := fmt.Sprintf("%s/%s/", test.directory, subdirectory)
+
+						for _, file := range files {
+							filePath := fmt.Sprintf("%s/%s", subdirectory, file)
+							test.files = append(test.files, filePath)
+						}
+						test.expectedFiles = append(test.expectedFiles, basicRollingHourLogs(fullPath))
+					}
+				case "Rolling Logs - New":
+					// test should keep only the first RollingLogDaysToKeep days
+					for i := -cmd.RollingLogDaysToKeep - 5; i < 1; i++ {
+						subdirectory := today.Add(time.Duration(i) * 24 * time.Hour).Format("2006-01-02")
+						require.NoError(t, afs.MkdirAll(filepath.Join(test.directory, subdirectory), test.directoryPermissions))
+						fullPath := fmt.Sprintf("%s/%s/", test.directory, subdirectory)
+
+						for _, file := range files {
+							filePath := fmt.Sprintf("%s/%s", subdirectory, file)
+							test.files = append(test.files, filePath)
+						}
+
+						if i > -cmd.RollingLogDaysToKeep {
+							test.expectedFiles = append(test.expectedFiles, basicRollingHourLogs(fullPath))
+						}
+					}
+					fmt.Println(test.files[len(test.files)-1])
+
+				}
+				test.expectedFiles = createExpectedResults(test.expectedFiles)
 			}
 
 			// create the files
@@ -1232,9 +1290,9 @@ func TestWalkFiles(t *testing.T) {
 			// since some of the tests are for files passed in to the import command instead of the root directory, we need to
 			// simulate that accordingly
 			if test.directory != "" {
-				logMap, walkErrors, err = cmd.WalkFiles(afs, test.directory)
+				logMap, walkErrors, err = cmd.WalkFiles(afs, test.directory, test.rolling) // TODO: add rolling tests
 			} else {
-				logMap, walkErrors, err = cmd.WalkFiles(afs, strings.Join(test.files, " "))
+				logMap, walkErrors, err = cmd.WalkFiles(afs, strings.Join(test.files, " "), test.rolling)
 			}
 
 			// check if the error is expected
@@ -1259,6 +1317,20 @@ func TestWalkFiles(t *testing.T) {
 			require.NoError(t, err, "removing mock directory should not produce an error")
 		})
 
+	}
+}
+
+func basicRollingHourLogs(fullPath string) cmd.HourlyZeekLogs {
+	return cmd.HourlyZeekLogs{
+		0: {
+			importer.ConnPrefix:     []string{fullPath + "conn.log"},
+			importer.DNSPrefix:      []string{fullPath + "dns.log"},
+			importer.SSLPrefix:      []string{fullPath + "ssl.log"},
+			importer.OpenConnPrefix: []string{fullPath + "open_conn.log"},
+			importer.HTTPPrefix:     []string{fullPath + "http.log"},
+			importer.OpenHTTPPrefix: []string{fullPath + "open_http.log"},
+			importer.OpenSSLPrefix:  []string{fullPath + "open_ssl.log"},
+		},
 	}
 }
 

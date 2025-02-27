@@ -32,6 +32,9 @@ var (
 	numWriters   = 12 // 2nd largest impact
 )
 
+// for rolling datasets, limit the logs that are imported to the past 14 (to match the snapshot tables) + 1 (for good luck) days
+const RollingLogDaysToKeep = 15
+
 // util.Max(1, runtime.NumCPU()/2)
 var ErrInsufficientReadPermissions = errors.New("file does not have readable permission or does not exist")
 var ErrNoValidFilesFound = errors.New("no valid log files found")
@@ -156,7 +159,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 	}
 
 	// get list of hourly log maps of all days of log files in directory
-	logMap, walkErrors, err := WalkFiles(afs, logDir)
+	logMap, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
 	if err != nil {
 		return importResults, err
 	}
@@ -376,7 +379,7 @@ func ParseFolderDate(folder string) (time.Time, error) {
 // WalkFiles starts a goroutine to walk the directory tree at root and send the
 // path of each regular file on the string channel.  It sends the result of the
 // walk on the error channel.  If done is closed, WalkFiles abandons its work.
-func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error) {
+func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []WalkError, error) {
 	logger := zlog.GetLogger()
 
 	// check if root is a valid directory or file
@@ -565,19 +568,48 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		return nil, walkErrors, ErrNoValidFilesFound
 	}
 
-	var importLogs []HourlyZeekLogs
-
 	var days []time.Time
 	for day := range logMap {
 		days = append(days, day)
 	}
-	slices.SortFunc(days, func(a, b time.Time) int { return a.Compare(b) })
 
-	for _, day := range days {
-		importLogs = append(importLogs, logMap[day])
-	}
+	// for rolling logs, limit the logs that are included to RollingLogDaysToKeep as long as there was at least one log folder in the past N days
+	importLogs := GatherDailyLogs(logMap, days, rolling)
 
 	return importLogs, walkErrors, err
+}
+
+func GatherDailyLogs(logMap map[time.Time]HourlyZeekLogs, days []time.Time, rolling bool) []HourlyZeekLogs {
+	shouldFilter := false
+
+	// sort days by oldest to newest
+	slices.SortFunc(days, func(a, b time.Time) int { return a.Compare(b) })
+
+	// determine if there are any logs that are in the range to keep
+	today := time.Now().Truncate(24 * time.Hour)
+	nDaysAgo := today.Add(time.Duration(-RollingLogDaysToKeep) * 24 * time.Hour)
+
+	// only filter rolling!
+	if rolling {
+		//  determine if there are any logs that are in the range to keep by checking the newest day (last in the array)
+		if days[len(days)-1].Compare(nDaysAgo) > -1 {
+			shouldFilter = true
+		}
+	}
+
+	var importLogs []HourlyZeekLogs
+
+	// build hourly zeek logs (for both rolling and non-rolling)
+	for _, day := range days {
+		if shouldFilter {
+			// if day is too old, skip adding it to the import logs array
+			if day.Compare(nDaysAgo) == -1 {
+				continue
+			}
+		}
+		importLogs = append(importLogs, logMap[day])
+	}
+	return importLogs
 }
 
 // ParseHourFromFilename extracts the hour from a given filename
