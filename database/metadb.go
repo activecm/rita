@@ -216,8 +216,8 @@ func (db *DB) AddImportStartRecordToMetaDB(importID util.FixedString) error {
 	})
 
 	err := db.Conn.Exec(ctx, `
-		INSERT INTO metadatabase.imports (import_id, rolling, database, rebuild, started_at)
-		VALUES (unhex({importID:String}), {rolling:Bool}, {database:String}, {rebuild:Bool}, fromUnixTimestamp64Micro({importStartedAt:Int64}))
+		INSERT INTO metadatabase.imports (import_id, rolling, database, rebuild, started_at, import_version)
+		VALUES (unhex({importID:String}), {rolling:Bool}, {database:String}, {rebuild:Bool}, fromUnixTimestamp64Micro({importStartedAt:Int64}), {importVersion:String})
 	`)
 
 	return err
@@ -255,7 +255,7 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 	})
 
 	err = db.Conn.Exec(ctx, `
-		INSERT INTO metadatabase.imports (import_id, rolling, database, started_at, ended_at, min_timestamp, max_timestamp, min_open_timestamp, max_open_timestamp)
+		INSERT INTO metadatabase.imports (import_id, rolling, database, started_at, ended_at, min_timestamp, max_timestamp, min_open_timestamp, max_open_timestamp, import_version)
 		VALUES (
 			unhex({importID:String}), 
 			{rolling:Bool}, 
@@ -265,7 +265,8 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 			fromUnixTimestamp({minTs:Int32}), 
 			fromUnixTimestamp({maxTs:Int32}), 
 			fromUnixTimestamp({minOpenTs:Int32}), 
-			fromUnixTimestamp({maxOpenTs:Int32})
+			fromUnixTimestamp({maxOpenTs:Int32}),
+			{importVersion:String}
 		)
 	`)
 	return err
