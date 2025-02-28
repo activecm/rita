@@ -2,10 +2,13 @@ package database
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -285,7 +288,49 @@ func (db *DB) CheckIfFilesWereAlreadyImported(fileMap map[string][]string) (int,
 		totalFileCount += len(results)
 	}
 
-	return totalFileCount, nil
+	// don't bother validating log combinations if there are no new logs
+	if totalFileCount == 0 {
+		return 0, nil
+	}
+
+	// we must validate the log combinations after checking the logs against the metadb
+	// because if this is a rolling import and an import was killed/failed somehow and the remaining
+	// logs to import are an invalid combination, they need to be filtered out/skipped or else
+	// the import can end up hanging
+	totalFiles := ValidateLogCombinations(fileMap)
+
+	return totalFiles, nil
+}
+
+// ValidateLogCombinations filters out invalid log combinations and returns the number of valid logs to import
+// This function is in this package because it needs to be used by both the cmd package and the import or database package
+// and this avoids an import cycle
+func ValidateLogCombinations(hourMap map[string][]string) int {
+	logger := zlog.GetLogger()
+
+	totalHourFilesFound := 0
+	// if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
+	if len(hourMap[c.ConnPrefix]) == 0 && (len(hourMap[c.SSLPrefix]) > 0 || len(hourMap[c.HTTPPrefix]) > 0) {
+		logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
+		delete(hourMap, c.SSLPrefix)
+		delete(hourMap, c.HTTPPrefix)
+	}
+
+	// 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
+	if len(hourMap[c.OpenConnPrefix]) == 0 && (len(hourMap[c.OpenSSLPrefix]) > 0 || len(hourMap[c.OpenHTTPPrefix]) > 0) {
+		logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
+		delete(hourMap, c.OpenSSLPrefix)
+		delete(hourMap, c.OpenHTTPPrefix)
+	}
+
+	// track the total number of files after filtering out invalid file combinations
+	for zeekType := range hourMap {
+		// sort the files for each log type, necessary for tests
+		slices.Sort(hourMap[zeekType])
+		totalHourFilesFound += len(hourMap[zeekType])
+	}
+
+	return totalHourFilesFound
 }
 
 // checkFileHashes filters fileList to only files that haven't already been imported for this dataset

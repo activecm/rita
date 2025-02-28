@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	"github.com/activecm/rita/v5/cmd"
+	"github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/importer"
 	"github.com/activecm/rita/v5/util"
 
 	iofs "io/fs"
@@ -14,8 +16,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/activecm/rita/v5/importer"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/spf13/afero"
@@ -651,13 +651,13 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix:     []string{"/logs/conn.log", "/logs/conn_blue.log.gz", "/logs/conn_red.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.log", "/logs/dns_blue.log.gz", "/logs/dns_red.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.log", "/logs/http_blue.log.gz", "/logs/http_red.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.log", "/logs/ssl_blue.log.gz", "/logs/ssl_red.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.log", "/logs/conn_blue.log.gz", "/logs/conn_red.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.log", "/logs/dns_blue.log.gz", "/logs/dns_red.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.log", "/logs/http_blue.log.gz", "/logs/http_red.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.log", "/logs/ssl_blue.log.gz", "/logs/ssl_red.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.log"},
 					},
 				},
 			}),
@@ -699,40 +699,40 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix:     []string{"/logs/conn.00:00:00-01:00:00.log", "/logs/conn_blue.00:00:00-01:00:00.log.gz", "/logs/conn_red.00:00:00-01:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.00:00:00-01:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.00:00:00-01:00:00.log", "/logs/dns_blue.00:00:00-01:00:00.log.gz", "/logs/dns_red.00:00:00-01:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.00:00:00-01:00:00.log", "/logs/http_blue.00:00:00-01:00:00.log.gz", "/logs/http_red.00:00:00-01:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.00:00:00-01:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.00:00:00-01:00:00.log", "/logs/ssl_blue.00:00:00-01:00:00.log.gz", "/logs/ssl_red.00:00:00-01:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.00:00:00-01:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.00:00:00-01:00:00.log", "/logs/conn_blue.00:00:00-01:00:00.log.gz", "/logs/conn_red.00:00:00-01:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.00:00:00-01:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.00:00:00-01:00:00.log", "/logs/dns_blue.00:00:00-01:00:00.log.gz", "/logs/dns_red.00:00:00-01:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.00:00:00-01:00:00.log", "/logs/http_blue.00:00:00-01:00:00.log.gz", "/logs/http_red.00:00:00-01:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.00:00:00-01:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.00:00:00-01:00:00.log", "/logs/ssl_blue.00:00:00-01:00:00.log.gz", "/logs/ssl_red.00:00:00-01:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.00:00:00-01:00:00.log"},
 					},
 					1: {
-						importer.ConnPrefix:     []string{"/logs/conn.01:00:00-02:00:00.log", "/logs/conn_blue.01:00:00-02:00:00.log.gz", "/logs/conn_red.01:00:00-02:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.01:00:00-02:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.01:00:00-02:00:00.log", "/logs/dns_blue.01:00:00-02:00:00.log.gz", "/logs/dns_red.01:00:00-02:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.01:00:00-02:00:00.log", "/logs/http_blue.01:00:00-02:00:00.log.gz", "/logs/http_red.01:00:00-02:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.01:00:00-02:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.01:00:00-02:00:00.log", "/logs/ssl_blue.01:00:00-02:00:00.log.gz", "/logs/ssl_red.01:00:00-02:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.01:00:00-02:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.01:00:00-02:00:00.log", "/logs/conn_blue.01:00:00-02:00:00.log.gz", "/logs/conn_red.01:00:00-02:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.01:00:00-02:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.01:00:00-02:00:00.log", "/logs/dns_blue.01:00:00-02:00:00.log.gz", "/logs/dns_red.01:00:00-02:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.01:00:00-02:00:00.log", "/logs/http_blue.01:00:00-02:00:00.log.gz", "/logs/http_red.01:00:00-02:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.01:00:00-02:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.01:00:00-02:00:00.log", "/logs/ssl_blue.01:00:00-02:00:00.log.gz", "/logs/ssl_red.01:00:00-02:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.01:00:00-02:00:00.log"},
 					},
 					22: {
-						importer.ConnPrefix:     []string{"/logs/conn.22:00:00-23:00:00.log", "/logs/conn_blue.22:00:00-23:00:00.log.gz", "/logs/conn_red.22:00:00-23:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.22:00:00-23:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.22:00:00-23:00:00.log", "/logs/dns_blue.22:00:00-23:00:00.log.gz", "/logs/dns_red.22:00:00-23:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.22:00:00-23:00:00.log", "/logs/http_blue.22:00:00-23:00:00.log.gz", "/logs/http_red.22:00:00-23:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.22:00:00-23:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.22:00:00-23:00:00.log", "/logs/ssl_blue.22:00:00-23:00:00.log.gz", "/logs/ssl_red.22:00:00-23:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.22:00:00-23:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.22:00:00-23:00:00.log", "/logs/conn_blue.22:00:00-23:00:00.log.gz", "/logs/conn_red.22:00:00-23:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.22:00:00-23:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.22:00:00-23:00:00.log", "/logs/dns_blue.22:00:00-23:00:00.log.gz", "/logs/dns_red.22:00:00-23:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.22:00:00-23:00:00.log", "/logs/http_blue.22:00:00-23:00:00.log.gz", "/logs/http_red.22:00:00-23:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.22:00:00-23:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.22:00:00-23:00:00.log", "/logs/ssl_blue.22:00:00-23:00:00.log.gz", "/logs/ssl_red.22:00:00-23:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.22:00:00-23:00:00.log"},
 					},
 					23: {
-						importer.ConnPrefix:     []string{"/logs/conn.23:00:00-00:00:00.log", "/logs/conn_blue.23:00:00-00:00:00.log.gz", "/logs/conn_red.23:00:00-00:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.23:00:00-00:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.23:00:00-00:00:00.log", "/logs/dns_blue.23:00:00-00:00:00.log.gz", "/logs/dns_red.23:00:00-00:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.23:00:00-00:00:00.log", "/logs/http_blue.23:00:00-00:00:00.log.gz", "/logs/http_red.23:00:00-00:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.23:00:00-00:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.23:00:00-00:00:00.log", "/logs/ssl_blue.23:00:00-00:00:00.log.gz", "/logs/ssl_red.23:00:00-00:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.23:00:00-00:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.23:00:00-00:00:00.log", "/logs/conn_blue.23:00:00-00:00:00.log.gz", "/logs/conn_red.23:00:00-00:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.23:00:00-00:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.23:00:00-00:00:00.log", "/logs/dns_blue.23:00:00-00:00:00.log.gz", "/logs/dns_red.23:00:00-00:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.23:00:00-00:00:00.log", "/logs/http_blue.23:00:00-00:00:00.log.gz", "/logs/http_red.23:00:00-00:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.23:00:00-00:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.23:00:00-00:00:00.log", "/logs/ssl_blue.23:00:00-00:00:00.log.gz", "/logs/ssl_red.23:00:00-00:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.23:00:00-00:00:00.log"},
 					},
 				},
 			}),
@@ -751,13 +751,13 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					1: {
-						importer.ConnPrefix:     []string{"/logs/conn.01:00:00-02:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.01:00:00-02:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.01:00:00-02:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.01:00:00-02:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.01:00:00-02:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.01:00:00-02:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.01:00:00-02:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.01:00:00-02:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.01:00:00-02:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.01:00:00-02:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.01:00:00-02:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.01:00:00-02:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.01:00:00-02:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.01:00:00-02:00:00.log"},
 					},
 				},
 			}),
@@ -776,12 +776,12 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix: []string{
+						constants.ConnPrefix: []string{
 							"/logs/conn_red.00:00:00-01:00:00.log",
 						},
 					},
 					12: {
-						importer.ConnPrefix: []string{
+						constants.ConnPrefix: []string{
 							"/logs/conn_20240722_12:00:00-13:00:00+0000.log",
 						},
 					},
@@ -802,7 +802,7 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.DNSPrefix: []string{"/logs/dns.00:00:00-01:00:00.log"},
+						constants.DNSPrefix: []string{"/logs/dns.00:00:00-01:00:00.log"},
 					},
 				},
 			}),
@@ -844,10 +844,10 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					22: {
-						importer.ConnPrefix: []string{"/logs/conn.22:00:00-23:00:00.log"},
-						importer.DNSPrefix:  []string{"/logs/dns.22:00:00-23:00:00.log"},
-						importer.HTTPPrefix: []string{"/logs/http.22:00:00-23:00:00.log"},
-						importer.SSLPrefix:  []string{"/logs/ssl.22:00:00-23:00:00.log"},
+						constants.ConnPrefix: []string{"/logs/conn.22:00:00-23:00:00.log"},
+						constants.DNSPrefix:  []string{"/logs/dns.22:00:00-23:00:00.log"},
+						constants.HTTPPrefix: []string{"/logs/http.22:00:00-23:00:00.log"},
+						constants.SSLPrefix:  []string{"/logs/ssl.22:00:00-23:00:00.log"},
 					},
 				},
 			}),
@@ -879,13 +879,13 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix:     []string{"/logs/sensor1/conn.log", "/logs/sensor2/conn.log"},
-						importer.OpenConnPrefix: []string{"/logs/sensor1/open_conn.log", "/logs/sensor2/open_conn.log"},
-						importer.DNSPrefix:      []string{"/logs/sensor1/dns.log", "/logs/sensor2/dns.log"},
-						importer.HTTPPrefix:     []string{"/logs/sensor1/http.log", "/logs/sensor2/http.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/sensor1/open_http.log", "/logs/sensor2/open_http.log"},
-						importer.SSLPrefix:      []string{"/logs/sensor1/ssl.log", "/logs/sensor2/ssl.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/sensor1/open_ssl.log", "/logs/sensor2/open_ssl.log"},
+						constants.ConnPrefix:     []string{"/logs/sensor1/conn.log", "/logs/sensor2/conn.log"},
+						constants.OpenConnPrefix: []string{"/logs/sensor1/open_conn.log", "/logs/sensor2/open_conn.log"},
+						constants.DNSPrefix:      []string{"/logs/sensor1/dns.log", "/logs/sensor2/dns.log"},
+						constants.HTTPPrefix:     []string{"/logs/sensor1/http.log", "/logs/sensor2/http.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/sensor1/open_http.log", "/logs/sensor2/open_http.log"},
+						constants.SSLPrefix:      []string{"/logs/sensor1/ssl.log", "/logs/sensor2/ssl.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/sensor1/open_ssl.log", "/logs/sensor2/open_ssl.log"},
 					},
 				},
 			}),
@@ -907,22 +907,22 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix:     []string{"/logs/sensor1/conn.00:00:00-01:00:00.log", "/logs/sensor2/conn.00:00:00-01:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/sensor1/open_conn.00:00:00-01:00:00.log", "/logs/sensor2/open_conn.00:00:00-01:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/sensor1/dns.00:00:00-01:00:00.log", "/logs/sensor2/dns.00:00:00-01:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/sensor1/http.00:00:00-01:00:00.log", "/logs/sensor2/http.00:00:00-01:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/sensor1/open_http.00:00:00-01:00:00.log", "/logs/sensor2/open_http.00:00:00-01:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/sensor1/ssl.00:00:00-01:00:00.log", "/logs/sensor2/ssl.00:00:00-01:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/sensor1/open_ssl.00:00:00-01:00:00.log", "/logs/sensor2/open_ssl.00:00:00-01:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/sensor1/conn.00:00:00-01:00:00.log", "/logs/sensor2/conn.00:00:00-01:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/sensor1/open_conn.00:00:00-01:00:00.log", "/logs/sensor2/open_conn.00:00:00-01:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/sensor1/dns.00:00:00-01:00:00.log", "/logs/sensor2/dns.00:00:00-01:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/sensor1/http.00:00:00-01:00:00.log", "/logs/sensor2/http.00:00:00-01:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/sensor1/open_http.00:00:00-01:00:00.log", "/logs/sensor2/open_http.00:00:00-01:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/sensor1/ssl.00:00:00-01:00:00.log", "/logs/sensor2/ssl.00:00:00-01:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/sensor1/open_ssl.00:00:00-01:00:00.log", "/logs/sensor2/open_ssl.00:00:00-01:00:00.log"},
 					},
 					23: {
-						importer.ConnPrefix:     []string{"/logs/sensor1/conn.23:00:00-00:00:00.log", "/logs/sensor2/conn.23:00:00-00:00:00.log"},
-						importer.OpenConnPrefix: []string{"/logs/sensor1/open_conn.23:00:00-00:00:00.log", "/logs/sensor2/open_conn.23:00:00-00:00:00.log"},
-						importer.DNSPrefix:      []string{"/logs/sensor1/dns.23:00:00-00:00:00.log", "/logs/sensor2/dns.23:00:00-00:00:00.log"},
-						importer.HTTPPrefix:     []string{"/logs/sensor1/http.23:00:00-00:00:00.log", "/logs/sensor2/http.23:00:00-00:00:00.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/sensor1/open_http.23:00:00-00:00:00.log", "/logs/sensor2/open_http.23:00:00-00:00:00.log"},
-						importer.SSLPrefix:      []string{"/logs/sensor1/ssl.23:00:00-00:00:00.log", "/logs/sensor2/ssl.23:00:00-00:00:00.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/sensor1/open_ssl.23:00:00-00:00:00.log", "/logs/sensor2/open_ssl.23:00:00-00:00:00.log"},
+						constants.ConnPrefix:     []string{"/logs/sensor1/conn.23:00:00-00:00:00.log", "/logs/sensor2/conn.23:00:00-00:00:00.log"},
+						constants.OpenConnPrefix: []string{"/logs/sensor1/open_conn.23:00:00-00:00:00.log", "/logs/sensor2/open_conn.23:00:00-00:00:00.log"},
+						constants.DNSPrefix:      []string{"/logs/sensor1/dns.23:00:00-00:00:00.log", "/logs/sensor2/dns.23:00:00-00:00:00.log"},
+						constants.HTTPPrefix:     []string{"/logs/sensor1/http.23:00:00-00:00:00.log", "/logs/sensor2/http.23:00:00-00:00:00.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/sensor1/open_http.23:00:00-00:00:00.log", "/logs/sensor2/open_http.23:00:00-00:00:00.log"},
+						constants.SSLPrefix:      []string{"/logs/sensor1/ssl.23:00:00-00:00:00.log", "/logs/sensor2/ssl.23:00:00-00:00:00.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/sensor1/open_ssl.23:00:00-00:00:00.log", "/logs/sensor2/open_ssl.23:00:00-00:00:00.log"},
 					},
 				},
 			}),
@@ -942,24 +942,24 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix:     []string{"/logs/2024-04-29/conn.log"},
-						importer.OpenConnPrefix: []string{"/logs/2024-04-29/open_conn.log"},
-						importer.DNSPrefix:      []string{"/logs/2024-04-29/dns.log"},
-						importer.HTTPPrefix:     []string{"/logs/2024-04-29/http.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/2024-04-29/open_http.log"},
-						importer.SSLPrefix:      []string{"/logs/2024-04-29/ssl.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/2024-04-29/open_ssl.log"},
+						constants.ConnPrefix:     []string{"/logs/2024-04-29/conn.log"},
+						constants.OpenConnPrefix: []string{"/logs/2024-04-29/open_conn.log"},
+						constants.DNSPrefix:      []string{"/logs/2024-04-29/dns.log"},
+						constants.HTTPPrefix:     []string{"/logs/2024-04-29/http.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/2024-04-29/open_http.log"},
+						constants.SSLPrefix:      []string{"/logs/2024-04-29/ssl.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/2024-04-29/open_ssl.log"},
 					},
 				},
 				1: {
 					0: {
-						importer.ConnPrefix:     []string{"/logs/2024-05-01/conn.log"},
-						importer.OpenConnPrefix: []string{"/logs/2024-05-01/open_conn.log"},
-						importer.DNSPrefix:      []string{"/logs/2024-05-01/dns.log"},
-						importer.HTTPPrefix:     []string{"/logs/2024-05-01/http.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/2024-05-01/open_http.log"},
-						importer.SSLPrefix:      []string{"/logs/2024-05-01/ssl.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/2024-05-01/open_ssl.log"},
+						constants.ConnPrefix:     []string{"/logs/2024-05-01/conn.log"},
+						constants.OpenConnPrefix: []string{"/logs/2024-05-01/open_conn.log"},
+						constants.DNSPrefix:      []string{"/logs/2024-05-01/dns.log"},
+						constants.HTTPPrefix:     []string{"/logs/2024-05-01/http.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/2024-05-01/open_http.log"},
+						constants.SSLPrefix:      []string{"/logs/2024-05-01/ssl.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/2024-05-01/open_ssl.log"},
 					},
 				},
 			}),
@@ -978,13 +978,13 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					{
-						importer.ConnPrefix:     []string{"/logs/conn.log"},
-						importer.OpenConnPrefix: []string{"/logs/open_conn.log"},
-						importer.DNSPrefix:      []string{"/logs/dns.log"},
-						importer.HTTPPrefix:     []string{"/logs/http.log"},
-						importer.OpenHTTPPrefix: []string{"/logs/open_http.log"},
-						importer.SSLPrefix:      []string{"/logs/ssl.log"},
-						importer.OpenSSLPrefix:  []string{"/logs/open_ssl.log"},
+						constants.ConnPrefix:     []string{"/logs/conn.log"},
+						constants.OpenConnPrefix: []string{"/logs/open_conn.log"},
+						constants.DNSPrefix:      []string{"/logs/dns.log"},
+						constants.HTTPPrefix:     []string{"/logs/http.log"},
+						constants.OpenHTTPPrefix: []string{"/logs/open_http.log"},
+						constants.SSLPrefix:      []string{"/logs/ssl.log"},
+						constants.OpenSSLPrefix:  []string{"/logs/open_ssl.log"},
 					},
 				},
 			}),
@@ -1011,20 +1011,20 @@ func TestWalkFiles(t *testing.T) {
 
 				0: {
 					0: {
-						importer.DNSPrefix:  []string{"/logs/dns.log"},
-						importer.SSLPrefix:  []string{"/logs/sensor1/ssl.log"},
-						importer.ConnPrefix: []string{"/logs/sensor1/conn.log"},
+						constants.DNSPrefix:  []string{"/logs/dns.log"},
+						constants.SSLPrefix:  []string{"/logs/sensor1/ssl.log"},
+						constants.ConnPrefix: []string{"/logs/sensor1/conn.log"},
 					},
-					9: {importer.DNSPrefix: []string{"/logs/dns.09:00:00-10:00:00.log"}},
+					9: {constants.DNSPrefix: []string{"/logs/dns.09:00:00-10:00:00.log"}},
 				},
 				1: {
-					0: {importer.ConnPrefix: []string{"/logs/2024-05-01/conn.log"}},
-					3: {importer.DNSPrefix: []string{"/logs/2024-05-01/dns.03:00:00-04:00:00.log"}},
+					0: {constants.ConnPrefix: []string{"/logs/2024-05-01/conn.log"}},
+					3: {constants.DNSPrefix: []string{"/logs/2024-05-01/dns.03:00:00-04:00:00.log"}},
 				},
 				2: {
 					4: {
-						importer.ConnPrefix: []string{"/logs/sensor1/2025-06-29/conn.04:00:00-05:00:00.log"},
-						importer.HTTPPrefix: []string{"/logs/sensor1/2025-06-29/http.04:00:00-05:00:00.log"},
+						constants.ConnPrefix: []string{"/logs/sensor1/2025-06-29/conn.04:00:00-05:00:00.log"},
+						constants.HTTPPrefix: []string{"/logs/sensor1/2025-06-29/http.04:00:00-05:00:00.log"},
 					},
 				},
 			}),
@@ -1039,7 +1039,7 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.OpenConnPrefix: []string{"open_conn.log"},
+						constants.OpenConnPrefix: []string{"open_conn.log"},
 					},
 				},
 			}),
@@ -1058,7 +1058,7 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix: []string{"/logs_dupe/conn.log.gz"},
+						constants.ConnPrefix: []string{"/logs_dupe/conn.log.gz"},
 					},
 				},
 			}),
@@ -1079,7 +1079,7 @@ func TestWalkFiles(t *testing.T) {
 			expectedFiles: createExpectedResults([]cmd.HourlyZeekLogs{
 				0: {
 					0: {
-						importer.ConnPrefix: []string{"/logs_dupe/conn.log"},
+						constants.ConnPrefix: []string{"/logs_dupe/conn.log"},
 					},
 				},
 			}),
@@ -1323,13 +1323,13 @@ func TestWalkFiles(t *testing.T) {
 func basicRollingHourLogs(fullPath string) cmd.HourlyZeekLogs {
 	return cmd.HourlyZeekLogs{
 		0: {
-			importer.ConnPrefix:     []string{fullPath + "conn.log"},
-			importer.DNSPrefix:      []string{fullPath + "dns.log"},
-			importer.SSLPrefix:      []string{fullPath + "ssl.log"},
-			importer.OpenConnPrefix: []string{fullPath + "open_conn.log"},
-			importer.HTTPPrefix:     []string{fullPath + "http.log"},
-			importer.OpenHTTPPrefix: []string{fullPath + "open_http.log"},
-			importer.OpenSSLPrefix:  []string{fullPath + "open_ssl.log"},
+			constants.ConnPrefix:     []string{fullPath + "conn.log"},
+			constants.DNSPrefix:      []string{fullPath + "dns.log"},
+			constants.SSLPrefix:      []string{fullPath + "ssl.log"},
+			constants.OpenConnPrefix: []string{fullPath + "open_conn.log"},
+			constants.HTTPPrefix:     []string{fullPath + "http.log"},
+			constants.OpenHTTPPrefix: []string{fullPath + "open_http.log"},
+			constants.OpenSSLPrefix:  []string{fullPath + "open_ssl.log"},
 		},
 	}
 }

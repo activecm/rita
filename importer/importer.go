@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer/zeektypes"
 	zlog "github.com/activecm/rita/v5/logger"
@@ -220,6 +221,9 @@ func (importer *Importer) Import(afs afero.Fs, files map[string][]string) error 
 	if err != nil {
 		return err
 	}
+
+	fmt.Println("----")
+	fmt.Println(files)
 
 	// verify that there are still files left to import and set file count
 	if totalFileCount < 1 {
@@ -438,29 +442,29 @@ func (importer *Importer) feedAndListenForFileCompletion() {
 		}
 	}()
 
-	if len(importer.FileMap[ConnPrefix]) > 0 {
-		for _, connLog := range importer.FileMap[ConnPrefix] {
+	if len(importer.FileMap[c.ConnPrefix]) > 0 {
+		for _, connLog := range importer.FileMap[c.ConnPrefix] {
 			importer.Paths <- connLog
 		}
-		for _, httpLog := range importer.FileMap[HTTPPrefix] {
+		for _, httpLog := range importer.FileMap[c.HTTPPrefix] {
 			importer.Paths <- httpLog
 		}
-		for _, sslLog := range importer.FileMap[SSLPrefix] {
+		for _, sslLog := range importer.FileMap[c.SSLPrefix] {
 			importer.Paths <- sslLog
 		}
 	}
-	if len(importer.FileMap[OpenConnPrefix]) > 0 {
-		for _, openConnLog := range importer.FileMap[OpenConnPrefix] {
+	if len(importer.FileMap[c.OpenConnPrefix]) > 0 {
+		for _, openConnLog := range importer.FileMap[c.OpenConnPrefix] {
 			importer.Paths <- openConnLog
 		}
-		for _, openHTTPLog := range importer.FileMap[OpenHTTPPrefix] {
+		for _, openHTTPLog := range importer.FileMap[c.OpenHTTPPrefix] {
 			importer.Paths <- openHTTPLog
 		}
-		for _, openSSLLog := range importer.FileMap[OpenSSLPrefix] {
+		for _, openSSLLog := range importer.FileMap[c.OpenSSLPrefix] {
 			importer.Paths <- openSSLLog
 		}
 	}
-	for _, dnsLog := range importer.FileMap[DNSPrefix] {
+	for _, dnsLog := range importer.FileMap[c.DNSPrefix] {
 		importer.Paths <- dnsLog
 	}
 }
@@ -481,25 +485,25 @@ func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error
 	for path := range paths {
 		progressLogger.Println("[-] Parsing: ", path)
 		switch {
-		case strings.HasPrefix(filepath.Base(path), ConnPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.ConnPrefix):
 			parseFile(afs, path, entryChannels.Conn, errc, metaDBChan, dbName, importID)
 			done.conn <- struct{}{}
-		case strings.HasPrefix(filepath.Base(path), OpenConnPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.OpenConnPrefix):
 			parseFile(afs, path, entryChannels.OpenConn, errc, metaDBChan, dbName, importID)
 			done.openconn <- struct{}{}
-		case strings.HasPrefix(filepath.Base(path), DNSPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.DNSPrefix):
 			parseFile(afs, path, entryChannels.DNS, errc, metaDBChan, dbName, importID)
 			done.dns <- struct{}{}
-		case strings.HasPrefix(filepath.Base(path), HTTPPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.HTTPPrefix):
 			parseFile(afs, path, entryChannels.HTTP, errc, metaDBChan, dbName, importID)
 			done.http <- struct{}{}
-		case strings.HasPrefix(filepath.Base(path), OpenHTTPPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.OpenHTTPPrefix):
 			parseFile(afs, path, entryChannels.OpenHTTP, errc, metaDBChan, dbName, importID)
 			done.openhttp <- struct{}{}
-		case strings.HasPrefix(filepath.Base(path), SSLPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.SSLPrefix):
 			parseFile(afs, path, entryChannels.SSL, errc, metaDBChan, dbName, importID)
 			done.ssl <- struct{}{}
-		case strings.HasPrefix(filepath.Base(path), OpenSSLPrefix):
+		case strings.HasPrefix(filepath.Base(path), c.OpenSSLPrefix):
 			parseFile(afs, path, entryChannels.OpenSSL, errc, metaDBChan, dbName, importID)
 			done.openssl <- struct{}{}
 		}

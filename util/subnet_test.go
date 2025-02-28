@@ -622,7 +622,7 @@ func (s *SubnetSuite) TestParseSubnet() {
 		{
 			name:          "Empty Input",
 			input:         "",
-			expectedError: errParseCIDREmptyString,
+			expectedError: ErrParseCIDREmptyString,
 		},
 	}
 

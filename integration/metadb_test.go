@@ -9,8 +9,10 @@ import (
 
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	i "github.com/activecm/rita/v5/importer"
+
 	"github.com/activecm/rita/v5/util"
 
 	fp "path/filepath"
@@ -41,13 +43,13 @@ func CheckImportFileTracking(t *testing.T, importer *i.Importer) { // uses valid
 	require.EqualValues(t, importer.TotalFileCount, result.Count, "total file count matches imported file count")
 
 	var allFiles []string
-	allFiles = append(allFiles, importer.FileMap[i.ConnPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.OpenConnPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.HTTPPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.OpenHTTPPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.SSLPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.OpenSSLPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.DNSPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.ConnPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.OpenConnPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.HTTPPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.OpenHTTPPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.SSLPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.OpenSSLPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.DNSPrefix]...)
 
 	var filesResult struct {
 		Files []string `ch:"files"`

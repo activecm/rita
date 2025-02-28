@@ -16,6 +16,7 @@ import (
 
 	"github.com/activecm/rita/v5/analysis"
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	i "github.com/activecm/rita/v5/importer"
 	zlog "github.com/activecm/rita/v5/logger"
@@ -189,6 +190,8 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 			for zeekType := range files {
 				totalFileCount += len(files[zeekType])
 			}
+
+			fmt.Println(files)
 			// check that this hour contains files
 			// walkFiles errors if it found no files
 			// GetHourlyLogMap errors if it has no files left in any hour after filtering out invalid combinations of files
@@ -380,8 +383,6 @@ func ParseFolderDate(folder string) (time.Time, error) {
 // path of each regular file on the string channel.  It sends the result of the
 // walk on the error channel.  If done is closed, WalkFiles abandons its work.
 func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []WalkError, error) {
-	logger := zlog.GetLogger()
-
 	// check if root is a valid directory or file
 	err := util.ValidateDirectory(afs, root)
 	if err != nil && !errors.Is(err, util.ErrPathIsNotDir) {
@@ -482,20 +483,20 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		// check if the file is one of the accepted log types
 		var prefix string
 		switch {
-		case strings.HasPrefix(filepath.Base(path), i.ConnPrefix) && !strings.HasPrefix(filepath.Base(path), i.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(path), i.ConnSummaryPrefixHyphen):
-			prefix = i.ConnPrefix
-		case strings.HasPrefix(filepath.Base(path), i.OpenConnPrefix):
-			prefix = i.OpenConnPrefix
-		case strings.HasPrefix(filepath.Base(path), i.DNSPrefix):
-			prefix = i.DNSPrefix
-		case strings.HasPrefix(filepath.Base(path), i.HTTPPrefix):
-			prefix = i.HTTPPrefix
-		case strings.HasPrefix(filepath.Base(path), i.OpenHTTPPrefix):
-			prefix = i.OpenHTTPPrefix
-		case strings.HasPrefix(filepath.Base(path), i.SSLPrefix):
-			prefix = i.SSLPrefix
-		case strings.HasPrefix(filepath.Base(path), i.OpenSSLPrefix):
-			prefix = i.OpenSSLPrefix
+		case strings.HasPrefix(filepath.Base(path), c.ConnPrefix) && !strings.HasPrefix(filepath.Base(path), c.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(path), c.ConnSummaryPrefixHyphen):
+			prefix = c.ConnPrefix
+		case strings.HasPrefix(filepath.Base(path), c.OpenConnPrefix):
+			prefix = c.OpenConnPrefix
+		case strings.HasPrefix(filepath.Base(path), c.DNSPrefix):
+			prefix = c.DNSPrefix
+		case strings.HasPrefix(filepath.Base(path), c.HTTPPrefix):
+			prefix = c.HTTPPrefix
+		case strings.HasPrefix(filepath.Base(path), c.OpenHTTPPrefix):
+			prefix = c.OpenHTTPPrefix
+		case strings.HasPrefix(filepath.Base(path), c.SSLPrefix):
+			prefix = c.SSLPrefix
+		case strings.HasPrefix(filepath.Base(path), c.OpenSSLPrefix):
+			prefix = c.OpenSSLPrefix
 		default: // skip file if it doesn't match any of the accepted prefixes
 			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInvalidLogType})
 			continue
@@ -537,28 +538,34 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		// loop over each hour in the day
 		for hour := range logMap[day] {
 
-			// if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
-			if len(logMap[day][hour][i.ConnPrefix]) == 0 && (len(logMap[day][hour][i.SSLPrefix]) > 0 || len(logMap[day][hour][i.HTTPPrefix]) > 0) {
-				logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
-				delete(logMap[day][hour], i.SSLPrefix)
-				delete(logMap[day][hour], i.HTTPPrefix)
-			}
+			// // if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
+			// if len(logMap[day][hour][i.ConnPrefix]) == 0 && (len(logMap[day][hour][i.SSLPrefix]) > 0 || len(logMap[day][hour][i.HTTPPrefix]) > 0) {
+			// 	logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
+			// 	delete(logMap[day][hour], i.SSLPrefix)
+			// 	delete(logMap[day][hour], i.HTTPPrefix)
+			// }
 
-			// 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
-			if len(logMap[day][hour][i.OpenConnPrefix]) == 0 && (len(logMap[day][hour][i.OpenSSLPrefix]) > 0 || len(logMap[day][hour][i.OpenHTTPPrefix]) > 0) {
-				logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
-				delete(logMap[day][hour], i.OpenSSLPrefix)
-				delete(logMap[day][hour], i.OpenHTTPPrefix)
-			}
+			// // 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
+			// if len(logMap[day][hour][i.OpenConnPrefix]) == 0 && (len(logMap[day][hour][i.OpenSSLPrefix]) > 0 || len(logMap[day][hour][i.OpenHTTPPrefix]) > 0) {
+			// 	logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
+			// 	delete(logMap[day][hour], i.OpenSSLPrefix)
+			// 	delete(logMap[day][hour], i.OpenHTTPPrefix)
+			// }
 
-			// track the total number of files after filtering out invalid file combinations
-			for zeekType := range logMap[day][hour] {
-				// sort the files for each log type, necessary for tests
-				slices.Sort(logMap[day][hour][zeekType])
-				totalFilesFound += len(logMap[day][hour][zeekType])
-				if hour == 0 {
-					hour0FilesFound += len(logMap[day][hour][zeekType])
-				}
+			// // track the total number of files after filtering out invalid file combinations
+			// for zeekType := range logMap[day][hour] {
+			// 	// sort the files for each log type, necessary for tests
+			// 	slices.Sort(logMap[day][hour][zeekType])
+			// 	totalFilesFound += len(logMap[day][hour][zeekType])
+			// 	if hour == 0 {
+			// 		hour0FilesFound += len(logMap[day][hour][zeekType])
+			// 	}
+			// }
+
+			totalHourFilesFound := database.ValidateLogCombinations(logMap[day][hour])
+			totalFilesFound += totalHourFilesFound
+			if hour == 0 {
+				hour0FilesFound += totalHourFilesFound
 			}
 		}
 	}
