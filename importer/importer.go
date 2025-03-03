@@ -222,9 +222,6 @@ func (importer *Importer) Import(afs afero.Fs, files map[string][]string) error 
 		return err
 	}
 
-	fmt.Println("----")
-	fmt.Println(files)
-
 	// verify that there are still files left to import and set file count
 	if totalFileCount < 1 {
 		return ErrAllFilesPreviouslyImported

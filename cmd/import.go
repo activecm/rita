@@ -191,7 +191,6 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 				totalFileCount += len(files[zeekType])
 			}
 
-			fmt.Println(files)
 			// check that this hour contains files
 			// walkFiles errors if it found no files
 			// GetHourlyLogMap errors if it has no files left in any hour after filtering out invalid combinations of files
