@@ -386,6 +386,7 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 		"unique_connection_threshold": fmt.Sprint(analyzer.Config.Scoring.Beacon.UniqueConnectionThreshold),
 		"network_size":                fmt.Sprint(analyzer.networkSize),
 		"rolling":                     strconv.FormatBool(analyzer.Database.Rolling),
+		"long_connection_base_thresh": fmt.Sprintf("%f", float64(analyzer.Config.Scoring.LongConnectionScoreThresholds.Base)),
 	}))
 
 	query := `--sql
@@ -404,14 +405,15 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 			)
 			GROUP BY ip
 		),  
-		sniconns AS ( -- usni connections that will be beacons in this import
-			SELECT hash, uniqExactMerge(u.unique_ts_count) AS unique_count, countMerge(u.count) AS total_count
+		sniconns AS ( -- usni connections that will be beacons or long connections in this import
+			SELECT hash, uniqExactMerge(u.unique_ts_count) AS unique_count, countMerge(u.count) AS total_count, sumMerge(total_duration) AS duration
 			FROM usni u
 			LEFT SEMI JOIN sniconn_tmp t USING hash
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
 			GROUP BY hash
-			HAVING unique_count >= {unique_connection_threshold:UInt64} AND total_count < 86400
-
+			-- is beacon or longconn
+			HAVING (unique_count >= {unique_connection_threshold:UInt64} AND total_count < 86400) OR
+			duration >= {long_connection_base_thresh:Float64}
 		), uid_list AS ( -- list of unique Zeek UID's used by SNI beacons in this import
 			SELECT DISTINCT zeek_uid FROM sniconn_tmp
 			INNER JOIN sniconns USING hash
