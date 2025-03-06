@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 	"github.com/go-playground/validator/v10"
 
@@ -321,7 +322,9 @@ func (cfg *Config) Reset() error {
 
 // Validate validates the config struct values
 func (cfg *Config) Validate() error {
-	fmt.Println("validating:", cfg)
+	zlog := logger.GetLogger()
+	zlog.Debug().Interface("config", cfg).Msg("validating config")
+
 	// create a new validator
 	validate, err := NewValidator()
 	if err != nil {
