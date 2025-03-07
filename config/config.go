@@ -190,7 +190,6 @@ func (c *Config) setEnv() error {
 		return errors.New("environment variable CLICKHOUSE_USERNAME not set")
 	}
 	c.Env.DBUsername = dbUsername
-	fmt.Println("I AM CH USER", dbUsername)
 	dbPassword := os.Getenv("CLICKHOUSE_PASSWORD")
 	// don't check if CLICKHOUSE_PASSWORD is set because it can be empty
 	c.Env.DBPassword = dbPassword
