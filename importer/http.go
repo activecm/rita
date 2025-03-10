@@ -311,6 +311,8 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 					icmpCode = int64(entry.DstPort)
 				}
 
+				httpWriter.WriteChannel <- &entry
+
 				connEntry := &ConnEntry{
 					ZeekUID:              entry.ZeekUID,
 					ImportID:             importer.ImportID,

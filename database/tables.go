@@ -1073,7 +1073,7 @@ func (db *DB) createUSNIConnTable(ctx context.Context) error {
 		minState(ts) as first_seen,
 		maxState(ts) as last_seen
 	FROM {database:Identifier}.http h
-	WHERE h.multi_request == false
+	WHERE h.multi_request == false AND length(h.host) > 0
 	GROUP BY (import_hour, hour, src, src_nuid, src_local, dst_local, dst, dst_nuid, fqdn, hash, proxy);
 	`)
 
