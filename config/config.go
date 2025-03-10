@@ -39,7 +39,7 @@ const (
 
 type (
 	Config struct {
-		Env       Env `validate:"required"`
+		Env       Env `json:"env" validate:"required"`
 		RITA      `validate:"required"`
 		Filtering Filtering `json:"filtering" validate:"required"`
 		Scoring   Scoring   `json:"scoring" validate:"required"`
@@ -48,8 +48,8 @@ type (
 
 	Env struct { // set by .env file
 		DBConnection                    string `validate:"required"` // DB_ADDRESS
-		DBUsername                      string
-		DBPassword                      string
+		DBUsername                      string `json:"-"`
+		DBPassword                      string `json:"-"`
 		HTTPExtensionsFilePath          string `validate:"file"`        // CONFIG_DIR/http_extensions_list.csv
 		LogLevel                        int8   `validate:"min=0,max=6"` // LOG_LEVEL
 		ThreatIntelCustomFeedsDirectory string `validate:"dir"`         // CONFIG_DIR/threat_intel_feeds
