@@ -16,6 +16,7 @@ import (
 
 	"github.com/activecm/rita/v5/analysis"
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	i "github.com/activecm/rita/v5/importer"
 	zlog "github.com/activecm/rita/v5/logger"
@@ -31,6 +32,9 @@ var (
 	numDigesters = 8
 	numWriters   = 12 // 2nd largest impact
 )
+
+// for rolling datasets, limit the logs that are imported to the past 14 (to match the snapshot tables) + 1 (for good luck) days
+const RollingLogDaysToKeep = 15
 
 // util.Max(1, runtime.NumCPU()/2)
 var ErrInsufficientReadPermissions = errors.New("file does not have readable permission or does not exist")
@@ -96,10 +100,7 @@ var ImportCommand = &cli.Command{
 			return err
 		}
 
-		// set the number of workers based on the number of CPUs
-		numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
-		numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
-		numWriters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
+		// TODO: do we need to move this into RunImportCmd?
 
 		// set the import start time in microseconds
 		startTime := time.Now()
@@ -132,6 +133,10 @@ type ImportResults struct {
 }
 
 func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir string, dbName string, rolling bool, rebuild bool) (ImportResults, error) {
+	// set the number of workers based on the number of CPUs
+	numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
+	numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
+	numWriters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
 
 	var importResults ImportResults
 	logger := zlog.GetLogger()
@@ -155,7 +160,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 	}
 
 	// get list of hourly log maps of all days of log files in directory
-	logMap, walkErrors, err := WalkFiles(afs, logDir)
+	logMap, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
 	if err != nil {
 		return importResults, err
 	}
@@ -185,6 +190,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 			for zeekType := range files {
 				totalFileCount += len(files[zeekType])
 			}
+
 			// check that this hour contains files
 			// walkFiles errors if it found no files
 			// GetHourlyLogMap errors if it has no files left in any hour after filtering out invalid combinations of files
@@ -243,7 +249,9 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 
 			minTS, maxTS, _, useCurrentTime, err := db.GetTrueMinMaxTimestamps()
 			if err != nil {
-				return importResults, fmt.Errorf("could not find imported data. Be sure to include your internal subnets in 'filter.internal_subnets' in config.hjson.\n(err: %w)", err)
+				logger.Error().Err(err).Int("day", day).Int("hour", hour).Msg("could not find imported data. Be sure to include your internal subnets in 'filter.internal_subnets' in config.hjson.")
+				continue
+				// return importResults, fmt.Errorf("could not find imported data. Be sure to include your internal subnets in 'filter.internal_subnets' in config.hjson.\n(err: %w)", err)
 			}
 
 			importResults.ImportTimestamps = append(importResults.ImportTimestamps, ImportTimestamps{
@@ -373,9 +381,7 @@ func ParseFolderDate(folder string) (time.Time, error) {
 // WalkFiles starts a goroutine to walk the directory tree at root and send the
 // path of each regular file on the string channel.  It sends the result of the
 // walk on the error channel.  If done is closed, WalkFiles abandons its work.
-func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error) {
-	logger := zlog.GetLogger()
-
+func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []WalkError, error) {
 	// check if root is a valid directory or file
 	err := util.ValidateDirectory(afs, root)
 	if err != nil && !errors.Is(err, util.ErrPathIsNotDir) {
@@ -476,20 +482,20 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		// check if the file is one of the accepted log types
 		var prefix string
 		switch {
-		case strings.HasPrefix(filepath.Base(path), i.ConnPrefix) && !strings.HasPrefix(filepath.Base(path), i.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(path), i.ConnSummaryPrefixHyphen):
-			prefix = i.ConnPrefix
-		case strings.HasPrefix(filepath.Base(path), i.OpenConnPrefix):
-			prefix = i.OpenConnPrefix
-		case strings.HasPrefix(filepath.Base(path), i.DNSPrefix):
-			prefix = i.DNSPrefix
-		case strings.HasPrefix(filepath.Base(path), i.HTTPPrefix):
-			prefix = i.HTTPPrefix
-		case strings.HasPrefix(filepath.Base(path), i.OpenHTTPPrefix):
-			prefix = i.OpenHTTPPrefix
-		case strings.HasPrefix(filepath.Base(path), i.SSLPrefix):
-			prefix = i.SSLPrefix
-		case strings.HasPrefix(filepath.Base(path), i.OpenSSLPrefix):
-			prefix = i.OpenSSLPrefix
+		case strings.HasPrefix(filepath.Base(path), c.ConnPrefix) && !strings.HasPrefix(filepath.Base(path), c.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(path), c.ConnSummaryPrefixHyphen):
+			prefix = c.ConnPrefix
+		case strings.HasPrefix(filepath.Base(path), c.OpenConnPrefix):
+			prefix = c.OpenConnPrefix
+		case strings.HasPrefix(filepath.Base(path), c.DNSPrefix):
+			prefix = c.DNSPrefix
+		case strings.HasPrefix(filepath.Base(path), c.HTTPPrefix):
+			prefix = c.HTTPPrefix
+		case strings.HasPrefix(filepath.Base(path), c.OpenHTTPPrefix):
+			prefix = c.OpenHTTPPrefix
+		case strings.HasPrefix(filepath.Base(path), c.SSLPrefix):
+			prefix = c.SSLPrefix
+		case strings.HasPrefix(filepath.Base(path), c.OpenSSLPrefix):
+			prefix = c.OpenSSLPrefix
 		default: // skip file if it doesn't match any of the accepted prefixes
 			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInvalidLogType})
 			continue
@@ -531,28 +537,34 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		// loop over each hour in the day
 		for hour := range logMap[day] {
 
-			// if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
-			if len(logMap[day][hour][i.ConnPrefix]) == 0 && (len(logMap[day][hour][i.SSLPrefix]) > 0 || len(logMap[day][hour][i.HTTPPrefix]) > 0) {
-				logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
-				delete(logMap[day][hour], i.SSLPrefix)
-				delete(logMap[day][hour], i.HTTPPrefix)
-			}
+			// // if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
+			// if len(logMap[day][hour][i.ConnPrefix]) == 0 && (len(logMap[day][hour][i.SSLPrefix]) > 0 || len(logMap[day][hour][i.HTTPPrefix]) > 0) {
+			// 	logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
+			// 	delete(logMap[day][hour], i.SSLPrefix)
+			// 	delete(logMap[day][hour], i.HTTPPrefix)
+			// }
 
-			// 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
-			if len(logMap[day][hour][i.OpenConnPrefix]) == 0 && (len(logMap[day][hour][i.OpenSSLPrefix]) > 0 || len(logMap[day][hour][i.OpenHTTPPrefix]) > 0) {
-				logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
-				delete(logMap[day][hour], i.OpenSSLPrefix)
-				delete(logMap[day][hour], i.OpenHTTPPrefix)
-			}
+			// // 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
+			// if len(logMap[day][hour][i.OpenConnPrefix]) == 0 && (len(logMap[day][hour][i.OpenSSLPrefix]) > 0 || len(logMap[day][hour][i.OpenHTTPPrefix]) > 0) {
+			// 	logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
+			// 	delete(logMap[day][hour], i.OpenSSLPrefix)
+			// 	delete(logMap[day][hour], i.OpenHTTPPrefix)
+			// }
 
-			// track the total number of files after filtering out invalid file combinations
-			for zeekType := range logMap[day][hour] {
-				// sort the files for each log type, necessary for tests
-				slices.Sort(logMap[day][hour][zeekType])
-				totalFilesFound += len(logMap[day][hour][zeekType])
-				if hour == 0 {
-					hour0FilesFound += len(logMap[day][hour][zeekType])
-				}
+			// // track the total number of files after filtering out invalid file combinations
+			// for zeekType := range logMap[day][hour] {
+			// 	// sort the files for each log type, necessary for tests
+			// 	slices.Sort(logMap[day][hour][zeekType])
+			// 	totalFilesFound += len(logMap[day][hour][zeekType])
+			// 	if hour == 0 {
+			// 		hour0FilesFound += len(logMap[day][hour][zeekType])
+			// 	}
+			// }
+
+			totalHourFilesFound := database.ValidateLogCombinations(logMap[day][hour])
+			totalFilesFound += totalHourFilesFound
+			if hour == 0 {
+				hour0FilesFound += totalHourFilesFound
 			}
 		}
 	}
@@ -562,19 +574,48 @@ func WalkFiles(afs afero.Fs, root string) ([]HourlyZeekLogs, []WalkError, error)
 		return nil, walkErrors, ErrNoValidFilesFound
 	}
 
-	var importLogs []HourlyZeekLogs
-
 	var days []time.Time
 	for day := range logMap {
 		days = append(days, day)
 	}
-	slices.SortFunc(days, func(a, b time.Time) int { return a.Compare(b) })
 
-	for _, day := range days {
-		importLogs = append(importLogs, logMap[day])
-	}
+	// for rolling logs, limit the logs that are included to RollingLogDaysToKeep as long as there was at least one log folder in the past N days
+	importLogs := GatherDailyLogs(logMap, days, rolling)
 
 	return importLogs, walkErrors, err
+}
+
+func GatherDailyLogs(logMap map[time.Time]HourlyZeekLogs, days []time.Time, rolling bool) []HourlyZeekLogs {
+	shouldFilter := false
+
+	// sort days by oldest to newest
+	slices.SortFunc(days, func(a, b time.Time) int { return a.Compare(b) })
+
+	// determine if there are any logs that are in the range to keep
+	today := time.Now().Truncate(24 * time.Hour)
+	nDaysAgo := today.Add(time.Duration(-RollingLogDaysToKeep) * 24 * time.Hour)
+
+	// only filter rolling!
+	if rolling {
+		//  determine if there are any logs that are in the range to keep by checking the newest day (last in the array)
+		if days[len(days)-1].Compare(nDaysAgo) > -1 {
+			shouldFilter = true
+		}
+	}
+
+	var importLogs []HourlyZeekLogs
+
+	// build hourly zeek logs (for both rolling and non-rolling)
+	for _, day := range days {
+		if shouldFilter {
+			// if day is too old, skip adding it to the import logs array
+			if day.Compare(nDaysAgo) == -1 {
+				continue
+			}
+		}
+		importLogs = append(importLogs, logMap[day])
+	}
+	return importLogs
 }
 
 // ParseHourFromFilename extracts the hour from a given filename

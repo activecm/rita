@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	errParseCIDREmptyString    = fmt.Errorf("unable to parse CIDR as subnet, empty string")
+	ErrParseCIDREmptyString    = fmt.Errorf("unable to parse CIDR as subnet, empty string")
 	ErrParseCIDRInvalidIP      = fmt.Errorf("unable to parse CIDR as subnet, invalid IP address")
 	ErrParseCIDRInvalidMask    = fmt.Errorf("unable to parse CIDR as subnet, invalid mask")
 	errParseCIDRInvalidNumMask = fmt.Errorf("unable to parse CIDR as subnet, invalid numerical value for cidr mask")
@@ -147,13 +147,15 @@ func (s *Subnet) Scan(src any) error {
 }
 
 func (s *Subnet) ToIPv6Notation() {
-	if s.IP.To4() != nil {
-		s.IP = s.IP.To16()
-	}
+	if s.IP != nil {
+		if s.IP.To4() != nil {
+			s.IP = s.IP.To16()
+		}
 
-	ones, bits := s.Mask.Size()
-	if bits == 32 {
-		s.Mask = net.CIDRMask(ones+96, 128)
+		ones, bits := s.Mask.Size()
+		if bits == 32 {
+			s.Mask = net.CIDRMask(ones+96, 128)
+		}
 	}
 }
 
@@ -161,7 +163,7 @@ func (s *Subnet) ToIPv6Notation() {
 // It supports both IPv4 and IPv6 CIDRs, as well as IPv4 in IPv6 CIDRs
 func ParseSubnet(str string) (Subnet, error) {
 	if str == "" {
-		return Subnet{}, errParseCIDREmptyString
+		return Subnet{}, ErrParseCIDREmptyString
 	}
 	var subnet Subnet
 	isIPv4CIDRInIPv6 := false

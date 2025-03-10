@@ -7,7 +7,7 @@ require (
 	github.com/charmbracelet/bubbles v0.18.0
 	github.com/charmbracelet/bubbletea v0.26.3
 	github.com/charmbracelet/lipgloss v0.11.0
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.23.0
 	github.com/google/uuid v1.6.0
 	github.com/hjson/hjson-go/v4 v4.4.0
 	github.com/joho/godotenv v1.5.1

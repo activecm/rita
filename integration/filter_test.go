@@ -11,6 +11,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/progressbar"
+	"github.com/activecm/rita/v5/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/charmbracelet/bubbles/progress"
@@ -75,7 +76,7 @@ func (it *FilterTestSuite) TestNeverIncludeSubnets() {
 	require.NoError(t, err)
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
-	require.Contains(t, cfg.Filtering.NeverIncludedSubnets, &net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}})
+	require.Contains(t, cfg.Filtering.NeverIncludedSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}))
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs2, "../test_data/valid_tsv", "never_include_subnet", false, true)
@@ -275,8 +276,8 @@ func (it *FilterTestSuite) TestAlwaysIncludeSubnets() {
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
 
-	require.Contains(t, cfg.Filtering.NeverIncludedSubnets, &net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}, "never included subnets should contain 10.0.0.0/8")
-	require.Contains(t, cfg.Filtering.AlwaysIncludedSubnets, &net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}, "always included subnets should contain 10.55.100.0/24")
+	require.Contains(t, cfg.Filtering.NeverIncludedSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}), "never included subnets should contain 10.0.0.0/8")
+	require.Contains(t, cfg.Filtering.AlwaysIncludedSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}), "always included subnets should contain 10.55.100.0/24")
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs2, "../test_data/valid_tsv", "always_include_subnet", false, true)
@@ -502,8 +503,8 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	type protoInfo struct {
 		PortProtoService string `ch:"port_proto_service"`
 		ConnCount        uint64 `ch:"conn_count"`
-		BytesSent        int64  `ch:"bytes_sent"`
-		BytesReceived    int64  `ch:"bytes_received"`
+		BytesSent        uint64 `ch:"bytes_sent"`
+		BytesReceived    uint64 `ch:"bytes_received"`
 	}
 
 	type testData struct {
@@ -626,7 +627,7 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	type foundEntry struct {
 		PortProtoService string
 		ConnCount        uint64
-		TotalBytes       int64
+		TotalBytes       uint64
 	}
 	type resData struct {
 		src          string

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 	"github.com/go-playground/validator/v10"
 
@@ -20,7 +21,7 @@ var Version string
 
 const DefaultConfigPath = "./config.hjson"
 
-var errInvalidImpactCategory = errors.New("invalid impact category: must be 'critical', 'high', 'medium', 'low', or 'none'")
+var errInvalidImpactCategory = errors.New("invalid impact category: must be 'high', 'medium', 'low', or 'none'")
 var errReadingConfigFile = errors.New("encountered an error while reading the config file")
 
 const (
@@ -46,10 +47,12 @@ type (
 	}
 
 	Env struct { // set by .env file
-		DBConnection                    string `validate:"hostname_port"` // DB_ADDRESS
-		HTTPExtensionsFilePath          string `validate:"file"`          // CONFIG_DIR/http_extensions_list.csv
-		LogLevel                        int8   `validate:"min=0,max=6"`   // LOG_LEVEL
-		ThreatIntelCustomFeedsDirectory string `validate:"dir"`           // CONFIG_DIR/threat_intel_feeds
+		DBConnection                    string `validate:"required"` // DB_ADDRESS
+		DBUsername                      string
+		DBPassword                      string
+		HTTPExtensionsFilePath          string `validate:"file"`        // CONFIG_DIR/http_extensions_list.csv
+		LogLevel                        int8   `validate:"min=0,max=6"` // LOG_LEVEL
+		ThreatIntelCustomFeedsDirectory string `validate:"dir"`         // CONFIG_DIR/threat_intel_feeds
 	}
 
 	RITA struct {
@@ -68,9 +71,9 @@ type (
 		// subnets do not need a validate tag because they are validated when they are unmarshalled
 		InternalSubnets          []util.Subnet `ch:"internal_subnets" json:"internal_subnets" validate:"required,gt=0"`
 		AlwaysIncludedSubnets    []util.Subnet `ch:"always_included_subnets" json:"always_included_subnets"`
-		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,fqdn"`
+		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,wildcard_fqdn"`
 		NeverIncludedSubnets     []util.Subnet `ch:"never_included_subnets" json:"never_included_subnets" validate:"required,gt=0"`
-		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,fqdn"`
+		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,wildcard_fqdn"`
 		FilterExternalToInternal bool          `ch:"filter_external_to_internal" json:"filter_external_to_internal" validate:"boolean"`
 	}
 
@@ -146,7 +149,7 @@ func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("contents:", contents)
+	// fmt.Println("contents:", contents)
 	var cfg Config
 	// // parse the JSON config file
 	// if err := hjson.Unmarshal(contents, &cfg); err != nil {
@@ -166,11 +169,11 @@ func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 // ReadConfigFromMemory reads the config from bytes already read into memory as opposed to reading from a file
 // It also provides its own environment struct that must already be completely set
 func ReadConfigFromMemory(data []byte, env Env) (*Config, error) {
-	var cfg *Config
-	if err := unmarshal(data, cfg, &env); err != nil {
+	var cfg Config
+	if err := unmarshal(data, &cfg, &env); err != nil {
 		return nil, err
 	}
-	return cfg, nil
+	return &cfg, nil
 
 }
 
@@ -181,6 +184,15 @@ func (c *Config) setEnv() error {
 		return errors.New("environment variable DB_ADDRESS not set")
 	}
 	c.Env.DBConnection = connection
+
+	dbUsername := os.Getenv("CLICKHOUSE_USERNAME")
+	if dbUsername == "" {
+		return errors.New("environment variable CLICKHOUSE_USERNAME not set")
+	}
+	c.Env.DBUsername = dbUsername
+	dbPassword := os.Getenv("CLICKHOUSE_PASSWORD")
+	// don't check if CLICKHOUSE_PASSWORD is set because it can be empty
+	c.Env.DBPassword = dbPassword
 
 	// get the log level
 	logLevelStr := os.Getenv("LOG_LEVEL")
@@ -208,12 +220,12 @@ func (c *Config) setEnv() error {
 
 // unmarshal unmarshals the data into the config struct, sets the environment variables, and validates the values
 func unmarshal(data []byte, cfg *Config, env *Env) error {
-	fmt.Println("unmarshalling")
 	// unmarshal the JSON config file
 	if err := hjson.Unmarshal(data, &cfg); err != nil {
+		// fmt.Println("UNMARSHAL HAS ERROR :(", string(data))
 		return err
 	}
-	fmt.Println("unmarshalled config:", cfg)
+
 	// set the environment struct
 	// this MUST be done before validating the values, because the
 	// validation checks for the presence of the environment variables
@@ -231,12 +243,11 @@ func unmarshal(data []byte, cfg *Config, env *Env) error {
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-// UnmarshalJSON unmarshals the JSON bytes into the config struct
-// overrides the default unmarshalling method to allow for custom parsing
+// // UnmarshalJSON unmarshals the JSON bytes into the config struct
+// // overrides the default unmarshalling method to allow for custom parsing
 func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// create temporary config struct to unmarshal into
 	// not doing this would result in an infinite unmarshalling loop
@@ -254,9 +265,6 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 
 	// convert the temporary config struct to a config struct
 	cfg := Config(tmpCfg)
-
-	fmt.Println("convert the temporary config:", cfg)
-
 	// validate internal subnets
 	cfg.Filtering.InternalSubnets = util.CompactSubnets(cfg.Filtering.InternalSubnets)
 
@@ -313,7 +321,9 @@ func (cfg *Config) Reset() error {
 
 // Validate validates the config struct values
 func (cfg *Config) Validate() error {
-	fmt.Println("validating:", cfg)
+	zlog := logger.GetLogger()
+	zlog.Debug().Interface("config", cfg).Msg("validating config")
+
 	// create a new validator
 	validate, err := NewValidator()
 	if err != nil {
@@ -335,7 +345,6 @@ func NewValidator() (*validator.Validate, error) {
 	// register custom validation for impact category
 	if err := v.RegisterValidation("impact_category", func(fl validator.FieldLevel) bool {
 		value := fl.Field().Interface().(ScoreImpact)
-		// cat := ImpactCategory(value)
 		err := ValidateImpactCategory(value.Category)
 		return err == nil
 	}); err != nil {
@@ -370,6 +379,16 @@ func NewValidator() (*validator.Validate, error) {
 			sl.ReportError(value, "HistogramScoreWeight", "BeaconScoring", "beacon_weights", "")
 		}
 	}, BeaconScoring{})
+
+	// validate fqdns and fqdns with wildcards
+	if err := v.RegisterValidation("wildcard_fqdn", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Interface().(string)
+		// If it starts with "*.", strip it out
+		value = strings.TrimPrefix(value, "*.")
+		return v.Var(value, "fqdn") == nil
+	}); err != nil {
+		return nil, err
+	}
 
 	return v, nil
 }
@@ -438,7 +457,7 @@ func GetScoreFromImpactCategory(category ImpactCategory) (float32, error) {
 	return 0, errInvalidImpactCategory
 }
 
-func GetImpactCategoryFromScore(score float32) ImpactCategory {
+func GetImpactCategoryFromScore(score float64) ImpactCategory {
 	switch {
 	// >80%
 	case score > MEDIUM_CATEGORY_SCORE:
@@ -490,7 +509,7 @@ func defaultConfig() Config {
 		RITA: RITA{
 			UpdateCheckEnabled:              true,
 			BatchSize:                       100000,
-			MaxQueryExecutionTime:           120,
+			MaxQueryExecutionTime:           240,
 			MonthsToKeepHistoricalFirstSeen: 3,
 			ThreatIntel: ThreatIntel{
 				OnlineFeeds: []string{},
@@ -572,4 +591,38 @@ func defaultConfig() Config {
 			MIMETypeMismatchScoreIncrease: 0.15, // +15% score for connections with mismatched MIME type/URI
 		},
 	}
+}
+
+// ONLY TO BE CALLED IN TESTS
+// helper function to set the env variables that are reliant on paths since tests use the path of the package
+func (c *Config) SetTestEnv() {
+	fmt.Println(c)
+	c.setEnv()
+	c.Env.HTTPExtensionsFilePath = "../deployment/http_extensions_list.csv"
+	c.Env.ThreatIntelCustomFeedsDirectory = "../deployment/threat_intel_feeds"
+}
+
+// ReadTestFileConfig is for TESTS only
+func ReadTestFileConfig(afs afero.Fs, path string) (*Config, error) {
+	// read the config file
+	contents, err := util.GetFileContents(afs, path)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a temporary config just to generate the environment
+	var tmpCfg Config
+	if err := tmpCfg.setEnv(); err != nil {
+		return nil, fmt.Errorf("unable to set environment variables for TEST environment")
+	}
+	// override path based variables since tests use their package directory
+	tmpCfg.Env.HTTPExtensionsFilePath = "../deployment/http_extensions_list.csv"
+	tmpCfg.Env.ThreatIntelCustomFeedsDirectory = "../deployment/threat_intel_feeds"
+
+	var cfg Config
+	if err := unmarshal(contents, &cfg, &tmpCfg.Env); err != nil {
+		return nil, fmt.Errorf("%w, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", errReadingConfigFile, path, err)
+	}
+
+	return &cfg, nil
 }

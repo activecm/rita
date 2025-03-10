@@ -213,7 +213,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 				hasThreatIndicator = true
 				mixtape.C2OverDNSScore = c2OverDNSScore
 				// run c2 over dns direct connection analysis
-				if shouldHaveC2OverDNSDirectConnModifier(entry.DirectConns, entry.QueriedBy) {
+				if mixtape.HasC2OverDNSDirectConnectionsModifier {
 					mixtape.C2OverDNSDirectConnScore = analyzer.Config.Modifiers.C2OverDNSDirectConnScoreIncrease
 				}
 			}
@@ -260,7 +260,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 
 			// Threat Intel Data Size Score
 			if entry.OnThreatIntel {
-				if entry.TotalBytes >= analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold {
+				if entry.TotalBytes >= uint64(analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold) {
 					mixtape.ThreatIntelDataSizeScore = analyzer.Config.Modifiers.ThreatIntelScoreIncrease
 				}
 			}
