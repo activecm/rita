@@ -50,31 +50,6 @@
         msg: "Unsupported CPU architecture: {{  ansible_architecture  }}"
       when: ( ansible_architecture != "x86_64" ) 	#and ansible_architecture != "aarch64" ) # "aarch64" for pi.  #pi0w is armv6l.  i386.  amd64?
 
-#Selinux checks
-    - name: "RITA Pre: /sys/fs/selinux/enforce  exists."
-      stat:
-        path: "/sys/fs/selinux/enforce"
-      check_mode: true
-      changed_when: false
-      register: selinuxenforce_check
-      tags:
-        - linux
-
-    - name: "RITA Pre: sys filesystem check for selinux."
-      lineinfile:
-        path: /sys/fs/selinux/enforce
-        regexp: '^1'
-        line: 0
-        create: false
-        unsafe_writes: true									#Needed because the original file in the sys filesystem and Ansible's tmp directory are on different filesystems.
-        state: present
-      #check_mode: yes
-      changed_when: false
-      #register: enforce_check
-      when: selinuxenforce_check.stat.exists
-      tags:
-        - linux
-
 #Add tools needed by later stages
     # Provides "needs-restarting" for ansible's ability to manage rebooting after patching
     - name: "RITA Pre: Check for yum-utils before proceeding."
@@ -401,12 +376,10 @@
               - docker-compose
               - docker-compose-v2
               - docker-doc
-              - docker-engine-selinux
               - docker-engine
               - docker-latest
               - docker-latest-logrotate
               - docker-logrotate
-              - docker-selinux
               - docker.io
               - docker
               - podman-docker
