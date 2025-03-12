@@ -136,7 +136,7 @@ patch_system() {
 	status "Patching system"		#================
 	if [ -x /usr/bin/apt-get -a -x /usr/bin/dpkg-query ]; then
 		if [ -s /etc/os-release ] && egrep -iq '(^ID=ubuntu|^ID=pop|^ID=Zorin OS)' /etc/os-release ; then	#The "universe" repository is only available on Ubuntu (and, in theory, popos and Zorin)  Kali DOES NOT have universe
-			while ! $SUDO add-apt-repository universe ; do
+			while ! $SUDO add-apt-repository --yes universe ; do
 				echo "Error subscribing to universe repository, perhaps because a system update is running; will wait 60 seconds and try again." >&2
 				sleep 60
 			done
