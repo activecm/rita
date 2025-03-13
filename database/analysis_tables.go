@@ -68,6 +68,7 @@ func (db *DB) createThreatMixtapeTable(ctx context.Context) error {
 			prevalence_total UInt64,
 			prevalence Float32,
 			prevalence_score Float32,
+			network_size UInt64,
 
 			first_seen_historical DateTime(),
 			first_seen_score Float32,
