@@ -122,6 +122,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 	// get source destination pair for connection record
 	src := parseConn.Source
 	dst := parseConn.Destination
+	connState := parseConn.ConnState
 
 	// parse addresses into binary format
 	srcIP := net.ParseIP(src)
@@ -153,7 +154,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		return nil, err
 	}
 
-	filtered := cfg.Filter.FilterConnPair(srcIP, dstIP)
+	filtered := cfg.Filter.FilterConnPair(srcIP, dstIP) || cfg.Filter.FilterFailedConnection(connState)
 
 	entry := &ConnEntry{
 		ImportTime:  importTime,
@@ -183,7 +184,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		DstIPBytes:  parseConn.RespIPBytes,
 		SrcPackets:  parseConn.OrigPackets,
 		DstPackets:  parseConn.RespPackets,
-		ConnState:   parseConn.ConnState,
+		ConnState:   connState,
 	}
 
 	// conn is treated differently than the rest of the logs since some other logs might need to correlate

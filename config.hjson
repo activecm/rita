@@ -2,6 +2,7 @@
     update_check_enabled: true,
     filtering: {
         filter_external_to_internal: true,
+        filter_failed_connections: false,
         internal_subnets: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"]
     },
     threat_intel: {

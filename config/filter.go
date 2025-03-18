@@ -22,6 +22,7 @@ type Filter struct {
 	NeverIncludedDomains  []string `json:"never_included_domains"`
 
 	FilterExternalToInternal bool `json:"filter_external_to_internal"`
+	FilterFailedConnections  bool `json:"filter_failed_connections"`
 }
 
 func GetMandatoryNeverIncludeSubnets() []string {
@@ -274,4 +275,8 @@ func (fs *Filter) FilterDomain(domain string) bool {
 
 func (fs *Filter) CheckIfInternal(host net.IP) bool {
 	return util.ContainsIP(fs.InternalSubnets, host)
+}
+
+func (fs *Filter) FilterFailedConnection(connState string) bool {
+	return fs.FilterFailedConnections && (connState == "S0")
 }

@@ -54,6 +54,7 @@ func TestReadFileConfig(t *testing.T) {
 						always_included_domains: ["abc.com", "def.com"],
 						never_included_domains: ["ghi.com", "jkl.com"],
 						filter_external_to_internal: false,
+						filter_failed_connections: false,
 					},
 					http_extensions_file_path: "/path/to/http/extensions",
 					batch_size: 75000,
@@ -151,6 +152,7 @@ func TestReadFileConfig(t *testing.T) {
 					AlwaysIncludedDomains:    []string{"abc.com", "def.com"},
 					NeverIncludedDomains:     []string{"ghi.com", "jkl.com"},
 					FilterExternalToInternal: false,
+					FilterFailedConnections:  false,
 				},
 				HTTPExtensionsFilePath:          "/path/to/http/extensions",
 				BatchSize:                       75000,
@@ -279,6 +281,8 @@ func TestReadFileConfig(t *testing.T) {
 			require.ElementsMatch(test.expectedConfig.Filter.NeverIncludedDomains, cfg.Filter.NeverIncludedDomains, "NeverIncludedDomains should match expected value")
 
 			require.Equal(test.expectedConfig.Filter.FilterExternalToInternal, cfg.Filter.FilterExternalToInternal, "FilterExternalToInternal should match expected value")
+
+			require.Equal(test.expectedConfig.Filter.FilterFailedConnections, cfg.Filter.FilterFailedConnections, "FilterFailedConnections should match expected value")
 
 			require.Equal(test.expectedConfig.HTTPExtensionsFilePath, cfg.HTTPExtensionsFilePath, "HTTPExtensionsFilePath should match expected value")
 

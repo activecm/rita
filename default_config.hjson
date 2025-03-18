@@ -29,7 +29,8 @@
         // connections involving ranges entered into never_included_subnets are filtered out at import time
         never_included_subnets: [], // array of CIDRs
         never_included_domains: [], // array of FQDNs
-        filter_external_to_internal: true // ignores any entries where communication is occurring from an external host to an internal host
+        filter_external_to_internal: true, // ignores any entries where communication is occurring from an external host to an internal host
+        filter_failed_connections: false // ignores any entries where connection attempt seen but no reply (conn & open_conn)
     },
     scoring: {
         beacon: {
