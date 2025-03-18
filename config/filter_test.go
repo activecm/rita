@@ -32,6 +32,9 @@ func TestFilterConnPair(t *testing.T) {
 	// set config filter for external to internal to false
 	cfg.Filter.FilterExternalToInternal = false
 
+	// set config filter for failed connections to false
+	cfg.Filter.FilterFailedConnections = false
+
 	// AlwaysInclude list tests
 	t.Run("AlwaysInclude list tests", func(t *testing.T) {
 		cfg.Filter.AlwaysIncludedSubnets = alwaysIncludedSubnetList
@@ -77,6 +80,20 @@ func TestFilterConnPair(t *testing.T) {
 		// Empty list
 		cfg.Filter.InternalSubnets = internalSubnetListEmpty
 		checkCases = cfg.Filter.FilterConnPair(net.IP{180, 0, 0, 0}, net.IP{80, 0, 0, 0})
+		require.False(t, checkCases, "filter state should match expected value")
+	})
+
+	t.Run("FailedConnections tests", func(t *testing.T) {
+		cfg.Filter.FilterFailedConnections = true
+
+		checkCases := cfg.Filter.FilterFailedConnection("S0")
+		require.True(t, checkCases, "filter state should match expected value")
+
+		checkCases = cfg.Filter.FilterFailedConnection("S1")
+		require.False(t, checkCases, "filter state should match expected value")
+
+		cfg.Filter.FilterFailedConnections = false
+		checkCases = cfg.Filter.FilterFailedConnection("S0")
 		require.False(t, checkCases, "filter state should match expected value")
 	})
 }

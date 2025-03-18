@@ -543,6 +543,7 @@ func defaultConfig() Config {
 			AlwaysIncludedDomains:     []string{},
 			NeverIncludedDomains:      []string{},
 			FilterExternalToInternal:  true,
+			FilterFailedConnections:   false,
 		},
 		HTTPExtensionsFilePath:          "./http_extensions_list.csv",
 		BatchSize:                       100000,

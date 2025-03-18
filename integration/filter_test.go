@@ -701,3 +701,43 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 
 	require.ElementsMatch(t, expectedResData, foundIPs)
 }
+
+// TestFilterFailedConnections
+func (it *FilterTestSuite) TestFilterFailedConnections() {
+	t := it.T()
+	// set up file system interface
+	afs := afero.NewOsFs()
+
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
+	require.NoError(t, err)
+	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Filter.FilterFailedConnections = true
+	it.cfg = cfg
+	require.NoError(t, err, "updating config should not return an error")
+
+	require.True(t, cfg.Filter.FilterFailedConnections)
+
+	// import data
+	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "filter_fail_conn", false, true)
+	require.NoError(t, err)
+
+	// connect to database
+	db, err := database.ConnectToDB(context.Background(), "filter_fail_conn", cfg, nil)
+	require.NoError(t, err)
+
+	var count uint64
+
+	err = db.Conn.QueryRow(db.GetContext(), `
+		SELECT count(DISTINCT hash) FROM conn
+		WHERE conn_state = 'S0'
+	`).Scan(&count)
+	require.NoError(t, err)
+	require.EqualValues(t, 0, count, "conn table should contain 0 entries with conn_state = S0, got: %d", count)
+
+	err = db.Conn.QueryRow(db.GetContext(), `
+		SELECT count(DISTINCT hash) FROM openconn
+		WHERE conn_state = 'S0'
+	`).Scan(&count)
+	require.NoError(t, err)
+	require.EqualValues(t, 0, count, "open conn table should contain 0 entries with conn_state = S0, got: %d", count)
+}
