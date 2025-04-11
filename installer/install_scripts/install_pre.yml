@@ -84,7 +84,7 @@
       tags:
         - linux
 
-#Teach apt how to use a proxy
+#Teach package managers how to use a proxy
     #Must precede "name: Start AC-Hunter"
     - name: Add proxy environment variable to /etc/apt/apt.conf file
       lineinfile:
@@ -96,6 +96,24 @@
         - linux
         - linuxdeb
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
+
+#Note: following configuration honors neither an embedded username nor password.  These would have to be specified as proxy_username=U and proxy_password=P lines as well.
+#This configuration works for rhel 8.0 and above.  It should work for Alma/Centos/Oracle/Rocky 8.0 and above too, as well as Fedora 22 and above.
+#Ref: https://linuxiac.com/how-to-use-yum-dnf-command-with-a-proxy-server/
+#Note: for centos 7 (no longer supported), one needs to add the proxy line to /etc/yum.conf instead (and see above note about proxy_username=U and proxy_password=P lines needed too.)
+#Ref: https://www.rosehosting.com/blog/how-to-enable-proxy-settings-for-yum-command-on-centos-7/
+    - name: Add proxy configuration to dnf and yum
+      lineinfile:
+        path: /etc/dnf/dnf.conf
+        line: "{{ item }}"
+        insertafter: EOF
+        create: yes
+      loop:
+        - "proxy={{ ANS_HTTP_PROXY }}"
+      tags:
+        - linux
+        - linuxrpm
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
 
 
 #Add tools needed by later stages
