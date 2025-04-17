@@ -265,6 +265,7 @@ func (db *DB) createBigOlHistogramTable(ctx context.Context) error {
 			sumSimpleState(src_ip_bytes) as src_ip_bytes,
 			countState() as count
 		FROM {database:Identifier}.http 
+		WHERE length(host) > 0
 		GROUP BY (import_hour, hash, bucket)
 	`); err != nil {
 		return err
@@ -935,7 +936,7 @@ func (db *DB) createHTTPProtoTable(ctx context.Context) error {
 		dst_mime_types AggregateFunction(groupUniqArray, String),
 		count AggregateFunction(count, UInt64)
 	) ENGINE = AggregatingMergeTree()
-	ORDER BY (hour, hash, useragent, method, uri);
+	ORDER BY (hour, hash, method, useragent, referrer, uri);
 	`); err != nil {
 		return err
 	}
@@ -954,7 +955,7 @@ func (db *DB) createHTTPProtoTable(ctx context.Context) error {
 		groupUniqArrayArrayState(h.dst_mime_types) as dst_mime_types,
 		countState() as count
 		FROM {database:Identifier}.http h
-		GROUP BY (import_hour, hour, hash, useragent, method, referrer, uri);
+		GROUP BY (import_hour, hour, hash, method, referrer, useragent, uri);
 	`); err != nil {
 		return err
 	}
