@@ -512,7 +512,9 @@ func defaultConfig() Config {
 			MaxQueryExecutionTime:           240,
 			MonthsToKeepHistoricalFirstSeen: 3,
 			ThreatIntel: ThreatIntel{
-				OnlineFeeds: []string{},
+				OnlineFeeds: []string{
+					"https://feodotracker.abuse.ch/downloads/ipblocklist.txt",
+				},
 			},
 		},
 		Filtering: Filtering{
