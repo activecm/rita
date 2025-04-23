@@ -291,7 +291,7 @@ func (it *FilterTestSuite) TestAlwaysIncludeSubnets() {
 
 	// verify that not all connections in 10.0.0.0/8 were filtered
 	conn := 12591
-	http := 1982
+	http := 1982 + 176 // regular http + http missing host
 	ssl := 5531
 
 	err = db.Conn.QueryRow(db.GetContext(), `

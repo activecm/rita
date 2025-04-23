@@ -120,14 +120,14 @@ func (it *ValidDatasetTestSuite) TestCounts() {
 		},
 		{
 			table:               "http",
-			expectedDBCount:     26150 - 1023,
+			expectedDBCount:     26150, // includes 1023
 			expectedImportCount: 26181,
 			importResultCount:   it.importResults.HTTP,
 			msg:                 "written http record count matches imported record count",
 		},
 		{
 			table:               "openhttp",
-			expectedDBCount:     26150 - 1023,
+			expectedDBCount:     26150,
 			expectedImportCount: 26181,
 			importResultCount:   it.importResults.OpenHTTP,
 			msg:                 "written openhttp record count should be zero because they were closed",
