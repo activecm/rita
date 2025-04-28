@@ -61,6 +61,14 @@ func (server *ServerConn) createMetaDatabase() error {
 		return err
 	}
 
+	if err := server.createMetaDatabasePerformedZoneTransfersTable(); err != nil {
+		return err
+	}
+
+	if err := server.createMetaDatabaseZoneTransferTable(); err != nil {
+		return err
+	}
+
 	if err := server.createThreatIntelTables(); err != nil {
 		return err
 	}
@@ -164,6 +172,41 @@ func (server *ServerConn) createMetaDatabaseMinMaxTable() error {
 	// 	return err
 	// }
 	return nil
+}
+
+func (server *ServerConn) createMetaDatabasePerformedZoneTransfersTable() error {
+	err := server.Conn.Exec(server.ctx, `
+		CREATE TABLE IF NOT EXISTS metadatabase.performed_zone_transfers (
+			domain_name String,
+			name_server String,
+			serial_soa UInt32,
+			mbox String,
+			is_ixfr Bool, -- for debugging
+			performed_at DateTime()
+		)
+		ENGINE = ReplacingMergeTree()
+		PRIMARY KEY (domain_name, name_server)
+		ORDER BY (domain_name, name_server)
+	`)
+
+	return err
+}
+
+func (server *ServerConn) createMetaDatabaseZoneTransferTable() error {
+	err := server.Conn.Exec(server.ctx, `
+		CREATE TABLE IF NOT EXISTS metadatabase.zone_transfer (
+		performed_at DateTime(),
+		domain_name String, -- TODO: do we need to identify ip/hostname mappings per forest? critical question
+		name_server String,
+		hostname String,
+		ip IPv6,
+		ttl Int32, -- RFC2181 defines TTLs as int32
+	) ENGINE = MergeTree()
+	PRIMARY KEY (domain_name, name_server, hostname, ip) 
+	ORDER BY (domain_name, name_server, hostname, ip, performed_at)
+	`)
+
+	return err
 }
 
 // createMetaDatabaseFilesTable creates the metadatabase.files table

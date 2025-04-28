@@ -39,11 +39,12 @@ const (
 
 type (
 	Config struct {
-		Env       Env `json:"env" validate:"required"`
-		RITA      `validate:"required"`
-		Filtering Filtering `json:"filtering" validate:"required"`
-		Scoring   Scoring   `json:"scoring" validate:"required"`
-		Modifiers Modifiers `json:"modifiers" validate:"required"`
+		Env          Env `json:"env" validate:"required"`
+		RITA         `validate:"required"`
+		Filtering    Filtering    `json:"filtering" validate:"required"`
+		Scoring      Scoring      `json:"scoring" validate:"required"`
+		Modifiers    Modifiers    `json:"modifiers" validate:"required"`
+		ZoneTransfer ZoneTransfer `json:"zone_transfer"`
 	}
 
 	Env struct { // set by .env file
@@ -80,6 +81,11 @@ type (
 	Scoring struct {
 		Beacon        BeaconScoring `json:"beacon" validate:"required"`
 		ThreatScoring `validate:"required"`
+	}
+
+	ZoneTransfer struct {
+		DomainName string `json:"domain_name"  validate:"omitempty,fqdn"`
+		NameServer string `json:"name_server"  validate:"omitempty,hostname_port"`
 	}
 
 	BeaconScoring struct {
