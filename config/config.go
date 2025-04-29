@@ -84,8 +84,9 @@ type (
 	}
 
 	ZoneTransfer struct {
-		DomainName string `json:"domain_name"  validate:"omitempty,fqdn"`
-		NameServer string `json:"name_server"  validate:"omitempty,hostname_port"`
+		Enabled    bool   `ch:"enabled" json:"enabled"`
+		DomainName string `ch:"domain_name" json:"domain_name" validate:"omitempty,fqdn"`
+		NameServer string `ch:"name_server" json:"name_server" validate:"omitempty,hostname_port"`
 	}
 
 	BeaconScoring struct {
@@ -597,6 +598,11 @@ func defaultConfig() Config {
 			C2OverDNSDirectConnScoreIncrease: 0.15, // +15% score for domains that were queried but had no direct connections
 
 			MIMETypeMismatchScoreIncrease: 0.15, // +15% score for connections with mismatched MIME type/URI
+		},
+		ZoneTransfer: ZoneTransfer{
+			Enabled:    false,
+			DomainName: "",
+			NameServer: "",
 		},
 	}
 }

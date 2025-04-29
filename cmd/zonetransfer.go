@@ -66,7 +66,7 @@ func runZoneTransferCmd(cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	// zt.GetCurrentSerial()
+
 	if err := zt.PerformZoneTransfer(); err != nil {
 		return err
 	}
