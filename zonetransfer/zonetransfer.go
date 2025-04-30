@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +18,7 @@ import (
 )
 
 var ErrDomainNotConfigured = errors.New("domain name or name server has not been configured for zone transfer")
+var ErrZoneTransferNotEnabled = errors.New("zone transfers are not enabled for RITA")
 
 type Record struct {
 	PerformedAt time.Time `ch:"performed_at"`
@@ -43,11 +43,9 @@ type ZoneTransfer struct {
 	domainName  string
 	nameServer  string
 	latestSOA   dns.SOA
-	records     map[string][]Record
 	db          *database.ServerConn
 	cfg         *config.Config
 	performedAt time.Time
-	isIXFR      bool
 }
 
 func NewZoneTransfer(db *database.ServerConn, cfg *config.Config) (*ZoneTransfer, error) {
@@ -60,39 +58,10 @@ func NewZoneTransfer(db *database.ServerConn, cfg *config.Config) (*ZoneTransfer
 	return &ZoneTransfer{
 		domainName:  cfg.ZoneTransfer.DomainName,
 		nameServer:  cfg.ZoneTransfer.NameServer,
-		records:     make(map[string][]Record),
 		db:          db,
 		cfg:         cfg,
 		performedAt: time.Now().UTC(),
 	}, nil
-}
-
-// NOTE: we might not need this, still planning
-// GetCurrentSerial gets the current authoritative serial of the domain.
-// This should be called before performing the zone transfer so that we can write it out with
-// the current results
-func (zt *ZoneTransfer) GetCurrentSerial() error {
-
-	m := new(dns.Msg)
-	m.SetQuestion(zt.domainName, dns.TypeSOA)
-	m.RecursionDesired = false
-
-	c := new(dns.Client)
-	r, _, err := c.Exchange(m, zt.nameServer)
-	if err != nil {
-		return err
-	}
-
-	for _, ans := range r.Answer {
-		if r.Authoritative {
-			if soa, ok := ans.(*dns.SOA); ok {
-				fmt.Println("SOA Serial:", soa.Serial)
-				fmt.Println("SOA MBox:", soa.Mbox)
-				fmt.Println("Primary NS:", soa.Ns)
-			}
-		}
-	}
-	return nil
 }
 
 func (zt *ZoneTransfer) DoZT(axfr bool) error {
@@ -132,11 +101,9 @@ func (zt *ZoneTransfer) DoZT(axfr bool) error {
 				record.Hostname = strings.TrimSuffix(rec.Header().Name, ".")
 				record.IP = rec.A
 				record.TTL = rec.Header().Ttl
-				zt.records[rec.A.String()] = append(zt.records[rec.A.String()], record)
 				writer.WriteChannel <- &record
 			case *dns.AAAA:
 				record.Hostname = strings.TrimSuffix(rec.Header().Name, ".")
-				zt.records[rec.AAAA.String()] = append(zt.records[rec.AAAA.String()], record)
 				record.IP = rec.AAAA
 				record.TTL = rec.Header().Ttl
 				writer.WriteChannel <- &record
@@ -151,13 +118,6 @@ func (zt *ZoneTransfer) DoZT(axfr bool) error {
 	writer.Close()
 
 	zt.recordZoneTransferPerformed()
-
-	// Sort the record slices (currently by TTL just for funsies, but if we store timestamp information we will likely want to use that field as well)
-	for _, result := range zt.records {
-		sort.Slice(result, func(i, j int) bool {
-			return result[i].TTL > result[j].TTL
-		})
-	}
 
 	return nil
 }
@@ -203,16 +163,10 @@ func (zt ZoneTransfer) FindLastZoneTransfer() (*PerformedZoneTransfer, error) {
 	return &lastZoneTransfer, nil
 }
 
-// Return the record map structure as a string
-func (zt ZoneTransfer) String() string {
-	ret := ""
-	for key, result := range zt.records {
-		ret += fmt.Sprintf("%s %v\n", key, result)
-	}
-	return ret
-}
-
 func (zt ZoneTransfer) PerformZoneTransfer() error {
+	if !zt.cfg.ZoneTransfer.Enabled {
+		return ErrZoneTransferNotEnabled
+	}
 	// Try to find last zone transfer that was performed for this domain & name server
 	lastZoneTransfer, err := zt.FindLastZoneTransfer()
 	if err != nil {

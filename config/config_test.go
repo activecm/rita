@@ -470,6 +470,26 @@ func TestConfig_Validate(t *testing.T) {
 			{name: "MIMETypeMismatchScoreIncrease > Range", config: func(cfg *Config) { cfg.Modifiers.MIMETypeMismatchScoreIncrease = 1.1 }, expectedErrs: []string{"'MIMETypeMismatchScoreIncrease' failed on the 'lte' tag"}},
 			{name: "Empty Struct", config: func(cfg *Config) { cfg.Modifiers = Modifiers{} }, expectedErrs: []string{"'Modifiers' failed on the 'required' tag"}},
 		}},
+		{"Zone Transfer", []testCase{
+			{name: "Disabled, Empty Domain Name", config: func(cfg *Config) { cfg.ZoneTransfer.DomainName = "" }},
+			{name: "Disabled, Empty Name Server", config: func(cfg *Config) { cfg.ZoneTransfer.NameServer = "" }},
+			{name: "Enabled, Empty Domain Name", config: func(cfg *Config) { cfg.ZoneTransfer.DomainName = ""; cfg.ZoneTransfer.Enabled = true }, expectedErrs: []string{"'DomainName' failed on the 'required_if' tag", "'NameServer' failed on the 'required_if' tag"}},
+			{name: "Enabled, Empty Name Server", config: func(cfg *Config) { cfg.ZoneTransfer.NameServer = ""; cfg.ZoneTransfer.Enabled = true }, expectedErrs: []string{"'DomainName' failed on the 'required_if' tag", "'NameServer' failed on the 'required_if' tag"}},
+			{name: "Invalid Domain Name", config: func(cfg *Config) {
+				cfg.ZoneTransfer.DomainName = "192.168.0.1"
+				cfg.ZoneTransfer.NameServer = "dc1.bug.corp:53"
+				cfg.ZoneTransfer.Enabled = true
+			}, expectedErrs: []string{"'DomainName' failed on the 'fqdn' tag"}},
+			{name: "Invalid Name Server", config: func(cfg *Config) {
+				cfg.ZoneTransfer.DomainName = "bug.corp."
+				cfg.ZoneTransfer.NameServer = "bug.corp"
+				cfg.ZoneTransfer.Enabled = true
+			}, expectedErrs: []string{"'NameServer' failed on the 'hostname_port' tag"}},
+			{name: "Disabled but Valid", config: func(cfg *Config) {
+				cfg.ZoneTransfer.DomainName = "bug.corp."
+				cfg.ZoneTransfer.NameServer = "dc1.bug.corp:53"
+			}},
+		}},
 	}
 	for _, test := range tests {
 		t.Run(test.group, func(t *testing.T) {

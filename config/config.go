@@ -85,8 +85,8 @@ type (
 
 	ZoneTransfer struct {
 		Enabled    bool   `ch:"enabled" json:"enabled"`
-		DomainName string `ch:"domain_name" json:"domain_name" validate:"omitempty,fqdn"`
-		NameServer string `ch:"name_server" json:"name_server" validate:"omitempty,hostname_port"`
+		DomainName string `ch:"domain_name" json:"domain_name" validate:"required_if=Enabled true,omitempty,fqdn"`
+		NameServer string `ch:"name_server" json:"name_server" validate:"required_if=Enabled true,omitempty,hostname_port"`
 	}
 
 	BeaconScoring struct {
