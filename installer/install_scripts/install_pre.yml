@@ -30,16 +30,14 @@
     - name: "RITA Pre: Checking Linux distribution."
       ansible.builtin.fail:
         msg: "Distribution name: {{  ansible_distribution  }} does not appear to be recognized - please contact ACM"
-      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' )
-      # and ansible_distribution != 'RedHat'
+      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' and ansible_distribution != 'RedHat' )
       tags:
         - linux
 
     - name: "RITA Pre: Checking Linux distribution version."
       ansible.builtin.fail:
         msg: "Warning: Linux distribution {{  ansible_distribution  }} {{  ansible_distribution_major_version  }} may not have been tested - please contact ACM and report whether the install worked or not"
-      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) )
-      #or ( ansible_distribution != 'RedHat' and (ansible_distribution_major_version == '9') )
+      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) or ( ansible_distribution == 'RedHat' and (ansible_distribution_major_version != '9') ) )
       ignore_errors: True		#We print a warning but do not abort if this is an unknown combination of distribution and major version.
       tags:
         - linux
@@ -434,7 +432,6 @@
             - linux
             - linuxrpm
       when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-      #Reminder that RedHat/RHEL 9 is broken as of 20240618
 
 
     - name: "RITA Pre: replace python3-requests with a new version installed by pip."
