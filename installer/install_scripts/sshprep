@@ -230,8 +230,8 @@ check_config_block() {
 			prepend_config_block "\nHost ${2} ${local_ip}\n\tHostname\t\t${local_ip}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
 		else
 			status "No user-supplied target IP or hostname for $2, look one up"
-			ip4=$(dig +nocomment +short ${2} A 2>/dev/null | sed -e 's/;;.*//' | grep -v '^$')
-			ip6=$(dig +nocomment +short ${2} AAAA 2>/dev/null | sed -e 's/;;.*//' | grep -v '^$')
+			ip4=$(dig +nocomment +short ${2} A 2>/dev/null | sed -e 's/;;.*//' | grep -v '^$' | head -1)
+			ip6=$(dig +nocomment +short ${2} AAAA 2>/dev/null | sed -e 's/;;.*//' | grep -v '^$' | head -1)
 
 			if [ -n "$ip4" ]; then
 				if [ -n "$ip6" ]; then
