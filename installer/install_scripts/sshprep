@@ -2,13 +2,13 @@
 #Performs all the setup steps needed to connect to one or more hosts listed on the command line
 #Copyright 2022 William Stearns <william.l.stearns@gmail.com>
 #Released under the GPL 3.0
-#Version 0.1.6
+#Version 0.1.8
 
 
 
 askYN() {
     # Prints a question mark, reads repeatedly until the user
-    # repsonds with t/T/y/Y or f/F/n/N.
+    # responds with t/T/y/Y or f/F/n/N.
 	TESTYN=""
 	while [ "$TESTYN" != 'Y' ] && [ "$TESTYN" != 'N' ] ; do
 		echo -n '? ' >&2
@@ -124,7 +124,7 @@ check_requirements() {
 	mkdir -p "$HOME/.ssh"
 	chmod -R go-rwx "$HOME/.ssh"
 	if [ -z "$SSH_AUTH_SOCK" ] || [ ! -S "$SSH_AUTH_SOCK" ]; then
-		fail 'We do not appear to have an ssh-agent to talk to.  You may want to add the following 3 lines to ~/.bashrc :
+		fail 'We do not appear to have an ssh-agent to talk to.  You may want to add the following 3 lines to ~/.bashrc on this system :
 if [ -z "$SSH_AUTH_SOCK" ] || [ ! -S "$SSH_AUTH_SOCK" ]; then
 	eval $(ssh-agent -s)
 fi
@@ -230,8 +230,8 @@ check_config_block() {
 			prepend_config_block "\nHost ${2} ${local_ip}\n\tHostname\t\t${local_ip}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
 		else
 			status "No user-supplied target IP or hostname for $2, look one up"
-			ip4=$(dig +short ${2} A)
-			ip6=$(dig +short ${2} AAAA)
+			ip4=$(dig +nocomment +short ${2} A 2>/dev/null | sed -e 's/;;.*//' | grep -v '^$' | head -1)
+			ip6=$(dig +nocomment +short ${2} AAAA 2>/dev/null | sed -e 's/;;.*//' | grep -v '^$' | head -1)
 
 			if [ -n "$ip4" ]; then
 				if [ -n "$ip6" ]; then
@@ -246,8 +246,13 @@ check_config_block() {
 					status "Have an ipv6 address only for $2"
 					prepend_config_block "\nHost ${2} ${2}-v6 ${ip6}\n\tHostname\t\t${ip6}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
 				else
-					status "No ipv4 or ipv6 address found for ${2}.  Please enter an IP address to use:"
-					read ip_or_hostname
+					#echo "== No ipv4 or ipv6 address found for ${2}.  Please enter an IP address to use:" >&2
+					#read ip_or_hostname <&2
+					#if [ -z "$ip_or_hostname" ]; then
+					#	ip_or_hostname="$2"
+					#fi
+					status "We could not lookup a DNS address for $2 so we will just use $2 in the ssh Hostname field."
+					ip_or_hostname="$2"
 					prepend_config_block "\nHost ${2} ${ip_or_hostname}\n\tHostname\t\t${ip_or_hostname}\n\tHostKeyAlias\t\t${2}\n${user_line}\n"
 				fi
 			fi
