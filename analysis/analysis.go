@@ -73,6 +73,7 @@ type ThreatMixtape struct {
 	// modifiers that are able to be added to the same row as the threat indicator scores
 	// these are detected during the analysis phase (in the spagooper)
 	PrevalenceScore          float32 `ch:"prevalence_score"`
+	NetworkSize              uint64  `ch:"network_size"`
 	FirstSeenScore           float32 `ch:"first_seen_score"`
 	ThreatIntelDataSizeScore float32 `ch:"threat_intel_data_size_score"`
 	MissingHostHeaderScore   float32 `ch:"missing_host_header_score"`
@@ -169,6 +170,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 			ImportID:       analyzer.ImportID,
 			AnalysisResult: entry,
 			BeaconType:     entry.BeaconType,
+			NetworkSize:    analyzer.networkSize,
 		}
 
 		// set the first seen historical value
