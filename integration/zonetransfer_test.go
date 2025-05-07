@@ -23,11 +23,17 @@ func TestZoneTransfer(t *testing.T) {
 
 // Reset config after each test since these tests load the config from a file
 func (it *ZoneTransferSuite) SetupSuite() {
+	t := it.T()
 	afs := afero.NewOsFs()
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
-	it.Require().NoError(err)
+	require.NoError(t, err)
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
+
+	db, err := database.ConnectToServer(context.Background(), it.cfg)
+	require.NoError(t, err)
+	require.NoError(t, db.Conn.Exec(db.GetContext(), "TRUNCATE TABLE metadatabase.performed_zone_transfers"))
+
 }
 
 func (it *ZoneTransferSuite) SetupTest() {
@@ -68,17 +74,7 @@ func (it *ZoneTransferSuite) TestRecordZoneTransferPerformed() {
 			},
 			expectedIndex: 0,
 		},
-		{
-			label: "Older timestamp shouldn't return itself",
-			toCreate: zonetransfer.PerformedZoneTransfer{
-				PerformedAt: time.Unix(1415531081, 0).UTC(),
-				DomainName:  "bug.corp.",
-				NameServer:  "dc1.bug.corp:53",
-				Serial:      100,
-				MBox:        "example@bug.corp",
-			},
-			expectedIndex: 0,
-		},
+
 		{
 			label: "Newer timestamp should return itself",
 			toCreate: zonetransfer.PerformedZoneTransfer{
@@ -88,7 +84,18 @@ func (it *ZoneTransferSuite) TestRecordZoneTransferPerformed() {
 				Serial:      100,
 				MBox:        "example@bug.corp",
 			},
-			expectedIndex: 2,
+			expectedIndex: 1,
+		},
+		{
+			label: "Older timestamp shouldn't return itself",
+			toCreate: zonetransfer.PerformedZoneTransfer{
+				PerformedAt: time.Unix(1415531081, 0).UTC(),
+				DomainName:  "bug.corp.",
+				NameServer:  "dc1.bug.corp:53",
+				Serial:      100,
+				MBox:        "example@bug.corp",
+			},
+			expectedIndex: 1,
 		},
 		{
 			label:        "It should filter by domain name and name server",
@@ -129,5 +136,4 @@ func (it *ZoneTransferSuite) TestRecordZoneTransferPerformed() {
 
 		require.Equal(t, tests[tc.expectedIndex].toCreate, *latestZT, "latest zone transfer found should match expected performed zone transfer: %s", tc.label)
 	}
-
 }

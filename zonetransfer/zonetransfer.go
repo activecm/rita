@@ -147,7 +147,7 @@ func (zt *ZoneTransfer) DoZT(axfr bool) error {
 // RecordZoneTransferPerformed marks a completed zone transfer in the metadatabase and stores the most recent serial (SOA) found in the dns query
 func (zt *ZoneTransfer) RecordZoneTransferPerformed() error {
 	chCtx := zt.db.QueryParameters(clickhouse.Parameters{
-		"performed_at": zt.performedAt.Format("2006-01-02 15:04:05"),
+		"performed_at": fmt.Sprintf("%d", zt.performedAt.UTC().Unix()),
 		"domain_name":  zt.domainName,
 		"name_server":  zt.nameServer,
 		"serial_soa":   strconv.FormatUint(uint64(zt.latestSOA.Serial), 10),
@@ -155,8 +155,8 @@ func (zt *ZoneTransfer) RecordZoneTransferPerformed() error {
 	})
 	if err := zt.db.Conn.Exec(chCtx, `
 		INSERT INTO metadatabase.performed_zone_transfers (performed_at, domain_name, name_server, serial_soa, mbox) 
-		VALUES ( toDateTime({performed_at:String}, 'UTC'), {domain_name:String}, {name_server:String}, {serial_soa:UInt32}, {mbox:String} )
-`); err != nil {
+		VALUES ( fromUnixTimestamp({performed_at:Int64}), {domain_name:String}, {name_server:String}, {serial_soa:UInt32}, {mbox:String} )
+	`); err != nil {
 		return err
 	}
 	return nil
@@ -175,6 +175,8 @@ func (zt *ZoneTransfer) FindLastZoneTransfer() (*PerformedZoneTransfer, error) {
 		FROM metadatabase.performed_zone_transfers
 		WHERE domain_name = {domain_name:String} AND name_server = {name_server:String}
 		GROUP BY domain_name, name_server, serial_soa, mbox, is_ixfr
+		ORDER BY performed_at DESC
+		LIMIT 1
 `).ScanStruct(&lastZoneTransfer); err != nil {
 		// return nil PerformedZoneTransfer with no error if no zone transfer was found (ignore error)
 		if errors.Is(err, sql.ErrNoRows) {

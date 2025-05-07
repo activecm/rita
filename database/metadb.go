@@ -184,9 +184,8 @@ func (server *ServerConn) createMetaDatabasePerformedZoneTransfersTable() error 
 			is_ixfr Bool, -- for debugging
 			performed_at DateTime()
 		)
-		ENGINE = ReplacingMergeTree()
+		ENGINE = ReplacingMergeTree(performed_at)
 		PRIMARY KEY (domain_name, name_server)
-		ORDER BY (domain_name, name_server)
 	`)
 
 	return err
@@ -196,7 +195,7 @@ func (server *ServerConn) createMetaDatabaseZoneTransferTable() error {
 	err := server.Conn.Exec(server.ctx, `
 		CREATE TABLE IF NOT EXISTS metadatabase.zone_transfer (
 		performed_at DateTime(),
-		domain_name String, -- TODO: do we need to identify ip/hostname mappings per forest? critical question
+		domain_name String,
 		name_server String,
 		hostname String,
 		ip IPv6,
