@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	c "github.com/activecm/rita/v5/constants"
+
 	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
@@ -48,16 +50,6 @@ type MetaDBFile struct {
 
 // ZeekDateTimeFmt is the common format for zeek header datetimes
 const ZeekDateTimeFmt = "2006-01-02-15-04-05"
-
-const ConnPrefix = "conn"
-const OpenConnPrefix = "open_conn"
-const DNSPrefix = "dns"
-const HTTPPrefix = "http"
-const OpenHTTPPrefix = "open_http"
-const SSLPrefix = "ssl"
-const OpenSSLPrefix = "open_ssl"
-const ConnSummaryPrefixUnderscore = "conn_summary"
-const ConnSummaryPrefixHyphen = "conn-summary"
 
 const lineErrorLimit = 25
 
@@ -476,17 +468,17 @@ func (header *ZeekHeader[Z]) parseField(value string, zeekType string, resultFie
 	case "addr":
 		resultField.SetString(value)
 	case "count":
-		countInt, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+		countInt, err := strconv.ParseUint(strings.TrimSpace(value), 10, 64)
 		if err != nil {
 			return fmt.Errorf("couldn't convert zeektype count: %v", err.Error())
 		}
-		resultField.SetInt(countInt)
+		resultField.SetUint(uint64(countInt))
 	case "port":
 		portInt, err := strconv.Atoi(strings.TrimSpace(value))
 		if err != nil {
 			return fmt.Errorf("couldn't convert zeektype port: %v", err.Error())
 		}
-		resultField.SetInt(int64(portInt))
+		resultField.SetUint(uint64(portInt))
 	case "bool":
 		boolCvt, err := strconv.ParseBool(value)
 		if err != nil {
@@ -522,32 +514,32 @@ func (header *ZeekHeader[Z]) parseField(value string, zeekType string, resultFie
 // validatePathPrefix returns an error if the TSV header path field does not match the prefix of the file's path name
 func (header *ZeekHeader[Z]) validatePathPrefix() (err error) {
 	switch {
-	case strings.HasPrefix(filepath.Base(header.fsPath), ConnPrefix) && !strings.HasPrefix(filepath.Base(header.fsPath), ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(header.fsPath), ConnSummaryPrefixHyphen):
-		if header.path != ConnPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.ConnPrefix) && !strings.HasPrefix(filepath.Base(header.fsPath), c.ConnSummaryPrefixUnderscore) && !strings.HasPrefix(filepath.Base(header.fsPath), c.ConnSummaryPrefixHyphen):
+		if header.path != c.ConnPrefix {
 			return errMismatchedPathField
 		}
-	case strings.HasPrefix(filepath.Base(header.fsPath), OpenConnPrefix):
-		if header.path != OpenConnPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.OpenConnPrefix):
+		if header.path != c.OpenConnPrefix {
 			return errMismatchedPathField
 		}
-	case strings.HasPrefix(filepath.Base(header.fsPath), DNSPrefix):
-		if header.path != DNSPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.DNSPrefix):
+		if header.path != c.DNSPrefix {
 			return errMismatchedPathField
 		}
-	case strings.HasPrefix(filepath.Base(header.fsPath), HTTPPrefix):
-		if header.path != HTTPPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.HTTPPrefix):
+		if header.path != c.HTTPPrefix {
 			return errMismatchedPathField
 		}
-	case strings.HasPrefix(filepath.Base(header.fsPath), OpenHTTPPrefix):
-		if header.path != OpenHTTPPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.OpenHTTPPrefix):
+		if header.path != c.OpenHTTPPrefix {
 			return errMismatchedPathField
 		}
-	case strings.HasPrefix(filepath.Base(header.fsPath), SSLPrefix):
-		if header.path != SSLPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.SSLPrefix):
+		if header.path != c.SSLPrefix {
 			return errMismatchedPathField
 		}
-	case strings.HasPrefix(filepath.Base(header.fsPath), OpenSSLPrefix):
-		if header.path != OpenSSLPrefix {
+	case strings.HasPrefix(filepath.Base(header.fsPath), c.OpenSSLPrefix):
+		if header.path != c.OpenSSLPrefix {
 			return errMismatchedPathField
 		}
 	}

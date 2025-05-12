@@ -42,7 +42,7 @@ func TestCalculateBucketedScore(t *testing.T) {
 	score = calculateBucketedScore(0, config.ScoreThresholds{Base: 0, Low: 5, Med: 10, High: 15})
 	require.InDelta(t, 0.2, score, 0.0001, "score must be 0.2 if the base threshold and the value are zero")
 
-	cfg, err := config.ReadFileConfig(afero.NewOsFs(), "../config.hjson")
+	cfg, err := config.ReadTestFileConfig(afero.NewOsFs(), "../config.hjson")
 	require.NoError(t, err)
 
 	type testCase struct {

@@ -42,7 +42,7 @@ func (d *DatabaseTestSuite) TestConnectToDB() {
 	d.Run("Invalid Configuration", func() {
 		t := d.T()
 		invalidCfg := *d.cfg
-		invalidCfg.DBConnection = "invalid connection string"
+		invalidCfg.Env.DBConnection = "invalid connection string"
 
 		db, err := database.ConnectToDB(context.Background(), "testDB", &invalidCfg, nil)
 		require.Error(t, err, "connecting with invalid configuration should produce an error")

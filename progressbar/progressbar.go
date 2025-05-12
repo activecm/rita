@@ -72,7 +72,7 @@ func New(ctx context.Context, bars []*ProgressBar, spinners []Spinner) *tea.Prog
 		ProgressBars: bars,
 		Spinners:     spinners,
 		ctx:          ctx,
-	})
+	}, tea.WithInput(nil))
 }
 
 type tickMsg string

@@ -10,6 +10,7 @@ import (
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/util"
 	"github.com/activecm/rita/v5/viewer"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -52,14 +53,14 @@ func TestMissingHost(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	_, dropletSubnet, err := net.ParseCIDR("64.225.56.201/32")
+	dropletSubnet, err := util.ParseSubnet("64.225.56.201/32")
 	require.NoError(t, err)
-	cfg.Filter.InternalSubnets = append(cfg.Filter.InternalSubnets, dropletSubnet)
-	cfg.Filter.FilterExternalToInternal = false
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Filtering.InternalSubnets = append(cfg.Filtering.InternalSubnets, dropletSubnet)
+	cfg.Filtering.FilterExternalToInternal = false
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
-	require.Contains(t, cfg.Filter.InternalSubnets, &net.IPNet{IP: net.IP{64, 225, 56, 201}, Mask: net.IPMask{255, 255, 255, 255}})
-	require.False(t, cfg.Filter.FilterExternalToInternal)
+	require.Contains(t, cfg.Filtering.InternalSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{64, 225, 56, 201}, Mask: net.IPMask{255, 255, 255, 255}}))
+	require.False(t, cfg.Filtering.FilterExternalToInternal)
 
 	// // import data
 	results, err := cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/missing_host", "missing_host", false, true)

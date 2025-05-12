@@ -30,21 +30,21 @@ type HTTPEntry struct {
 	SrcNUID      uuid.UUID        `ch:"src_nuid"`
 	DstNUID      uuid.UUID        `ch:"dst_nuid"`
 	MultiRequest bool             `ch:"multi_request"`
-	SrcPort      uint16           `ch:"src_port"`
-	DstPort      uint16           `ch:"dst_port"`
+	SrcPort      uint32           `ch:"src_port"`
+	DstPort      uint32           `ch:"dst_port"`
 	Duration     float64          `ch:"duration"`
 	SrcLocal     bool             `ch:"src_local"`
 	DstLocal     bool             `ch:"dst_local"`
-	SrcBytes     int64            `ch:"src_bytes"`
-	DstBytes     int64            `ch:"dst_bytes"`
-	SrcIPBytes   int64            `ch:"src_ip_bytes"`
-	DstIPBytes   int64            `ch:"dst_ip_bytes"`
-	SrcPackets   int64            `ch:"src_packets"`
-	DstPackets   int64            `ch:"dst_packets"`
+	SrcBytes     uint64           `ch:"src_bytes"`
+	DstBytes     uint64           `ch:"dst_bytes"`
+	SrcIPBytes   uint64           `ch:"src_ip_bytes"`
+	DstIPBytes   uint64           `ch:"dst_ip_bytes"`
+	SrcPackets   uint64           `ch:"src_packets"`
+	DstPackets   uint64           `ch:"dst_packets"`
 	Proto        string           `ch:"proto"`
 	Service      string           `ch:"service"`
 	ConnState    string           `ch:"conn_state"`
-	TransDepth   uint16           `ch:"trans_depth"`
+	TransDepth   uint64           `ch:"trans_depth"`
 	Method       string           `ch:"method"`
 	Host         string           `ch:"host"`
 	URI          string           `ch:"uri"`
@@ -52,9 +52,9 @@ type HTTPEntry struct {
 	HTTPVersion  string           `ch:"http_version"`
 	UserAgent    string           `ch:"useragent"`
 	Origin       string           `ch:"origin"`
-	StatusCode   int64            `ch:"status_code"`
+	StatusCode   uint64           `ch:"status_code"`
 	StatusMsg    string           `ch:"status_msg"`
-	InfoCode     int64            `ch:"info_code"`
+	InfoCode     uint64           `ch:"info_code"`
 	InfoMsg      string           `ch:"info_msg"`
 	Username     string           `ch:"username"`
 	Password     string           `ch:"password"`
@@ -140,23 +140,23 @@ func formatHTTPRecord(cfg *config.Config, parseHTTP *zeektypes.HTTP, importTime 
 	// appearing as a destination, while still allowing for processing that
 	// data for the proxy modules
 
-	srcLocal := cfg.Filter.CheckIfInternal(srcIP)
-	dstLocal := cfg.Filter.CheckIfInternal(dstIP)
+	srcLocal := cfg.Filtering.CheckIfInternal(srcIP)
+	dstLocal := cfg.Filtering.CheckIfInternal(dstIP)
 
 	if dstIsProxy {
 
-		if cfg.Filter.FilterDomain(fqdn) || cfg.Filter.FilterSingleIP(srcIP) {
+		if cfg.Filtering.FilterDomain(fqdn) || cfg.Filtering.FilterSingleIP(srcIP) {
 
 			return nil, nil
 		}
 		fqdnAsIPAddress := net.ParseIP(fqdn)
 
-		if fqdnAsIPAddress != nil && dstLocal && cfg.Filter.FilterConnPair(srcIP, fqdnAsIPAddress) {
+		if fqdnAsIPAddress != nil && dstLocal && cfg.Filtering.FilterConnPair(srcIP, fqdnAsIPAddress) {
 			return nil, nil
 		}
-	} else if cfg.Filter.FilterDomain(fqdn) || cfg.Filter.FilterConnPair(srcIP, dstIP) ||
+	} else if cfg.Filtering.FilterDomain(fqdn) || cfg.Filtering.FilterConnPair(srcIP, dstIP) ||
 		// filter out connections where the src is external if the host isn't missing
-		(cfg.Filter.FilterSNIPair(srcIP) && parseHTTP.Host != "") {
+		(cfg.Filtering.FilterSNIPair(srcIP) && parseHTTP.Host != "") {
 		return nil, nil
 	}
 
@@ -182,11 +182,11 @@ func formatHTTPRecord(cfg *config.Config, parseHTTP *zeektypes.HTTP, importTime 
 		Dst:          dstIP,
 		SrcNUID:      srcNUID,
 		DstNUID:      dstNUID,
-		SrcPort:      uint16(parseHTTP.SourcePort),
-		DstPort:      uint16(parseHTTP.DestinationPort),
+		SrcPort:      parseHTTP.SourcePort,
+		DstPort:      parseHTTP.DestinationPort,
 		SrcLocal:     srcLocal,
 		DstLocal:     dstLocal,
-		TransDepth:   uint16(parseHTTP.TransDepth),
+		TransDepth:   parseHTTP.TransDepth,
 		Method:       parseHTTP.Method,
 		Host:         fqdn,
 		URI:          parseHTTP.URI,
@@ -299,17 +299,19 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 
 			switch {
 			case entry.Host == "":
-				ignore := importer.Cfg.Filter.FilterConnPair(entry.Src, entry.Dst)
+				ignore := importer.Cfg.Filtering.FilterConnPair(entry.Src, entry.Dst)
 				if ignore {
 					continue
 				}
 
-				icmpType, icmpCode := -1, -1
+				icmpType, icmpCode := int64(-1), int64(-1)
 
 				if entry.Proto == "icmp" {
-					icmpType = int(entry.SrcPort)
-					icmpCode = int(entry.DstPort)
+					icmpType = int64(entry.SrcPort)
+					icmpCode = int64(entry.DstPort)
 				}
+
+				httpWriter.WriteChannel <- &entry
 
 				connEntry := &ConnEntry{
 					ZeekUID:              entry.ZeekUID,

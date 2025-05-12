@@ -27,7 +27,7 @@ func TestOpenSNI(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// // import data
 	results, err := cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/open_sni", "opensni", false, true)

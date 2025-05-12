@@ -73,6 +73,7 @@ type ThreatMixtape struct {
 	// modifiers that are able to be added to the same row as the threat indicator scores
 	// these are detected during the analysis phase (in the spagooper)
 	PrevalenceScore          float32 `ch:"prevalence_score"`
+	NetworkSize              uint64  `ch:"network_size"`
 	FirstSeenScore           float32 `ch:"first_seen_score"`
 	ThreatIntelDataSizeScore float32 `ch:"threat_intel_data_size_score"`
 	MissingHostHeaderScore   float32 `ch:"missing_host_header_score"`
@@ -169,6 +170,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 			ImportID:       analyzer.ImportID,
 			AnalysisResult: entry,
 			BeaconType:     entry.BeaconType,
+			NetworkSize:    analyzer.networkSize,
 		}
 
 		// set the first seen historical value
@@ -213,7 +215,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 				hasThreatIndicator = true
 				mixtape.C2OverDNSScore = c2OverDNSScore
 				// run c2 over dns direct connection analysis
-				if shouldHaveC2OverDNSDirectConnModifier(entry.DirectConns, entry.QueriedBy) {
+				if mixtape.HasC2OverDNSDirectConnectionsModifier {
 					mixtape.C2OverDNSDirectConnScore = analyzer.Config.Modifiers.C2OverDNSDirectConnScoreIncrease
 				}
 			}
@@ -260,7 +262,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 
 			// Threat Intel Data Size Score
 			if entry.OnThreatIntel {
-				if entry.TotalBytes >= analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold {
+				if entry.TotalBytes >= uint64(analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold) {
 					mixtape.ThreatIntelDataSizeScore = analyzer.Config.Modifiers.ThreatIntelScoreIncrease
 				}
 			}

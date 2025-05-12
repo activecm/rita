@@ -225,7 +225,7 @@ func TestGetBeaconScore(t *testing.T) {
 			score, err := getBeaconScore(test.tsScore, test.tsWeight, test.dsScore, test.dsWeight, test.durScore, test.durWeight, test.histScore, test.histWeight)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 
 			// check the calculated score
 			require.InDelta(test.expectedScore, score, 0.001, "Expected score to be %v, got %v", test.expectedScore, score)
@@ -365,13 +365,13 @@ func TestGetTimestampScore(t *testing.T) {
 			score, skew, mad, intervals, intervalCounts, mode, modeCount, err := getTimestampScore(test.tsList)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 
 			// check the calculated debug values
-			require.Equal(test.expectedUniqueIntervals, intervals, "Expected unique intervals to be %v, got %v", test.expectedUniqueIntervals, intervals)
-			require.Equal(test.expectedUniqueIntervalCounts, intervalCounts, "Expected unique interval counts to be %v, got %v", test.expectedUniqueIntervalCounts, intervalCounts)
-			require.Equal(test.expectedTSMode, mode, "Expected mode to be %v, got %v", test.expectedTSMode, mode)
-			require.Equal(test.expectedTSModeCount, modeCount, "Expected mode count to be %v, got %v", test.expectedTSModeCount, modeCount)
+			require.EqualValues(test.expectedUniqueIntervals, intervals, "Expected unique intervals to be %v, got %v", test.expectedUniqueIntervals, intervals)
+			require.EqualValues(test.expectedUniqueIntervalCounts, intervalCounts, "Expected unique interval counts to be %v, got %v", test.expectedUniqueIntervalCounts, intervalCounts)
+			require.EqualValues(test.expectedTSMode, mode, "Expected mode to be %v, got %v", test.expectedTSMode, mode)
+			require.EqualValues(test.expectedTSModeCount, modeCount, "Expected mode count to be %v, got %v", test.expectedTSModeCount, modeCount)
 
 			// check the calculated score values
 			require.InDelta(test.expectedSkew, skew, 0.001, "Expected skew to be %v, got %v", test.expectedSkew, skew)
@@ -490,13 +490,13 @@ func TestGetDataSizeScore(t *testing.T) {
 			score, skew, mad, sizes, sizeCounts, mode, modeCount, err := getDataSizeScore(test.bytesList)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 
 			// check the calculated debug values
-			require.Equal(test.expectedUniqueSizes, sizes, "Expected unique sizes to be %v, got %v", test.expectedUniqueSizes, sizes)
-			require.Equal(test.expectedUniqueSizeCounts, sizeCounts, "Expected unique size counts to be %v, got %v", test.expectedUniqueSizeCounts, sizeCounts)
+			require.EqualValues(test.expectedUniqueSizes, sizes, "Expected unique sizes to be %v, got %v", test.expectedUniqueSizes, sizes)
+			require.EqualValues(test.expectedUniqueSizeCounts, sizeCounts, "Expected unique size counts to be %v, got %v", test.expectedUniqueSizeCounts, sizeCounts)
 			require.InDelta(test.expectedDSMode, mode, 0.001, "Expected mode to be %v, got %v", test.expectedDSMode, mode)
-			require.Equal(test.expectedDSModeCount, modeCount, "Expected mode count to be %v, got %v", test.expectedDSModeCount, modeCount)
+			require.EqualValues(test.expectedDSModeCount, modeCount, "Expected mode count to be %v, got %v", test.expectedDSModeCount, modeCount)
 
 			// check the calculated score values
 			require.InDelta(test.expectedSkew, skew, 0.001, "Expected skew to be %v, got %v", test.expectedSkew, skew)
@@ -658,7 +658,7 @@ func TestCalculateStatisticalScore(t *testing.T) {
 			score, skew, mad, err := calculateStatisticalScore(test.values, test.defaultMadScore)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 
 			// check the calculated values
 			require.InDelta(test.expectedSkew, skew, 0.001, "Expected skew to be %v, got %v", test.expectedSkew, skew)
@@ -677,10 +677,10 @@ func TestGetDurationScore(t *testing.T) {
 		datasetMax            int64
 		histMin               int64
 		histMax               int64
-		totalBars             int
-		longestConsecutiveRun int
-		minHoursThreshold     int
-		idealConsistencyHours int
+		totalBars             int32
+		longestConsecutiveRun int32
+		minHoursThreshold     int32
+		idealConsistencyHours int32
 		expectedCoverage      float64
 		expectedConsistency   float64
 		expectedScore         float64
@@ -887,7 +887,7 @@ func TestGetDurationScore(t *testing.T) {
 			coverage, consistency, score, err := getDurationScore(test.datasetMin, test.datasetMax, test.histMin, test.histMax, test.totalBars, test.longestConsecutiveRun, test.minHoursThreshold, test.idealConsistencyHours)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", false, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", false, err)
 
 			// check the calculated values
 			require.InDelta(test.expectedConsistency, consistency, 0.001, "Expected consistency to be %v, got %v", test.expectedConsistency, consistency)
@@ -905,14 +905,14 @@ func TestGetHistogramScore(t *testing.T) {
 		datasetMax                 int64
 		tsList                     []uint32
 		modalSensitivity           float64
-		bimodalOutlierRemoval      int
-		minHoursForBimodalAnalysis int
-		beaconTimeSpan             int
+		bimodalOutlierRemoval      int32
+		minHoursForBimodalAnalysis int32
+		beaconTimeSpan             int32
 		expectedBinEdges           []float64
 		expectedHistogram          []int
 		expectedFreqCount          map[int32]int32
-		expectedTotalBars          int
-		expectedLongestRun         int
+		expectedTotalBars          int32
+		expectedLongestRun         int32
 		expectedScore              float64
 		expectedError              bool
 	}{
@@ -1114,13 +1114,13 @@ func TestGetHistogramScore(t *testing.T) {
 			freqList, freqCount, totalBars, longestRun, score, err := getHistogramScore(test.datasetMin, test.datasetMax, test.tsList, test.modalSensitivity, test.bimodalOutlierRemoval, test.minHoursForBimodalAnalysis, test.beaconTimeSpan)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", false, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", false, err)
 
 			// check the calculated values
-			require.Equal(test.expectedHistogram, freqList, "Expected frequency list to be %v, got %v", test.expectedHistogram, freqList)
-			require.Equal(test.expectedFreqCount, freqCount, "Expected frequency count to be %v, got %v", test.expectedFreqCount, freqCount)
-			require.Equal(test.expectedTotalBars, totalBars, "Expected total bars to be %v, got %v", test.expectedTotalBars, totalBars)
-			require.Equal(test.expectedLongestRun, longestRun, "Expected longest run to be %v, got %v", test.expectedLongestRun, longestRun)
+			require.EqualValues(test.expectedHistogram, freqList, "Expected frequency list to be %v, got %v", test.expectedHistogram, freqList)
+			require.EqualValues(test.expectedFreqCount, freqCount, "Expected frequency count to be %v, got %v", test.expectedFreqCount, freqCount)
+			require.EqualValues(test.expectedTotalBars, totalBars, "Expected total bars to be %v, got %v", test.expectedTotalBars, totalBars)
+			require.EqualValues(test.expectedLongestRun, longestRun, "Expected longest run to be %v, got %v", test.expectedLongestRun, longestRun)
 			require.InDelta(test.expectedScore, score, 0.001, "Expected score to be %v, got %v", test.expectedScore, score)
 
 		})
@@ -1250,7 +1250,7 @@ func TestCalculateBowleySkewness(t *testing.T) {
 			skew, score, err := calculateBowleySkewness(test.intervalsBetweenTimestamps)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 
 			// check the calculated values
 			require.InDelta(test.expectedSkewness, skew, 0.001, "Expected skewness to be %v, got %v", test.expectedSkewness, skew)
@@ -1333,13 +1333,13 @@ func TestCalculateDistinctCounts(t *testing.T) {
 			distinctNumbers, countsArray, mode, maxCount, err := calculateDistinctCounts(test.sortedInput)
 
 			// check if an error was expected
-			require.Equal(test.expectError, err != nil, "Expected error to be %v, got %v", test.expectError, err)
+			require.EqualValues(test.expectError, err != nil, "Expected error to be %v, got %v", test.expectError, err)
 
 			// check the calculated values
-			require.Equal(test.expectedDistinct, distinctNumbers, "Expected distinctNumbers to be %v, got %v", test.expectedDistinct, distinctNumbers)
-			require.Equal(test.expectedCounts, countsArray, "Expected countsArray to be %v, got %v", test.expectedCounts, countsArray)
-			require.Equal(test.expectedMode, mode, "Expected mode to be %v, got %v", test.expectedMode, mode)
-			require.Equal(test.expectedMaxCount, maxCount, "Expected maxCount to be %v, got %v", test.expectedMaxCount, maxCount)
+			require.EqualValues(test.expectedDistinct, distinctNumbers, "Expected distinctNumbers to be %v, got %v", test.expectedDistinct, distinctNumbers)
+			require.EqualValues(test.expectedCounts, countsArray, "Expected countsArray to be %v, got %v", test.expectedCounts, countsArray)
+			require.EqualValues(test.expectedMode, mode, "Expected mode to be %v, got %v", test.expectedMode, mode)
+			require.EqualValues(test.expectedMaxCount, maxCount, "Expected maxCount to be %v, got %v", test.expectedMaxCount, maxCount)
 		})
 	}
 }
@@ -1403,7 +1403,7 @@ func TestCalculateMedianAbsoluteDeviation(t *testing.T) {
 			mad, score, err := calculateMedianAbsoluteDeviation(test.inputData, test.defaultScore)
 
 			// check if an error was expected
-			require.Equal(test.expectError, err != nil, "error should match expected value")
+			require.EqualValues(test.expectError, err != nil, "error should match expected value")
 
 			// check the calculated MAD
 			require.InDelta(test.expectedMAD, mad, 0.001, "Expected MAD to be %v, got %v", test.expectedMAD, mad)
@@ -1419,7 +1419,7 @@ func TestComputeHistogramBins(t *testing.T) {
 		name             string
 		startTime        int64
 		endTime          int64
-		numBins          int
+		numBins          int32
 		expectedBinEdges []float64
 		expectedError    bool
 	}{
@@ -1535,10 +1535,10 @@ func TestComputeHistogramBins(t *testing.T) {
 			divs, err := computeHistogramBins(test.startTime, test.endTime, test.numBins)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", false, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", false, err)
 
 			// check the calculated values
-			// require.Equal(test.expectedBinEdges, divs, "Expected bin edges to be %v, got %v", test.expectedBinEdges, divs)
+			// require.EqualValues(test.expectedBinEdges, divs, "Expected bin edges to be %v, got %v", test.expectedBinEdges, divs)
 			require.InDeltaSlice(test.expectedBinEdges, divs, 0.01, "Expected bin edges to be %v, got %v", test.expectedBinEdges, divs)
 		})
 	}
@@ -1605,7 +1605,7 @@ func TestCalculateCoefficientOfVariationScore(t *testing.T) {
 			score, err := calculateCoefficientOfVariationScore(test.freqList)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 
 			// check the calculated values
 			require.InDelta(test.expectedScore, score, 0.001, "Expected score to be %v, got %v", test.expectedScore, score)
@@ -1618,9 +1618,9 @@ func TestCalculateBimodalFitScore(t *testing.T) {
 	tests := []struct {
 		name                       string
 		freqCount                  map[int32]int32
-		totalBars                  int
-		modalOutlierRemoval        int
-		minHoursForBimodalAnalysis int
+		totalBars                  int32
+		modalOutlierRemoval        int32
+		minHoursForBimodalAnalysis int32
 		expectedScore              float64
 		expectedError              bool
 	}{
@@ -1783,7 +1783,7 @@ func TestCalculateBimodalFitScore(t *testing.T) {
 			score, err := calculateBimodalFitScore(tc.freqCount, tc.totalBars, tc.modalOutlierRemoval, tc.minHoursForBimodalAnalysis)
 
 			// check if an error was expected
-			require.Equal(tc.expectedError, err != nil, "Expected error to be %v, got %v", tc.expectedError, err)
+			require.EqualValues(tc.expectedError, err != nil, "Expected error to be %v, got %v", tc.expectedError, err)
 
 			// check the calculated values
 			require.InDelta(tc.expectedScore, score, 0.001, "score should match expected value")
@@ -1801,8 +1801,8 @@ func TestCreateHistogram(t *testing.T) {
 		modalSensitivity   float64
 		expectedHistogram  []int
 		expectedFreqCount  map[int32]int32
-		expectedTotalBars  int
-		expectedLongestRun int
+		expectedTotalBars  int32
+		expectedLongestRun int32
 		expectedError      bool
 		errorContains      string
 	}{
@@ -2023,16 +2023,16 @@ func TestCreateHistogram(t *testing.T) {
 			frequencies, freqCount, totalBars, longestRun, err := createHistogram(test.binEdges, test.tsList, test.modalSensitivity)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, err)
 			// if test.errorContains != "" {
 			// 	require.Contains(err.Error(), test.errorContains)
 			// }
 
 			// check the calculated values
-			require.Equal(test.expectedHistogram, frequencies, "Expected frequencies to be %v, got %v", test.expectedHistogram, frequencies)
-			require.Equal(test.expectedFreqCount, freqCount, "Expected freqCount to be %v, got %v", test.expectedFreqCount, freqCount)
-			require.Equal(test.expectedTotalBars, totalBars, "Expected totalBars to be %v, got %v", test.expectedTotalBars, totalBars)
-			require.Equal(test.expectedLongestRun, longestRun, "Expected longestRun to be %v, got %v", test.expectedLongestRun, longestRun)
+			require.EqualValues(test.expectedHistogram, frequencies, "Expected frequencies to be %v, got %v", test.expectedHistogram, frequencies)
+			require.EqualValues(test.expectedFreqCount, freqCount, "Expected freqCount to be %v, got %v", test.expectedFreqCount, freqCount)
+			require.EqualValues(test.expectedTotalBars, totalBars, "Expected totalBars to be %v, got %v", test.expectedTotalBars, totalBars)
+			require.EqualValues(test.expectedLongestRun, longestRun, "Expected longestRun to be %v, got %v", test.expectedLongestRun, longestRun)
 
 		})
 	}
@@ -2044,8 +2044,8 @@ func TestGetFrequencyCounts(t *testing.T) {
 		histogram          []int
 		bimodalSensitivity float64
 		expectedCounts     map[int32]int32
-		totalBars          int
-		longestRun         int
+		totalBars          int32
+		longestRun         int32
 		expectedError      bool
 	}{
 		{
@@ -2184,12 +2184,12 @@ func TestGetFrequencyCounts(t *testing.T) {
 			freqCounts, totalBars, longestRun, err := getFrequencyCounts(test.histogram, test.bimodalSensitivity)
 
 			// check if an error was expected
-			require.Equal(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, false)
+			require.EqualValues(test.expectedError, err != nil, "Expected error to be %v, got %v", test.expectedError, false)
 
 			// check the calculated values
-			require.Equal(test.expectedCounts, freqCounts, "Expected freqCounts to be %v, got %v", test.expectedCounts, freqCounts)
-			require.Equal(test.totalBars, totalBars, "Expected totalBars to be %v, got %v", test.totalBars, totalBars)
-			require.Equal(test.longestRun, longestRun, "Expected longestRun to be %v, got %v", test.longestRun, longestRun)
+			require.EqualValues(test.expectedCounts, freqCounts, "Expected freqCounts to be %v, got %v", test.expectedCounts, freqCounts)
+			require.EqualValues(test.totalBars, totalBars, "Expected totalBars to be %v, got %v", test.totalBars, totalBars)
+			require.EqualValues(test.longestRun, longestRun, "Expected longestRun to be %v, got %v", test.longestRun, longestRun)
 
 		})
 	}
