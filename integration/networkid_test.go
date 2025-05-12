@@ -28,9 +28,9 @@ func TestNetworkID(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.Filter.FilterExternalToInternal = false
+	cfg.Filtering.FilterExternalToInternal = false
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	require.NoError(t, err, "updating config should not return an error")
 
 	// // import data

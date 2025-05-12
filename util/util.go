@@ -23,13 +23,14 @@ import (
 )
 
 var (
-	privateIPBlocks           []*net.IPNet
+	privateIPBlocks           []Subnet
 	PublicNetworkUUID         = uuid.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff")
 	PublicNetworkName         = "Public"
 	UnknownPrivateNetworkUUID = uuid.MustParse("ffffffff-ffff-ffff-ffff-fffffffffffe")
 	UnknownPrivateNetworkName = "Unknown Private"
 
-	ErrInvalidPath = errors.New("path cannot be empty string")
+	ErrFileSystemIsNil = errors.New("filesystem is nil")
+	ErrInvalidPath     = errors.New("path cannot be empty string")
 
 	ErrFileDoesNotExist = errors.New("file does not exist")
 	ErrFileIsEmtpy      = errors.New("file is empty")
@@ -38,6 +39,18 @@ var (
 	ErrDirDoesNotExist = errors.New("directory does not exist")
 	ErrDirIsEmpty      = errors.New("directory is empty")
 	ErrPathIsNotDir    = errors.New("given path is not a directory")
+
+	ErrFetchingLatestRelease = errors.New("error fetching latest release")
+	ErrParsingCurrentVersion = errors.New("error parsing current version")
+	ErrParsingLatestVersion  = errors.New("error parsing latest version")
+
+	// aliased for mocking in tests
+	readFile       = afero.ReadFile
+	pathExists     = afero.Exists
+	isDirectory    = afero.IsDir
+	isEmpty        = afero.IsEmpty
+	getUserHomeDir = os.UserHomeDir
+	getWorkingDir  = os.Getwd
 )
 
 type FixedString struct {
@@ -47,7 +60,7 @@ type FixedString struct {
 
 func init() {
 	// parse private IPs
-	privateIPs, err := ParseSubnets(
+	privateIPs, _ := NewSubnetList(
 		[]string{
 			// "127.0.0.0/8",    // IPv4 Loopback; handled by ip.IsLoopback
 			// "::1/128",        // IPv6 Loopback; handled by ip.IsLoopback
@@ -58,11 +71,10 @@ func init() {
 			"192.168.0.0/16", // RFC1918
 			"fc00::/7",       // IPv6 unique local addr
 		})
-	if err != nil {
-		panic(fmt.Sprintf("Error defining private IPs: %v", err.Error()))
-	}
-
-	// set privateIPBlocks to the parsed subnets
+	// if err != nil {
+	// 	// TODO: should we replace this panic with something else?
+	// 	panic(fmt.Sprintf("error defining private IPs: %v", err.Error()))
+	// }
 	privateIPBlocks = privateIPs
 }
 
@@ -134,7 +146,7 @@ func ValidFQDN(value string) bool {
 }
 
 // ContainsIP checks if a collection of subnets contains an IP
-func ContainsIP(subnets []*net.IPNet, ip net.IP) bool {
+func ContainsIP(subnets []Subnet, ip net.IP) bool {
 	// cache IPv4 conversion so it not performed every in every Contains call
 	if ipv4 := ip.To4(); ipv4 != nil {
 		ip = ipv4
@@ -148,54 +160,14 @@ func ContainsIP(subnets []*net.IPNet, ip net.IP) bool {
 	return false
 }
 
-// ParseSubnets parses the provided subnets into net.IPNet format
-func ParseSubnets(subnets []string) ([]*net.IPNet, error) {
-	var parsedSubnets []*net.IPNet
-
-	for _, entry := range subnets {
-		// Try to parse out CIDR range
-		_, block, err := net.ParseCIDR(entry)
-
-		// If there was an error, check if entry was an IP
-		if err != nil {
-			ipAddr := net.ParseIP(entry)
-			if ipAddr == nil {
-				return parsedSubnets, fmt.Errorf("error parsing entry: %s", err.Error())
-			}
-
-			// Check if it's an IPv4 or IPv6 address and append the appropriate subnet mask
-			var subnetMask string
-			if ipAddr.To4() != nil {
-				subnetMask = "/32"
-			} else {
-				subnetMask = "/128"
-			}
-
-			// Append the subnet mask and parse as a CIDR range
-			_, block, err = net.ParseCIDR(entry + subnetMask)
-
-			if err != nil {
-				return parsedSubnets, fmt.Errorf("error parsing entry: %s", err.Error())
-			}
-		}
-
-		// Add CIDR range to the list
-		parsedSubnets = append(parsedSubnets, block)
-	}
-	return parsedSubnets, nil
-}
-
-// IPIsPubliclyRoutable checks if an IP address is publicly routable. See privateIPBlocks.
+// IPIsPubliclyRoutable checks if an IP address is publicly routable
 func IPIsPubliclyRoutable(ip net.IP) bool {
-	// cache IPv4 conversion so it not performed every in every ip.IsXXX method
-	if ipv4 := ip.To4(); ipv4 != nil {
-		ip = ipv4
-	}
-
+	// check if the IP is a loopback, link-local unicast, or link-local multicast address
 	if ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
 		return false
 	}
 
+	// check if the IP is in the user-defined private IP blocks
 	if ContainsIP(privateIPBlocks, ip) {
 		return false
 	}
@@ -254,25 +226,6 @@ func ContainsDomain(domains []string, host string) bool {
 	return false
 }
 
-// EnsureSliceContainsAll ensures that a given slice contains all elements of a mandatory list
-func EnsureSliceContainsAll(data []string, mandatory []string) []string {
-	// create map to store elements of the given list
-	dataMap := make(map[string]bool)
-	for _, item := range data {
-		dataMap[item] = true
-	}
-
-	// check if all elements in the mandatory list exist in the given list
-	for _, item := range mandatory {
-		if !dataMap[item] {
-			data = append(data, item) // append missing element
-		}
-	}
-
-	return data
-
-}
-
 // UInt32sAreSorted returns true if a slice of uint32 is sorted in ascending order
 func UInt32sAreSorted(data []uint32) bool {
 	return sort.SliceIsSorted(data, func(i, j int) bool { return data[i] < data[j] })
@@ -310,14 +263,14 @@ func ParseRelativePath(dir string) (string, error) {
 	switch {
 	// if path is home, parse and set home dir
 	case dir[:2] == "~/":
-		home, err := os.UserHomeDir()
+		home, err := getUserHomeDir()
 		if err != nil {
 			return "", err
 		}
 		return filepath.Join(home, dir[2:]), nil
 	// if the path starts with a dot, get the path relative to the current working directory
 	case strings.HasPrefix(dir, "."):
-		currentDir, err := os.Getwd()
+		currentDir, err := getWorkingDir()
 		if err != nil {
 			return "", err
 		}
@@ -332,7 +285,7 @@ func ParseRelativePath(dir string) (string, error) {
 // ValidateDirectory returns whether a directory exists and is empty
 func ValidateDirectory(afs afero.Fs, dir string) error {
 	// validate path
-	exists, isDir, isEmpty, err := validatePath(afs, dir)
+	exists, isDir, empty, err := validatePath(afs, dir)
 	if err != nil {
 		return err
 	}
@@ -348,7 +301,7 @@ func ValidateDirectory(afs afero.Fs, dir string) error {
 	}
 
 	// check if file is empty
-	if isEmpty {
+	if empty {
 		return fmt.Errorf("%w: %s", ErrDirIsEmpty, dir)
 	}
 
@@ -358,7 +311,7 @@ func ValidateDirectory(afs afero.Fs, dir string) error {
 // Validate File
 func ValidateFile(afs afero.Fs, file string) error {
 	// validate path
-	exists, isDir, isEmpty, err := validatePath(afs, file)
+	exists, isDir, empty, err := validatePath(afs, file)
 	if err != nil {
 		return err
 	}
@@ -374,7 +327,7 @@ func ValidateFile(afs afero.Fs, file string) error {
 	}
 
 	// check if file is empty
-	if isEmpty {
+	if empty {
 		return fmt.Errorf("%w: %s", ErrFileIsEmtpy, file)
 	}
 
@@ -383,37 +336,54 @@ func ValidateFile(afs afero.Fs, file string) error {
 
 // validatePath validates a given path
 func validatePath(afs afero.Fs, path string) (bool, bool, bool, error) {
-	var exists, isDir, isEmpty bool
+	var exists, isDir, empty bool
 
 	// validate parameters
 	if afs == nil {
-		return exists, isDir, isEmpty, fmt.Errorf("filesystem is nil")
+		return exists, isDir, empty, ErrFileSystemIsNil
 	}
 	if path == "" {
-		return exists, isDir, isEmpty, ErrInvalidPath
+		return exists, isDir, empty, ErrInvalidPath
 	}
 
 	// check if path exists
-	exists, err := afero.Exists(afs, path)
+	exists, err := pathExists(afs, path)
 	if err != nil {
-		return exists, isDir, isEmpty, err
+		return exists, isDir, empty, err
 	}
 
 	if exists {
 		// check if path is a directory
-		isDir, err = afero.IsDir(afs, path)
+		isDir, err = isDirectory(afs, path)
 		if err != nil {
-			return exists, isDir, isEmpty, err
+			return exists, isDir, empty, err
 		}
 
 		// check if directory is empty
-		isEmpty, err = afero.IsEmpty(afs, path)
+		empty, err = isEmpty(afs, path)
 		if err != nil {
-			return exists, isDir, isEmpty, err
+			return exists, isDir, empty, err
 		}
 	}
 
-	return exists, isDir, isEmpty, nil
+	return exists, isDir, empty, nil
+}
+
+// GetFileContents reads the contents of a file at the specified path
+func GetFileContents(afs afero.Fs, path string) ([]byte, error) {
+	// validate file
+	err := ValidateFile(afs, path)
+	if err != nil {
+		return nil, err
+	}
+
+	// get file contents
+	file, err := readFile(afs, path)
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
 }
 
 // CheckForNewerVersion checks if a newer version of the project is available on the GitHub repository
@@ -427,13 +397,13 @@ func CheckForNewerVersion(client *github.Client, currentVersion string) (bool, s
 	// parse the current version
 	currentSemver, err := semver.ParseTolerant(currentVersion)
 	if err != nil {
-		return false, "", fmt.Errorf("error parsing current version: %w", err)
+		return false, "", fmt.Errorf("%w: %w", ErrParsingCurrentVersion, err)
 	}
 
 	// parse the latest version
 	latestSemver, err := semver.ParseTolerant(latestVersion)
 	if err != nil {
-		return false, "", fmt.Errorf("error parsing latest version: %w", err)
+		return false, "", fmt.Errorf("%w: %w", ErrParsingLatestVersion, err)
 	}
 
 	// compare the versions
@@ -449,7 +419,7 @@ func GetLatestReleaseVersion(client *github.Client, owner, repo string) (string,
 	// get the latest release
 	latestRelease, _, err := client.Repositories.GetLatestRelease(context.Background(), owner, repo)
 	if err != nil {
-		return "", fmt.Errorf("error fetching latest release: %w", err)
+		return "", fmt.Errorf("%w: %w", ErrFetchingLatestRelease, err)
 	}
 
 	// get the latest version from release tag name

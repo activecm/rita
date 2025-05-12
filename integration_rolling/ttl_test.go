@@ -98,7 +98,7 @@ func (d *TTLTestSuite) SetupSuite() {
 	importTime, changeTimezone, cleanup := SetupClickHouseTTL(t)
 	d.importTime = importTime
 	// update the config to use the clickhouse container connection
-	cfg.DBConnection = "localhost:9001"
+	cfg.Env.DBConnection = "localhost:9001"
 	d.changeTime = changeTimezone
 	d.cleanupContainer = cleanup
 	d.cfg = cfg

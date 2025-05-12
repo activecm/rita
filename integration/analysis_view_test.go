@@ -180,8 +180,8 @@ func (it *ValidDatasetTestSuite) TestPortInfoTable() {
 	type protoInfo struct {
 		PortProtoService string `ch:"port_proto_service"`
 		ConnCount        uint64 `ch:"conn_count"`
-		BytesSent        int64  `ch:"bytes_sent"`
-		BytesReceived    int64  `ch:"bytes_received"`
+		BytesSent        uint64 `ch:"bytes_sent"`
+		BytesReceived    uint64 `ch:"bytes_received"`
 	}
 
 	// make sure table values are getting populated correctly from the multiple materialized views
@@ -1230,7 +1230,7 @@ func (it *ValidDatasetTestSuite) TestBigOlHistogramTable() {
 
 	type histogram struct {
 		Bucket     uint32 `ch:"bucket_ts"`
-		SrcIPBytes int64  `ch:"src_ip_bytes"`
+		SrcIPBytes uint64 `ch:"src_ip_bytes"`
 		Count      uint64 `ch:"count"`
 	}
 

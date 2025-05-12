@@ -9,8 +9,10 @@ import (
 
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	i "github.com/activecm/rita/v5/importer"
+
 	"github.com/activecm/rita/v5/util"
 
 	fp "path/filepath"
@@ -41,13 +43,13 @@ func CheckImportFileTracking(t *testing.T, importer *i.Importer) { // uses valid
 	require.EqualValues(t, importer.TotalFileCount, result.Count, "total file count matches imported file count")
 
 	var allFiles []string
-	allFiles = append(allFiles, importer.FileMap[i.ConnPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.OpenConnPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.HTTPPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.OpenHTTPPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.SSLPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.OpenSSLPrefix]...)
-	allFiles = append(allFiles, importer.FileMap[i.DNSPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.ConnPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.OpenConnPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.HTTPPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.OpenHTTPPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.SSLPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.OpenSSLPrefix]...)
+	allFiles = append(allFiles, importer.FileMap[c.DNSPrefix]...)
 
 	var filesResult struct {
 		Files []string `ch:"files"`
@@ -92,7 +94,7 @@ func TestImportTracking(t *testing.T) {
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// ROLLING IMPORT
 	// new import
@@ -165,8 +167,8 @@ func TestMinMaxTimestamps(t *testing.T) {
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	require.True(t, cfg.Filter.FilterExternalToInternal)
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	require.True(t, cfg.Filtering.FilterExternalToInternal)
 
 	// connect to clickhouse server
 	server, err := database.ConnectToServer(context.Background(), cfg)
@@ -302,7 +304,7 @@ func TestMetaDatabase(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// import a dataset
 	dbName := "test_metadb"

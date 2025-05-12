@@ -57,7 +57,7 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 		return nil, err
 	}
 
-	err = server.createMetaDatabaseTTLs(cfg.MonthsToKeepHistoricalFirstSeen)
+	err = server.createMetaDatabaseTTLs(int(cfg.RITA.MonthsToKeepHistoricalFirstSeen))
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 	err := server.Conn.Exec(ctx, "CREATE DATABASE IF NOT EXISTS {database:Identifier}")
 	if err != nil {
 		logger.Err(err).Str("database", dbName).
-			Str("database connection", cfg.DBConnection).
+			Str("database connection", cfg.Env.DBConnection).
 			Msg("failed to create sensor database")
 		return nil, err
 	}
@@ -160,7 +160,7 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 	db, err := ConnectToDB(server.ctx, dbName, cfg, server.cancel)
 	if err != nil {
 		logger.Err(err).Str("database", dbName).
-			Str("database connection", cfg.DBConnection).
+			Str("database connection", cfg.Env.DBConnection).
 			Msg("failed to connect to sensor database")
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 	err = db.createSensorDBTables()
 	if err != nil {
 		logger.Err(err).Str("database", dbName).
-			Str("database connection", cfg.DBConnection).
+			Str("database connection", cfg.Env.DBConnection).
 			Msg("failed to create tables for import database")
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 	err = db.createSensorDBAnalysisTables()
 	if err != nil {
 		logger.Err(err).Str("database", dbName).
-			Str("database connection", cfg.DBConnection).
+			Str("database connection", cfg.Env.DBConnection).
 			Msg("failed to create analysis tables for import database")
 		return nil, err
 	}
@@ -351,10 +351,11 @@ func (server *ServerConn) checkRolling(dbName string, rollingFlag bool, rebuildF
 }
 
 type ImportDatabase struct {
-	Name    string    `ch:"database"`
-	Rolling bool      `ch:"rolling"`
-	MinTS   time.Time `ch:"min_ts"`
-	MaxTS   time.Time `ch:"max_ts"`
+	Name       string    `ch:"database" json:"name"`
+	Rolling    bool      `ch:"rolling" json:"rolling"`
+	MinTS      time.Time `ch:"min_ts" json:"minTS"`
+	MaxTS      time.Time `ch:"max_ts" json:"maxTS"`
+	IsSampleDB bool      `ch:"is_sample" json:"is_sample"`
 }
 
 func (server *ServerConn) ListImportDatabases() ([]ImportDatabase, error) {
@@ -373,11 +374,15 @@ func (server *ServerConn) ListImportDatabases() ([]ImportDatabase, error) {
 
 	// return list of databases based on min_max table
 	query := `
-		SELECT database, rolling, greatest(min_ts, timestamp_sub(WEEK, 2, max_ts)) as min_ts, max_ts FROM (
+		WITH sample_dbs AS (
+    		SELECT DISTINCT name FROM metadatabase.sample_dbs
+		)
+		SELECT database, rolling, greatest(min_ts, timestamp_sub(WEEK, 2, max_ts)) as min_ts, max_ts, notEmpty(sdb.name) as is_sample FROM (
 			SELECT database, rolling, min(min_ts) AS min_ts, max(max_ts) AS max_ts FROM metadatabase.min_max
 			GROUP BY database, rolling
 			ORDER BY max_ts DESC
-		)
+		) as dbs
+		LEFT JOIN sample_dbs sdb ON dbs.database = sdb.name
     `
 	err = server.Conn.Select(server.ctx, &sensorDBs, query)
 	if err != nil {
@@ -453,17 +458,18 @@ func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, erro
 	logger := zlog.GetLogger()
 
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{cfg.DBConnection}, // read from env instead
+		Addr: []string{cfg.Env.DBConnection}, // read from env instead
 		Auth: clickhouse.Auth{
 			Database: "default",
-			Username: "default",
-			Password: "",
+			Username: cfg.Env.DBUsername,
+			Password: cfg.Env.DBPassword,
 		},
 	})
 
 	if err != nil {
 		logger.Err(err).Str("database", "default").
-			Str("database connection", cfg.DBConnection).
+			Str("database connection", cfg.Env.DBConnection).
+			Str("user", cfg.Env.DBUsername).
 			Msg("failed to connect to ClickHouse server")
 		return nil, err
 	}
@@ -475,7 +481,7 @@ func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, erro
 
 	return &ServerConn{
 		Conn: conn,
-		addr: cfg.DBConnection,
+		addr: cfg.Env.DBConnection,
 		ctx:  ctx,
 	}, nil
 }

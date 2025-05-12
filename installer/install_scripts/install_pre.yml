@@ -59,31 +59,6 @@
         msg: "Unsupported CPU architecture: {{  ansible_architecture  }}"
       when: ( ansible_architecture != "x86_64" ) 	#and ansible_architecture != "aarch64" ) # "aarch64" for pi.  #pi0w is armv6l.  i386.  amd64?
 
-#Selinux checks
-    - name: "RITA Pre: /sys/fs/selinux/enforce  exists."
-      stat:
-        path: "/sys/fs/selinux/enforce"
-      check_mode: true
-      changed_when: false
-      register: selinuxenforce_check
-      tags:
-        - linux
-
-    - name: "RITA Pre: sys filesystem check for selinux."
-      lineinfile:
-        path: /sys/fs/selinux/enforce
-        regexp: '^1'
-        line: 0
-        create: false
-        unsafe_writes: true									#Needed because the original file in the sys filesystem and Ansible's tmp directory are on different filesystems.
-        state: present
-      #check_mode: yes
-      changed_when: false
-      #register: enforce_check
-      when: selinuxenforce_check.stat.exists
-      tags:
-        - linux
-
 #Teach package managers how to use a proxy
     #Must precede "name: Start AC-Hunter"
     - name: Add proxy environment variable to /etc/apt/apt.conf file
@@ -114,7 +89,6 @@
         - linux
         - linuxrpm
       when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-
 
 #Add tools needed by later stages
     # Provides "needs-restarting" for ansible's ability to manage rebooting after patching
@@ -442,12 +416,10 @@
               - docker-compose
               - docker-compose-v2
               - docker-doc
-              - docker-engine-selinux
               - docker-engine
               - docker-latest
               - docker-latest-logrotate
               - docker-logrotate
-              - docker-selinux
               - docker.io
               - docker
               - podman-docker
