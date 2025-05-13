@@ -21,6 +21,7 @@ var AnalysisSnapshotHourTTLs = []string{"big_ol_histogram", "tls_proto", "http_p
 var AnalysisSnapshotAnalyzedAtTTLs = []string{"threat_mixtape"}
 var MetaDatabaseTTLs = []string{"historical_first_seen", "files"}
 var MetaDatabaseYearTTLS = []string{"imports"}
+var ZoneTransferTTLs = []string{"performed_zone_transfers", "zone_transfer"}
 
 func (db *DB) createLogTableTTLs() error {
 	if !db.Rolling {
@@ -167,6 +168,18 @@ func (server *ServerConn) createMetaDatabaseTTLs(monthsToKeepHistoricalFirstSeen
 	// DO NOT SET TTL ON ended_at, WILL BREAK
 	err = server.Conn.Exec(ctx, `--sql
 		ALTER TABLE metadatabase.imports MODIFY TTL toDateTime(started_at) + INTERVAL 1 YEAR`)
+	if err != nil {
+		return err
+	}
+
+	err = server.Conn.Exec(ctx, `--sql
+		ALTER TABLE metadatabase.performed_zone_transfers MODIFY TTL performed_at + INTERVAL 90 DAYS`)
+	if err != nil {
+		return err
+	}
+
+	err = server.Conn.Exec(ctx, `--sql
+		ALTER TABLE metadatabase.zone_transfer MODIFY TTL performed_at + INTERVAL 90 DAYS`)
 	if err != nil {
 		return err
 	}

@@ -1447,6 +1447,23 @@ func (db *DB) createExplodedDNSTable(ctx context.Context) error {
 	return err
 }
 
+func (db *DB) createIPToHostnameTable(ctx context.Context) error {
+	if err := db.Conn.Exec(ctx, `--sql
+	
+	CREATE TABLE IF NOT EXISTS {database:Identifier}.ip_to_hostname (
+		import_time DateTime(),
+		import_id FixedString(16),
+		hostname String,
+		ip IPv6,
+		ttl Int32, -- RFC2181 defines TTLs as int32
+	) ENGINE = MergeTree()
+	PRIMARY KEY (import_id, hostname, ip) 
+	`); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (db *DB) createSensorDBTables() error {
 	ctx := db.QueryParameters(clickhouse.Parameters{
 		"database": db.selected,
@@ -1565,6 +1582,11 @@ func (db *DB) createSensorDBTables() error {
 	}
 
 	err = db.createExplodedDNSTable(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = db.createIPToHostnameTable(ctx)
 	if err != nil {
 		return err
 	}

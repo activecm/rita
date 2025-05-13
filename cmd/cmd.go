@@ -26,6 +26,7 @@ func Commands() []*cli.Command {
 		DeleteCommand,
 		ListCommand,
 		ValidateConfigCommand,
+		ZoneTransferCommand,
 	}
 }
 
