@@ -107,7 +107,7 @@ enable_repositories() {
 			$SUDO subscription-manager repos --enable codeready-builder-for-rhel-8-$(arch)-rpms
 			$SUDO dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 			;;
-		rhel/9)
+		rhel/9*)
 			$SUDO subscription-manager repos --enable codeready-builder-for-rhel-9-$(arch)-rpms
 			$SUDO dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 			;;
