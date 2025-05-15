@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/activecm/rita/v5/amalgamation"
 	"github.com/activecm/rita/v5/analysis"
 	"github.com/activecm/rita/v5/config"
 	c "github.com/activecm/rita/v5/constants"
@@ -284,6 +285,12 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 			// modify the data
 			err = modifier.Modify()
 			if err != nil {
+				return importResults, err
+			}
+
+			// set up new amalgamation
+			amalgamation := amalgamation.NewAmalgamator(db, &importer.ImportID, cfg)
+			if err := amalgamation.Amalgamate(); err != nil {
 				return importResults, err
 			}
 

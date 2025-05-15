@@ -43,7 +43,14 @@ type ThreatMixtape struct {
 	// Base connection details
 	AnalysisResult
 
-	FinalScore float32 `ch:"final_score"`
+	FinalScore               float32 `ch:"final_score"`
+	BaseScore                float32 `ch:"base_score"`
+	TotalModifierScore       float32 `ch:"total_modifier_score"`
+	ConnectionGraphIntervals []int64 `ch:"connection_graph_intervals"`
+	ConnectionGraphCounts    []int64 `ch:"connection_graph_counts"`
+	DataSizeGraphIntervals   []int64 `ch:"data_size_graph_intervals"`
+	DataSizeGraphCounts      []int64 `ch:"data_size_graph_counts"`
+
 	// BEACONS
 	Beacon
 	BeaconThreatScore float32 `ch:"beacon_threat_score"` // bucketed beacon score

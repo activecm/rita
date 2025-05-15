@@ -177,7 +177,7 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 		return nil, err
 	}
 	// create analysis tables for the newly created database
-	err = db.createSensorDBAnalysisTables()
+	err = db.CreateSensorDBAnalysisTables()
 	if err != nil {
 		logger.Err(err).Str("database", dbName).
 			Str("database connection", cfg.Env.DBConnection).

@@ -88,6 +88,271 @@ func (db *DB) createThreatMixtapeTable(ctx context.Context) error {
 	return err
 }
 
+// func (db *DB) createThreatMixtapeView(ctx context.Context) error {
+
+// 	if err := db.Conn.Exec(ctx, `
+// 		CREATE TABLE IF NOT EXISTS {database:Identifier}.final_mixtape (
+// 			analyzed_at DateTime64(6),
+// 			import_id FixedString(16),
+// 			hash FixedString(16),
+// 			src IPv6,
+// 			dst IPv6,
+// 			src_nuid UUID,
+// 			dst_nuid UUID,
+// 			fqdn String,
+// 			server_ips AggregateFunction(groupArrayArray, Array(IPv6)),
+// 			proxy_ips AggregateFunction(groupArrayArray, Array(IPv6)),
+// 			total_bytes AggregateFunction(sum, UInt64),
+// 			last_seen AggregateFunction(max, DateTime()),
+// 			port_proto_service AggregateFunction(groupArrayArray, Array(String)),
+
+// 			-- counts
+// 			count AggregateFunction(sum, UInt64),
+// 			ts_unique AggregateFunction(sum, UInt64),
+// 			proxy_count AggregateFunction(sum, UInt64),
+// 			open_count AggregateFunction(sum, UInt64),
+
+// 			-- **** THREAT INDICATORS ****
+// 			-- BEACONING
+// 			beacon_type LowCardinality(String),
+// 			beacon_score AggregateFunction(sum, Float32),
+// 			beacon_threat_score AggregateFunction(sum, Float32),
+// 			ts_score AggregateFunction(sum, Float32),
+// 			ds_score AggregateFunction(sum, Float32),
+// 			dur_score AggregateFunction(sum, Float32),
+// 			hist_score AggregateFunction(sum, Float32),
+// 			ts_intervals AggregateFunction(groupArrayArray, Array(Int64)),
+// 			ts_interval_counts AggregateFunction(groupArrayArray, Array(Int64)),
+// 			ds_sizes AggregateFunction(groupArrayArray, Array(Int64)),
+// 			ds_size_counts AggregateFunction(groupArrayArray, Array(Int64)),
+
+// 			-- LONG CONNECTIONS
+// 			total_duration AggregateFunction(sum, Float64),
+// 			long_conn_score AggregateFunction(sum, Float32),
+
+// 			-- STROBE
+// 			strobe_score AggregateFunction(sum, Float32),
+
+// 			-- C2 OVER DNS
+// 			subdomain_count AggregateFunction(sum, UInt64),
+// 			c2_over_dns_score AggregateFunction(sum, Float32),
+// 			c2_over_dns_direct_conn_score AggregateFunction(sum, Float32),
+
+// 			-- THREAT INTEL
+// 			threat_intel AggregateFunction(max, Bool),
+// 			threat_intel_score AggregateFunction(sum, Float32),
+
+// 			-- **** MODIFIERS ****
+// 			-- modifier_name LowCardinality(String),
+// 			-- modifier_score Float32,
+// 			-- modifier_value String,
+
+// 			-- PREVALENCE
+// 			prevalence_total AggregateFunction(sum, UInt64),
+// 			prevalence AggregateFunction(sum, Float32),
+// 			prevalence_score AggregateFunction(sum, Float32),
+// 			network_size AggregateFunction(sum, UInt64),
+
+// 			first_seen_historical AggregateFunction(max, DateTime()),
+// 			first_seen_score AggregateFunction(sum, Float32),
+
+// 			-- THREAT INTEL DATA SIZE
+// 			threat_intel_data_size_score AggregateFunction(sum, Float32),
+
+// 			-- MISSING HOST HEADER
+// 			missing_host_count AggregateFunction(sum, UInt64),
+// 			missing_host_header_score AggregateFunction(sum, Float32)
+
+// 		) ENGINE = AggregatingMergeTree()
+// 		-- FROM {database:Identifier}.threat_mixtape
+// 		-- GROUP BY analyzed_at, import_id, hash, src, src_nuid, dst, dst_nuid, fqdn, beacon_type
+// 		PRIMARY KEY (analyzed_at, dst_nuid, src_nuid, src, fqdn, dst, hash)
+// 		ORDER BY (analyzed_at, dst_nuid, src_nuid, src, fqdn, dst, hash)
+// 	`); err != nil {
+// 		return err
+// 	}
+
+// 	if err := db.Conn.Exec(ctx, `--sql
+// 		CREATE MATERIALIZED VIEW IF NOT EXISTS {database:Identifier}.final_mixtape_mv
+// 		TO {database:Identifier}.final_mixtape AS
+// 		SELECT
+// 			analyzed_at,
+// 			import_id,
+// 			hash,
+// 			src,
+// 			dst,
+// 			src_nuid,
+// 			dst_nuid,
+// 			fqdn,
+// 			groupArrayArrayState(server_ips) as server_ips,
+// 			groupArrayArrayState(proxy_ips) as proxy_ips,
+// 			sumState(total_bytes) as total_bytes,
+// 			maxState(last_seen) as last_seen,
+// 			groupArrayArrayState(port_proto_service) as port_proto_service,
+
+// 			-- counts
+// 			sumState(count) as count,
+// 			sumState(ts_unique) as ts_unique,
+// 			sumState(proxy_count) as proxy_count,
+// 			sumState(open_count) as open_count,
+
+// 			-- **** THREAT INDICATORS ****
+// 			-- BEACONING
+// 			beacon_type,
+// 			sumState(beacon_score) as beacon_score,
+// 			sumState(beacon_threat_score) as beacon_threat_score,
+// 			sumState(ts_score) as ts_score,
+// 			sumState(ds_score) as ds_score,
+// 			sumState(dur_score) as dur_score,
+// 			sumState(hist_score) as hist_score,
+// 			groupArrayArrayState(ts_intervals) as ts_intervals,
+// 			groupArrayArrayState(ts_interval_counts) as ts_interval_counts,
+// 			groupArrayArrayState(ds_sizes) as ds_sizes,
+// 			groupArrayArrayState(ds_size_counts) as ds_size_counts,
+
+// 			-- LONG CONNECTIONS
+// 			sumState(total_duration) as total_duration,
+// 			sumState(long_conn_score) as long_conn_score,
+
+// 			-- STROBE
+// 			sumState(strobe_score) as strobe_score,
+
+// 			-- C2 OVER DNS
+// 			sumState(subdomain_count) as subdomain_count,
+// 			sumState(c2_over_dns_score) as c2_over_dns_score,
+// 			sumState(c2_over_dns_direct_conn_score) as c2_over_dns_direct_conn_score,
+
+// 			-- THREAT INTEL
+// 			maxState(threat_intel) as threat_intel,
+// 			sumState(threat_intel_score) as threat_intel_score,
+
+// 			-- -- **** MODIFIERS ****
+// 			-- modifier_name LowCardinality(String),
+// 			-- modifier_score Float32,
+// 			-- modifier_value String,
+
+// 			-- PREVALENCE
+// 			sumState(prevalence_total) as prevalence_total,
+// 			sumState(prevalence) as prevalence,
+// 			sumState(prevalence_score) as prevalence_score,
+// 			sumState(network_size) as network_size,
+
+// 			maxState(first_seen_historical) as first_seen_historical,
+// 			sumState(first_seen_score) as first_seen_score,
+
+// 			-- THREAT INTEL DATA SIZE
+// 			sumState(threat_intel_data_size_score) as threat_intel_data_size_score,
+
+// 			-- MISSING HOST HEADER
+// 			sumState(missing_host_count) as missing_host_count,
+// 			sumState(missing_host_header_score) as missing_host_header_score
+// 		FROM {database:Identifier}.threat_mixtape
+// 		GROUP BY analyzed_at, import_id, hash, src, src_nuid, dst, dst_nuid, fqdn, beacon_type
+// 		-- PRIMARY KEY (analyzed_at, dst_nuid, src_nuid, src, fqdn, dst, hash)
+// 		-- ORDER BY (analyzed_at, dst_nuid, src_nuid, src, fqdn, dst, hash)
+// `); err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+func (db *DB) createFinalMixtape(ctx context.Context) error {
+	if err := db.Conn.Exec(ctx, `--sql
+
+		CREATE TABLE IF NOT EXISTS {database:Identifier}.final_mixtape (
+			analyzed_at DateTime64(6),
+			import_id FixedString(16),
+			hash FixedString(16),
+			src IPv6,
+			dst IPv6,
+			src_nuid UUID,
+			dst_nuid UUID,
+			fqdn String,
+			
+
+			base_score Float32,
+			total_modifier_score Float32,
+			final_score Float32,
+
+
+			server_ips Array(IPv6),
+			proxy_ips Array(IPv6),
+			total_bytes UInt64,
+			last_seen DateTime(),
+			port_proto_service Array(String),
+
+			-- counts
+			count UInt64,
+			ts_unique UInt64,
+			proxy_count UInt64,
+			open_count UInt64,
+
+			-- **** THREAT INDICATORS ****
+			-- BEACONING
+			beacon_type LowCardinality(String),
+			beacon_score Float32,
+			beacon_threat_score Float32,
+			ts_score Float32,
+			ds_score Float32,
+			dur_score Float32,
+			hist_score Float32,
+			-- ts_intervals Array(Int64),
+			-- ts_interval_counts Array(Int64),
+			-- ds_sizes Array(Int64),
+			-- ds_size_counts Array(Int64),
+
+			connection_graph_intervals Array(Int64), 
+			connection_graph_counts Array(Int64), 
+			data_size_graph_intervals Array(Int64), 
+			data_size_graph_counts Array(Int64),
+			
+			-- LONG CONNECTIONS
+			total_duration Float64,
+			long_conn_score Float32,
+
+			-- STROBE
+			strobe_score Float32,
+
+			-- C2 OVER DNS
+			subdomain_count UInt64,
+			c2_over_dns_score Float32,
+			c2_over_dns_direct_conn_score Float32,
+
+			-- THREAT INTEL
+			threat_intel Bool,
+			threat_intel_score Float32,
+
+			-- -- **** MODIFIERS ****
+			-- modifier_name LowCardinality(String),
+			-- modifier_score Float32,
+			-- modifier_value String,
+
+			-- PREVALENCE
+			prevalence_total UInt64,
+			prevalence Float32,
+			prevalence_score Float32,
+			network_size UInt64,
+
+			first_seen_historical DateTime(),
+			first_seen_score Float32,
+
+			-- THREAT INTEL DATA SIZE
+			threat_intel_data_size_score Float32,
+
+
+			-- MISSING HOST HEADER
+			missing_host_count UInt64,
+			missing_host_header_score Float32
+
+		) ENGINE = MergeTree 
+		PRIMARY KEY (hash, src, src_nuid, dst_nuid, dst, fqdn)
+		ORDER BY (hash, src, src_nuid, dst_nuid, dst, fqdn, final_score)
+	`); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (db *DB) createHistoricalFirstSeenMaterializedViews(ctx context.Context) error {
 	if err := db.Conn.Exec(ctx, `--sql
 		CREATE MATERIALIZED VIEW IF NOT EXISTS {database:Identifier}.historical_first_seen_conn_mv
@@ -444,12 +709,17 @@ func (db *DB) createPortInfoTable(ctx context.Context) error {
 	return nil
 }
 
-func (db *DB) createSensorDBAnalysisTables() error {
+func (db *DB) CreateSensorDBAnalysisTables() error {
 	ctx := db.QueryParameters(clickhouse.Parameters{
 		"database": db.selected,
 	})
 
 	err := db.createThreatMixtapeTable(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = db.createFinalMixtape(ctx)
 	if err != nil {
 		return err
 	}
