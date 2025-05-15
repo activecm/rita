@@ -264,8 +264,9 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 		if( h.rn = 1, c.dst_packets, 0) as dst_packets,
 		if( h.rn > 1,true,  0) as multi_request
 	FROM http_base h
-	INNER JOIN {table_b:Identifier} c USING zeek_uid
-	WHERE h.rn <= 20
+	INNER JOIN {table_b:Identifier} c ON h.zeek_uid = c.zeek_uid
+	WHERE h.rn <= 20 
+	-- AND zeek_uid IN (SELECT DISTINCT zeek_uid FROM {table_b:Identifier})
 `)
 	if err != nil {
 		return err

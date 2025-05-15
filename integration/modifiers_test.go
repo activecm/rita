@@ -24,3 +24,29 @@ func (it *ValidDatasetTestSuite) TestRareSignaturesModifier() {
 	require.Zero(t, count, "all rare signature entries in the mixtape should actually be used only once according to rare_signatures table")
 
 }
+
+func (it *ValidDatasetTestSuite) TestC2OverDNSDirectConnsModifier() {
+	t := it.T()
+	var count uint64
+	rows, err := it.db.Conn.Query(it.db.GetContext(), `
+		SELECT DISTINCT fqdn, c2_over_dns_direct_conn_score 
+		FROM threat_mixtape 
+		WHERE beacon_type = 'dns'
+	`)
+	require.NoError(t, err)
+	require.Positive(t, it.cfg.Modifiers.C2OverDNSDirectConnScoreIncrease)
+
+	for rows.Next() {
+		var fqdn string
+		var score float32
+		require.NoError(t, rows.Scan(&fqdn, &score))
+
+		if fqdn == "r-1x.com" || fqdn == "amazonaws.com" {
+			require.EqualValues(t, it.cfg.Modifiers.C2OverDNSDirectConnScoreIncrease, score, "score should match modifier increase value: %1.6f, got: %1.6f", it.cfg.Modifiers.C2OverDNSDirectConnScoreIncrease, score)
+		} else {
+			require.Equal(t, 0, score, "domains without a modifier should have a score of zero, got: %1.6f", score)
+		}
+	}
+	require.Zero(t, count, "all rare signature entries in the mixtape should actually be used only once according to rare_signatures table")
+
+}

@@ -214,7 +214,8 @@ func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Prog
 		c.src_packets as src_packets,
 		c.dst_packets as dst_packets
 	FROM {tmp_table:Identifier} s
-	INNER JOIN {table_b:Identifier} c USING zeek_uid
+	-- WHERE zeek_uid IN (SELECT DISTINCT zeek_uid FROM {table_b:Identifier})
+	INNER JOIN {table_b:Identifier} c ON s.zeek_uid = c.zeek_uid
     
 `)
 	if err != nil {

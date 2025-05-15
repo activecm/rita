@@ -457,14 +457,16 @@ func dropDatabase(ctx context.Context, conn driver.Conn, dbName string) error {
 func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, error) {
 	logger := zlog.GetLogger()
 
-	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{cfg.Env.DBConnection}, // read from env instead
-		Auth: clickhouse.Auth{
-			Database: "default",
-			Username: cfg.Env.DBUsername,
-			Password: cfg.Env.DBPassword,
-		},
-	})
+	ctx, cancel := context.WithCancel(ctx)
+	db, err := ConnectToDB(ctx, "default", cfg, cancel)
+	// conn, err := clickhouse.Open(&clickhouse.Options{
+	// 	Addr: []string{cfg.Env.DBConnection}, // read from env instead
+	// 	Auth: clickhouse.Auth{
+	// 		Database: "default",
+	// 		Username: cfg.Env.DBUsername,
+	// 		Password: cfg.Env.DBPassword,
+	// 	},
+	// })
 
 	if err != nil {
 		logger.Err(err).Str("database", "default").
@@ -475,12 +477,12 @@ func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, erro
 	}
 
 	// ping the server to verify connection
-	if err := conn.Ping(ctx); err != nil {
+	if err := db.Conn.Ping(ctx); err != nil {
 		return nil, err
 	}
 
 	return &ServerConn{
-		Conn: conn,
+		Conn: db.Conn,
 		addr: cfg.Env.DBConnection,
 		ctx:  ctx,
 	}, nil

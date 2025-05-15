@@ -163,44 +163,7 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 	}))
 	// panic(strconv.FormatBool(analyzer.Database.Rolling))
 	rows, err := analyzer.Database.Conn.Query(chCtx, `--sql
-	WITH unique_sni AS (
-		SELECT DISTINCT hash FROM sniconn_tmp
-	),
-	prevalence_counts AS (
-	    SELECT fqdn, count() as prevalence_total FROM (
-			SELECT DISTINCT fqdn, src FROM usni
-			WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			UNION DISTINCT
-			SELECT DISTINCT fqdn, dst AS src FROM usni
-			WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			
-			UNION DISTINCT 
-			
-			SELECT DISTINCT host as fqdn, src FROM openhttp
-			WHERE src_local
-			UNION DISTINCT
-			SELECT DISTINCT host as fqdn, dst AS src FROM openhttp
-			WHERE dst_local
-			
-			UNION DISTINCT 
-			
-			SELECT DISTINCT server_name as fqdn, src FROM openssl
-			WHERE src_local
-			UNION DISTINCT 
-			SELECT DISTINCT server_name as fqdn, dst AS src FROM openssl
-			WHERE dst_local
-
-			UNION DISTINCT
-
-			SELECT DISTINCT fqdn, src FROM udns
-			WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			UNION DISTINCT
-			SELECT DISTINCT fqdn, dst AS src FROM udns
-			WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-	    )
-	    GROUP BY fqdn
-	),  
-	sniconns AS (
+	WITH sniconns AS (
 		-- Get SNI connections (HTTP + SSL for a source IP -> destination FQDN pair)
 		SELECT hash, src, src_nuid, fqdn, 
 			countMerge(count) AS conn_count, 
@@ -217,9 +180,9 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 			maxMerge(last_seen) AS last_seen,
 			minMerge(first_seen) as first_seen
 		FROM usni
-		RIGHT JOIN unique_sni USING hash
+		-- RIGHT JOIN unique_sni USING hash
 		-- Limit query to the last 24 hours of data
-		WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+		WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND hash IN (SELECT DISTINCT hash FROM sniconn_tmp)
 		GROUP BY hash, src, src_nuid, fqdn, proxy
 
 		UNION ALL 
@@ -263,22 +226,59 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 		FROM openssl
 		GROUP BY hash, src, src_nuid, fqdn
 	),
+	-- prevalence_counts AS (
+	--     SELECT fqdn, count() as prevalence_total FROM (
+	-- 		SELECT DISTINCT fqdn, src FROM usni
+	-- 		WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND fqdn IN (SELECT fqdn FROM sniconns)
+	-- 		UNION DISTINCT
+	-- 		SELECT DISTINCT fqdn, dst AS src FROM usni
+	-- 		WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND fqdn IN (SELECT fqdn FROM sniconns)
+			
+	-- 		UNION DISTINCT 
+			
+	-- 		SELECT DISTINCT host as fqdn, src FROM openhttp
+	-- 		WHERE src_local AND fqdn IN (SELECT fqdn FROM sniconns)
+	-- 		UNION DISTINCT
+	-- 		SELECT DISTINCT host as fqdn, dst AS src FROM openhttp
+	-- 		WHERE dst_local AND fqdn IN (SELECT fqdn FROM sniconns)
+			
+	-- 		UNION DISTINCT 
+			
+	-- 		SELECT DISTINCT server_name as fqdn, src FROM openssl
+	-- 		WHERE src_local AND fqdn IN (SELECT fqdn FROM sniconns)
+	-- 		UNION DISTINCT 
+	-- 		SELECT DISTINCT server_name as fqdn, dst AS src FROM openssl
+	-- 		WHERE dst_local AND fqdn IN (SELECT fqdn FROM sniconns)
+
+	-- 		UNION DISTINCT
+
+	-- 		SELECT DISTINCT fqdn, src FROM udns
+	-- 		WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND fqdn IN (SELECT fqdn FROM sniconns)
+	-- 		UNION DISTINCT
+	-- 		SELECT DISTINCT fqdn, dst AS src FROM udns
+	-- 		WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND fqdn IN (SELECT fqdn FROM sniconns)
+	--     )
+	--     GROUP BY fqdn
+	-- ),  
 	historical AS (
 		SELECT min(first_seen) AS first_seen, fqdn 
 		FROM metadatabase.historical_first_seen
-		LEFT JOIN sniconns USING fqdn
+		-- LEFT JOIN sniconns USING fqdn
+		WHERE fqdn IN (SELECT fqdn FROM sniconns)
 		GROUP BY fqdn
 	),
 	port_proto AS (
 		SELECT hash, groupUniqArray(20)(port_proto_service) AS port_proto_service FROM (
 			SELECT DISTINCT hash, concat(po.dst_port, ':', po.proto, ':', po.service) as port_proto_service
 			FROM port_info po
-			LEFT JOIN sniconns s ON s.hash = po.hash
-			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+			-- LEFT JOIN sniconns s ON s.hash = po.hash
+			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND hash IN (SELECT hash FROM sniconns)
 			UNION DISTINCT
 			SELECT DISTINCT hash, concat(dst_port, ':', proto, ':', service) FROM openhttp
+			WHERE hash IN (SELECT hash FROM sniconns)
 			UNION DISTINCT
 			SELECT DISTINCT hash, concat(dst_port, ':', proto, ':', service) FROM openssl
+			WHERE hash IN (SELECT hash FROM sniconns)
 		)
 		GROUP BY hash
 	),
@@ -303,8 +303,8 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 	)
 	SELECT  s.hash AS hash, s.src AS src, s.src_nuid AS src_nuid, s.fqdn AS fqdn, 
 			if(t.fqdn != '', true, false) AS on_threat_intel,
-			prevalence_total, 
-			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
+			-- prevalence_total, 
+			-- toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
 			if({rolling:Bool}, h.first_seen, s.first_seen) AS first_seen_historical,
 			'sni' AS beacon_type,
 			count,
@@ -321,7 +321,7 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 			last_seen,
 			po.port_proto_service as port_proto_service
 	FROM totaled_sniconns s
-	LEFT JOIN prevalence_counts USING fqdn
+	-- LEFT JOIN prevalence_counts USING fqdn
 	LEFT JOIN metadatabase.threat_intel t ON s.fqdn = t.fqdn 
 	LEFT JOIN historical h ON h.fqdn = s.fqdn
 	LEFT JOIN port_proto po ON s.hash = po.hash
@@ -449,9 +449,9 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 				minMerge(first_seen) as first_seen
 		FROM uconn
 		-- Limit IP connections to just connections not used by a SNI beacon
-		RIGHT JOIN filtered_hashes USING hash
+		-- RIGHT JOIN filtered_hashes USING hash
 		-- Limit query to the last 24 hours of data
-		WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+		WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND hash IN (SELECT hash FROM filtered_hashes)
 		GROUP BY hash, src, src_nuid, dst, dst_nuid, src_local, dst_local
 
 		UNION ALL
@@ -471,7 +471,8 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 				min(ts) AS first_seen,
 				max(ts) AS last_seen
 		FROM openconn
-		RIGHT JOIN filtered_hashes USING hash -- exclude SNI connections
+		-- RIGHT JOIN filtered_hashes USING hash -- exclude SNI connections
+		WHERE hash IN (SELECT hash FROM filtered_hashes)
 		GROUP BY hash, src, src_nuid, dst, dst_nuid, src_local, dst_local
 		),
 		-- Aggregate data between all union groups
@@ -493,7 +494,6 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 				sum(total_bytes) as total_bytes,
 				max(last_seen) as last_seen,
 				min(first_seen) as first_seen
-				-- any(po.port_proto_service) as port_proto_service
 		FROM ip_conns
 		GROUP BY hash, src, src_nuid, dst, dst_nuid, src_local, dst_local
 		),
@@ -502,15 +502,16 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 		historical AS (
 			SELECT min(first_seen) AS first_seen, ip 
 			FROM metadatabase.historical_first_seen h
-			LEFT JOIN ip_conns i ON h.ip = multiIf(src_local = true, i.dst, dst_local = true, i.src, i.dst) 
+			-- LEFT JOIN ip_conns i ON h.ip = multiIf(src_local = true, i.dst, dst_local = true, i.src, i.dst) 
+			WHERE ip IN ( SELECT src AS ip FROM ip_conns) OR ip IN (SELECT dst AS ip FROM ip_conns)
 			GROUP BY ip
 		),
 		port_proto AS (
 			SELECT hash, groupUniqArray(20)(port_proto_service) AS port_proto_service FROM (
 				SELECT DISTINCT hash, if(po.proto = 'icmp', concat(po.proto, ':', po.icmp_type, '/', po.icmp_code), concat(po.dst_port, ':', po.proto, ':', po.service)) as port_proto_service
 				FROM port_info po
-				LEFT JOIN ip_conns i ON i.hash = po.hash
-				WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+				-- LEFT JOIN ip_conns i ON i.hash = po.hash
+				WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND hash IN (SELECT hash FROM ip_conns)
 				UNION DISTINCT
 				SELECT DISTINCT hash, if(proto = 'icmp', concat(proto, ':', src_port, '/', dst_port), concat(dst_port, ':', proto, ':', service)) as port_proto_service
 				FROM openconn
@@ -606,40 +607,44 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 
 	rows, err := analyzer.Database.Conn.Query(chCtx, `--sql
 		-- use only the domains from this import to reduce computation cost
-		WITH unique_tld AS (
-			SELECT DISTINCT tld FROM dns_tmp
-		), 
+		WITH sussy_subdomains AS (
+			-- get all tlds with more than 100 subdomains
+			SELECT tld, uniqExactMerge(subdomains) as subdomain_count FROM exploded_dns
+			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT DISTINCT tld FROM dns_tmp)
+			GROUP BY tld
+			HAVING subdomain_count >= 100
+		),
 		prevalence_counts AS (
 			SELECT tld, count() AS prevalence_total FROM (
 				SELECT DISTINCT cutToFirstSignificantSubdomain(fqdn) as tld, src FROM usni
-				WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+				WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT tld FROM sussy_subdomains)
 				UNION DISTINCT
 				SELECT DISTINCT cutToFirstSignificantSubdomain(fqdn) as tld, dst AS src FROM usni
-				WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+				WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT tld FROM sussy_subdomains)
 				
 				UNION DISTINCT 
 				
 				SELECT DISTINCT cutToFirstSignificantSubdomain(host) as tld, src FROM openhttp
-				WHERE src_local
+				WHERE src_local AND tld IN (SELECT tld FROM sussy_subdomains)
 				UNION DISTINCT
 				SELECT DISTINCT cutToFirstSignificantSubdomain(host) as tld, dst AS src FROM openhttp
-				WHERE dst_local
+				WHERE dst_local AND tld IN (SELECT tld FROM sussy_subdomains)
 				
 				UNION DISTINCT 
 				
 				SELECT DISTINCT cutToFirstSignificantSubdomain(server_name) as tld, src FROM openssl
-				WHERE src_local
+				WHERE src_local AND tld IN (SELECT tld FROM sussy_subdomains)
 				UNION DISTINCT 
 				SELECT DISTINCT cutToFirstSignificantSubdomain(server_name) as tld, dst AS src FROM openssl
-				WHERE dst_local
+				WHERE dst_local AND tld IN (SELECT tld FROM sussy_subdomains)
 
 				UNION DISTINCT
 
 				SELECT DISTINCT tld, src FROM udns
-				WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+				WHERE src_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT tld FROM sussy_subdomains)
 				UNION DISTINCT
 				SELECT DISTINCT tld, dst AS src FROM udns
-				WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+				WHERE dst_local AND hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT tld FROM sussy_subdomains)
 			)
 			GROUP BY tld
 		),  
@@ -648,75 +653,80 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			SELECT tld, maxMerge(last_seen) as last_seen, minMerge(first_seen) as first_seen from udns
 			-- limiting the scope to just the domains in this import here 
 			-- has significant performance benefits as opposed to doing it later in the query
-			RIGHT JOIN unique_tld USING tld
+			WHERE tld IN (SELECT tld FROM sussy_subdomains)
 			GROUP BY tld
 		),
-		sussy_subdomains AS (
-			-- get all tlds with more than 100 subdomains
-			SELECT tld, uniqExactMerge(subdomains) as subdomain_count FROM exploded_dns
-			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			GROUP BY tld
-			HAVING subdomain_count >= 100
 		-- get all the resolved ips for the tld
-		), resolved_ips AS (
+		 resolved_ips AS (
 			SELECT DISTINCT resolved_ip, tld FROM pdns
-			RIGHT JOIN sussy_subdomains USING tld
-			WHERE day >= toStartOfDay(fromUnixTimestamp({min_ts:Int64}))
+			-- RIGHT JOIN sussy_subdomains USING tld
+			WHERE day >= toStartOfDay(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT tld FROM sussy_subdomains)
 		-- get all source ips that made a connection to the resolved ips
 		), direct_connections AS (
 			SELECT tld, src as direct_conn FROM uconn u
 			RIGHT JOIN resolved_ips r ON u.dst = r.resolved_ip
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+			--  AND dst IN (SELECT resolved_ip AS dst FROM resolved_ips)
 		-- get all systems that performed a dns query to the tld
 		), queried_by AS (
 			SELECT tld, src as queried FROM udns
-			INNER JOIN sussy_subdomains USING tld
-			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+			-- INNER JOIN sussy_subdomains USING tld
+			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64})) AND tld IN (SELECT tld FROM sussy_subdomains)
 		-- keep tlds which had zero non-dns-server ips in direct connections
-		), queried_by_count AS (
-			SELECT tld, count() as qcount FROM queried_by
-			GROUP BY tld
-		), direct_conns_modifier AS (
+		),
+		--  queried_by_count AS (
+		-- 	SELECT tld, count() as qcount FROM queried_by
+		-- 	GROUP BY tld
+		-- ),
+		 direct_conns_modifier AS (
 			-- tld has modifier if queried count == 0 or if 
-			SELECT ddx.tld AS tld, greatest(if(qc.qcount > 0, 0, 1), 1 - inverse_has_mod) AS has_mod FROM (
+			-- SELECT ddx.tld AS tld, greatest(if(qc.qcount > 0, 0, 1), 1 - inverse_has_mod) AS has_mod FROM (
 				-- direct conns mod checks if there are any IPs in queried that are not also in direct_conns
 				-- if there is an IP in queried that isn't in direct_conns, then q.queried is empty
 				-- max will return 1 if there was at least 1 ip that wasn't in direct conns
-				SELECT d.tld AS tld, max(empty(q.queried)) AS inverse_has_mod FROM direct_connections d
-				LEFT JOIN queried_by q ON d.tld = q.tld AND d.direct_conn = q.queried
-				GROUP BY tld
-			) ddx
-			LEFT JOIN queried_by_count qc ON qc.tld = ddx.tld
+				SELECT DISTINCT tld FROM direct_connections
+				WHERE direct_conn IN (SELECT queried as direct_conn FROM queried_by)
+				-- LEFT JOIN queried_by q ON d.tld = q.tld AND d.direct_conn = q.queried
+				-- GROUP BY tld
+			-- ) ddx
+			-- LEFT JOIN queried_by_count qc ON qc.tld = ddx.tld
 		),
-		totaled_exploded AS (
-			SELECT tld, uniqExactMerge(subdomains) AS subdomain_count
-			FROM exploded_dns
-			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			GROUP BY tld
-			HAVING subdomain_count >= {subdomain_threshold:Int32}
-		),
+		-- totaled_exploded AS (
+		-- 	SELECT tld, uniqExactMerge(subdomains) AS subdomain_count
+		-- 	FROM exploded_dns
+		-- 	WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
+		-- 	GROUP BY tld
+		-- 	HAVING subdomain_count >= {subdomain_threshold:Int32}
+		-- ),
 		historical AS (
 			SELECT min(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
 			FROM metadatabase.historical_first_seen
-			INNER JOIN totaled_exploded USING tld
+			WHERE tld IN (SELECT tld FROM sussy_subdomains)
+			-- INNER JOIN totaled_exploded USING tld
 			GROUP BY tld
+		),
+		threat_intel AS (
+			SELECT DISTINCT cutToFirstSignificantSubdomain(fqdn) AS tld FROM metadatabase.threat_intel
+			WHERE tld IN (SELECT tld FROM sussy_subdomains)
 		)
 		-- get the subdomain counts and the last seen count for each tld
 		SELECT e.tld AS tld, e.subdomain_count as subdomain_count, 
 			'dns' AS beacon_type,
 			 u.last_seen as last_seen,
 			prevalence_total, 
-			if(dm.has_mod > 0, true, false) as has_c2_direct_conns_mod,
+			if(notEmpty(dm.tld), true, false) as has_c2_direct_conns_mod,
 			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
 			-- use the historical first seen value if this dataset is rolling
 			if({rolling:Bool}, h.first_seen, u.first_seen) AS first_seen_historical,
-			if(cutToFirstSignificantSubdomain(t.fqdn) != '', true, false) AS on_threat_intel
-		FROM totaled_exploded e
+			if(notEmpty(t.tld), true, false) AS on_threat_intel
+			-- if(cutToFirstSignificantSubdomain(t.fqdn) != '', true, false) AS on_threat_intel
+		FROM sussy_subdomains e
 		INNER JOIN unique_dns u ON e.tld = u.tld
 		LEFT JOIN prevalence_counts p ON e.tld = p.tld
 		LEFT JOIN historical h ON e.tld = h.tld
 		LEFT JOIN direct_conns_modifier dm ON e.tld = dm.tld
-		LEFT JOIN metadatabase.threat_intel t ON e.tld = cutToFirstSignificantSubdomain(t.fqdn)	
+		LEFT JOIN threat_intel t ON e.tld = t.tld
+		-- LEFT JOIN metadatabase.threat_intel t ON e.tld = cutToFirstSignificantSubdomain(t.fqdn)	
 	`)
 	if err != nil {
 		// return error and cancel all uconn analysis

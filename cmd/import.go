@@ -228,6 +228,8 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 				continue
 			}
 
+			logger.Info().Uint64("conn", importer.ResultCounts.Conn).Uint64("http", importer.ResultCounts.HTTP).Uint64("ssl", importer.ResultCounts.SSL).Uint64("dns", importer.ResultCounts.DNS).Int64("udns", importer.ResultCounts.UDNS).Uint64("pdns", importer.ResultCounts.PDNSRaw).Int("hour", hour).Msg("imported num")
+
 			// update result counts (used for testing)
 			importResults.Conn += importer.ResultCounts.Conn
 			importResults.OpenConn += importer.ResultCounts.OpenConn
