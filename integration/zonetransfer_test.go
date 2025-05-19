@@ -119,21 +119,24 @@ func (it *ZoneTransferSuite) TestRecordZoneTransferPerformed() {
 	require.Nil(t, latestZT)
 
 	for _, tc := range tests {
-		// switch to a different domain/name server for this
-		if tc.changeConfig {
-			it.cfg.ZoneTransfer.DomainName = tc.toCreate.DomainName
-			it.cfg.ZoneTransfer.NameServer = tc.toCreate.NameServer
-		}
-		zt, err := zonetransfer.NewZoneTransfer(db, it.cfg)
-		require.NoError(t, err)
+		t.Run(tc.label, func(t *testing.T) {
+			// switch to a different domain/name server for this
+			if tc.changeConfig {
+				it.cfg.ZoneTransfer.DomainName = tc.toCreate.DomainName
+				it.cfg.ZoneTransfer.NameServer = tc.toCreate.NameServer
+			}
+			zt, err := zonetransfer.NewZoneTransfer(db, it.cfg)
+			require.NoError(t, err)
 
-		zt.SetTransferInfo(tc.toCreate)
-		require.NoError(t, zt.RecordZoneTransferPerformed(), "recording zone transfer shouldn't fail: %s", tc.label)
+			zt.SetTransferInfo(tc.toCreate)
+			require.NoError(t, zt.RecordZoneTransferPerformed(), "recording zone transfer shouldn't fail: %s", tc.label)
 
-		latestZT, err := zt.FindLastZoneTransfer()
-		require.NoError(t, err)
-		require.NotNil(t, latestZT)
+			latestZT, err := zt.FindLastZoneTransfer()
+			require.NoError(t, err)
+			require.NotNil(t, latestZT)
 
-		require.Equal(t, tests[tc.expectedIndex].toCreate, *latestZT, "latest zone transfer found should match expected performed zone transfer: %s", tc.label)
+			require.Equal(t, tests[tc.expectedIndex].toCreate, *latestZT, "latest zone transfer found should match expected performed zone transfer: %s", tc.label)
+		})
+
 	}
 }

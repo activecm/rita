@@ -58,8 +58,8 @@ func (it *OpenSNITestSuite) TestThreats() {
 		src              string
 		dst              string
 		fqdn             string
-		finalScore       float32
-		beaconScore      float32
+		finalScore       float64
+		beaconScore      float64
 		totalDuration    float64
 		totalBytes       float64
 		count            uint64

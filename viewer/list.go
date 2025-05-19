@@ -214,7 +214,7 @@ func Truncate(str string, style *lipgloss.Style) string {
 	return truncate.StringWithTail(str, textwidth, ellipsis)
 }
 
-func renderIndicator(score float32, displayText string) string {
+func renderIndicator(score float64, displayText string) string {
 	category := config.GetImpactCategoryFromScore(float64(score))
 	style := lipgloss.NewStyle()
 

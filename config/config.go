@@ -111,20 +111,20 @@ type (
 	}
 
 	Modifiers struct {
-		ThreatIntelScoreIncrease         float32 `ch:"threat_intel_score_increase" json:"threat_intel_score_increase" validate:"gte=0,lte=1"`
+		ThreatIntelScoreIncrease         float64 `ch:"threat_intel_score_increase" json:"threat_intel_score_increase" validate:"gte=0,lte=1"`
 		ThreatIntelDataSizeThreshold     int64   `ch:"threat_intel_datasize_threshold" json:"threat_intel_datasize_threshold"  validate:"gte=1,lte=5000000000"`
-		PrevalenceScoreIncrease          float32 `ch:"prevalence_score_increase" json:"prevalence_score_increase" validate:"gte=0,lte=1"`
-		PrevalenceIncreaseThreshold      float32 `ch:"prevalence_increase_threshold" json:"prevalence_increase_threshold" validate:"gte=0,lte=1"`
-		PrevalenceScoreDecrease          float32 `ch:"prevalence_score_decrease" json:"prevalence_score_decrease" validate:"gte=0,lte=1"`
-		PrevalenceDecreaseThreshold      float32 `ch:"prevalence_decrease_threshold" json:"prevalence_decrease_threshold" validate:"gte=0,lte=1,gtfield=PrevalenceIncreaseThreshold"`
-		FirstSeenScoreIncrease           float32 `ch:"first_seen_score_increase" json:"first_seen_score_increase" validate:"gte=0,lte=1"`
-		FirstSeenIncreaseThreshold       float32 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"gte=1,lte=90"`
-		FirstSeenScoreDecrease           float32 `ch:"first_seen_score_decrease" json:"first_seen_score_decrease" validate:"gte=0,lte=1"`
-		FirstSeenDecreaseThreshold       float32 `ch:"first_seen_decrease_threshold" json:"first_seen_decrease_threshold" validate:"gte=1,lte=90,gtfield=FirstSeenIncreaseThreshold"`
-		MissingHostCountScoreIncrease    float32 `ch:"missing_host_count_score_increase" json:"missing_host_count_score_increase" validate:"gte=0,lte=1"`
-		RareSignatureScoreIncrease       float32 `ch:"rare_signature_score_increase" json:"rare_signature_score_increase" validate:"gte=0,lte=1"`
-		C2OverDNSDirectConnScoreIncrease float32 `ch:"c2_over_dns_direct_conn_score_increase" json:"c2_over_dns_direct_conn_score_increase" validate:"gte=0,lte=1"`
-		MIMETypeMismatchScoreIncrease    float32 `ch:"mime_type_mismatch_score_increase" json:"mime_type_mismatch_score_increase" validate:"gte=0,lte=1"`
+		PrevalenceScoreIncrease          float64 `ch:"prevalence_score_increase" json:"prevalence_score_increase" validate:"gte=0,lte=1"`
+		PrevalenceIncreaseThreshold      float64 `ch:"prevalence_increase_threshold" json:"prevalence_increase_threshold" validate:"gte=0,lte=1"`
+		PrevalenceScoreDecrease          float64 `ch:"prevalence_score_decrease" json:"prevalence_score_decrease" validate:"gte=0,lte=1"`
+		PrevalenceDecreaseThreshold      float64 `ch:"prevalence_decrease_threshold" json:"prevalence_decrease_threshold" validate:"gte=0,lte=1,gtfield=PrevalenceIncreaseThreshold"`
+		FirstSeenScoreIncrease           float64 `ch:"first_seen_score_increase" json:"first_seen_score_increase" validate:"gte=0,lte=1"`
+		FirstSeenIncreaseThreshold       float64 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"gte=1,lte=90"`
+		FirstSeenScoreDecrease           float64 `ch:"first_seen_score_decrease" json:"first_seen_score_decrease" validate:"gte=0,lte=1"`
+		FirstSeenDecreaseThreshold       float64 `ch:"first_seen_decrease_threshold" json:"first_seen_decrease_threshold" validate:"gte=1,lte=90,gtfield=FirstSeenIncreaseThreshold"`
+		MissingHostCountScoreIncrease    float64 `ch:"missing_host_count_score_increase" json:"missing_host_count_score_increase" validate:"gte=0,lte=1"`
+		RareSignatureScoreIncrease       float64 `ch:"rare_signature_score_increase" json:"rare_signature_score_increase" validate:"gte=0,lte=1"`
+		C2OverDNSDirectConnScoreIncrease float64 `ch:"c2_over_dns_direct_conn_score_increase" json:"c2_over_dns_direct_conn_score_increase" validate:"gte=0,lte=1"`
+		MIMETypeMismatchScoreIncrease    float64 `ch:"mime_type_mismatch_score_increase" json:"mime_type_mismatch_score_increase" validate:"gte=0,lte=1"`
 	}
 
 	// ScoreThresholds is used for indicators that have prorated (graduated) values rather than
@@ -142,7 +142,7 @@ type (
 	// impact of being true on the overall score.
 	ScoreImpact struct {
 		Category ImpactCategory `json:"category"`
-		Score    float32
+		Score    float64
 	}
 
 	ImpactCategory string
@@ -450,7 +450,7 @@ func ValidateImpactCategory(value ImpactCategory) error {
 	}
 }
 
-func GetScoreFromImpactCategory(category ImpactCategory) (float32, error) {
+func GetScoreFromImpactCategory(category ImpactCategory) (float64, error) {
 	switch {
 	case category == HighThreat:
 		return HIGH_CATEGORY_SCORE, nil
@@ -467,16 +467,16 @@ func GetScoreFromImpactCategory(category ImpactCategory) (float32, error) {
 func GetImpactCategoryFromScore(score float64) ImpactCategory {
 	switch {
 	// >80%
-	case score > MEDIUM_CATEGORY_SCORE:
+	case score >= MEDIUM_CATEGORY_SCORE:
 		return HighThreat
-	// >40% and <=60%
-	case score > LOW_CATEGORY_SCORE && score <= MEDIUM_CATEGORY_SCORE:
+	// >40% and <60%
+	case score >= LOW_CATEGORY_SCORE && score < MEDIUM_CATEGORY_SCORE:
 		return MediumThreat
-	// >20% and <=40%
-	case score > NONE_CATEGORY_SCORE && score <= LOW_CATEGORY_SCORE:
+	// >20% and <40%
+	case score >= NONE_CATEGORY_SCORE && score < LOW_CATEGORY_SCORE:
 		return LowThreat
 	// <=20%
-	case score > 0 && score <= NONE_CATEGORY_SCORE:
+	case score > 0 && score < NONE_CATEGORY_SCORE:
 		return NoneThreat
 	}
 

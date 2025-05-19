@@ -48,7 +48,7 @@ type AnalysisResult struct {
 
 	// Prevalence
 	PrevalenceTotal uint64  `ch:"prevalence_total"`
-	Prevalence      float32 `ch:"prevalence"`
+	Prevalence      float64 `ch:"prevalence"`
 
 	// C2 over DNS
 	TLD            string `ch:"tld"`
@@ -305,7 +305,7 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 	SELECT  s.hash AS hash, s.src AS src, s.src_nuid AS src_nuid, s.fqdn AS fqdn, 
 			if(t.fqdn != '', true, false) AS on_threat_intel,
 			prevalence_total, 
-			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
+      prevalence_total / {network_size:UInt64} AS prevalence,
 			if({use_historical:Bool}, h.first_seen, s.first_seen) AS first_seen_historical,
 			'sni' AS beacon_type,
 			count,
@@ -534,8 +534,8 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 				total_bytes,
 				last_seen,
 				if(t.ip != '::', true, false) AS on_threat_intel,
-				prevalence_total, 
-				toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
+				prevalence_total,
+				prevalence_total / {network_size:UInt64} AS prevalence,
 				if({use_historical:Bool}, h.first_seen, i.first_seen) AS first_seen_historical,
 				po.port_proto_service as port_proto_service
 		FROM totaled_ipconns i 
@@ -711,7 +711,7 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			 u.last_seen as last_seen,
 			prevalence_total, 
 			if(dm.has_mod > 0, true, false) as has_c2_direct_conns_mod,
-			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
+			prevalence_total / {network_size:UInt64} AS prevalence,
 			-- use the historical first seen value if this dataset is rolling and <= 24 hours old
 			if({use_historical:Bool}, h.first_seen, u.first_seen) AS first_seen_historical,
 			if(cutToFirstSignificantSubdomain(t.fqdn) != '', true, false) AS on_threat_intel

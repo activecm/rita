@@ -35,7 +35,7 @@ func TestCalculateBucketedScore(t *testing.T) {
 	// verify that the score is greater than zero when the none threshold is zero
 	// (and the value is greater than zero)
 	score := calculateBucketedScore(1, config.ScoreThresholds{Base: 0, Low: 5, Med: 10, High: 15})
-	require.Greater(t, score, float32(0), "score must be greater than zero when the base threshold is zero & the value is greater than zero")
+	require.Greater(t, score, float64(0), "score must be greater than zero when the base threshold is zero & the value is greater than zero")
 
 	// verify that the score is 20% if the none threshold and the value are zero
 	// this allows configuration for any positive integer to score at least 20%
