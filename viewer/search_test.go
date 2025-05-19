@@ -189,7 +189,7 @@ func (s *ViewerTestSuite) TestSearchResults() {
 		{name: "Filter by beacon score, less than", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "<", Value: "0.70"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore < 0.7 }},
 		{name: "Filter by beacon score, less than or equal", filter: viewer.Filter{Beacon: viewer.OperatorFilter{Operator: "<=", Value: "0.70"}}, valid: func(i *viewer.Item) bool { return i.BeaconScore <= 0.7 }},
 		// duration
-		{name: "Filter by duration", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "=", Value: "2584"}}, valid: func(i *viewer.Item) bool { return math.Floor(float64(i.TotalDuration)) == 2584 }},
+		{name: "Filter by duration", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "=", Value: "2584"}}, valid: func(i *viewer.Item) bool { return math.Floor(i.TotalDuration) == 2584 }},
 		{name: "Filter by duration, greater than", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: ">", Value: "21600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration > 21600 }},
 		{name: "Filter by duration, greater than or equal", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: ">=", Value: "21600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration >= 21600 }},
 		{name: "Filter by duration, less than", filter: viewer.Filter{Duration: viewer.OperatorFilter{Operator: "<", Value: "3600"}}, valid: func(i *viewer.Item) bool { return i.TotalDuration < 3600 }},
@@ -215,23 +215,23 @@ func (s *ViewerTestSuite) TestSearchResults() {
 			return i.FinalScore < config.LOW_CATEGORY_SCORE && i.FinalScore >= config.NONE_CATEGORY_SCORE
 		}},
 		// sorting
-		{name: "Sort by beacon, desc", filter: viewer.Filter{SortBeacon: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.BeaconScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
-			return float64(newItem.BeaconScore), newItem.BeaconScore <= float32(currentVal)
+		{name: "Sort by beacon, desc", filter: viewer.Filter{SortBeacon: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return item.BeaconScore }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
+			return newItem.BeaconScore, newItem.BeaconScore <= currentVal
 		}},
-		{name: "Sort by beacon, asc", filter: viewer.Filter{SortBeacon: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.BeaconScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
-			return float64(newItem.BeaconScore), newItem.BeaconScore >= float32(currentVal)
+		{name: "Sort by beacon, asc", filter: viewer.Filter{SortBeacon: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return item.BeaconScore }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
+			return newItem.BeaconScore, newItem.BeaconScore >= currentVal
 		}},
-		{name: "Sort by duration, desc", filter: viewer.Filter{SortDuration: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.TotalDuration) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
-			return float64(newItem.TotalDuration), newItem.TotalDuration <= float32(currentVal)
+		{name: "Sort by duration, desc", filter: viewer.Filter{SortDuration: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return item.TotalDuration }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
+			return newItem.TotalDuration, newItem.TotalDuration <= currentVal
 		}},
-		{name: "Sort by duration, asc", filter: viewer.Filter{SortDuration: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.TotalDuration) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
-			return float64(newItem.TotalDuration), newItem.TotalDuration >= float32(currentVal)
+		{name: "Sort by duration, asc", filter: viewer.Filter{SortDuration: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return item.TotalDuration }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
+			return newItem.TotalDuration, newItem.TotalDuration >= currentVal
 		}},
-		{name: "Sort by severity, desc", filter: viewer.Filter{SortSeverity: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.FinalScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
-			return float64(newItem.FinalScore), newItem.FinalScore <= float32(currentVal)
+		{name: "Sort by severity, desc", filter: viewer.Filter{SortSeverity: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return item.FinalScore }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
+			return newItem.FinalScore, newItem.FinalScore <= currentVal
 		}},
-		{name: "Sort by severity, asc", filter: viewer.Filter{SortSeverity: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.FinalScore) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
-			return float64(newItem.FinalScore), newItem.FinalScore >= float32(currentVal)
+		{name: "Sort by severity, asc", filter: viewer.Filter{SortSeverity: "asc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return item.FinalScore }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
+			return newItem.FinalScore, newItem.FinalScore >= currentVal
 		}},
 		{name: "Sort by subdomains, desc", filter: viewer.Filter{SortSubdomains: "desc"}, checkSorting: true, field: func(item *viewer.Item) float64 { return float64(item.Subdomains) }, sorted: func(currentVal float64, newItem *viewer.Item) (float64, bool) {
 			return float64(newItem.Subdomains), float64(newItem.Subdomains) <= currentVal

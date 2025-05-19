@@ -18,11 +18,11 @@ var ErrInputSliceEmpty = errors.New("input slice must not be empty")
 
 type Beacon struct {
 	BeaconType     string  `ch:"beacon_type"` // (sni, ip)
-	Score          float32 `ch:"beacon_score"`
-	TimestampScore float32 `ch:"ts_score"`
-	DataSizeScore  float32 `ch:"ds_score"`
-	HistogramScore float32 `ch:"hist_score"`
-	DurationScore  float32 `ch:"dur_score"`
+	Score          float64 `ch:"beacon_score"`
+	TimestampScore float64 `ch:"ts_score"`
+	DataSizeScore  float64 `ch:"ds_score"`
+	HistogramScore float64 `ch:"hist_score"`
+	DurationScore  float64 `ch:"dur_score"`
 
 	TSIntervals      []int64 `ch:"ts_intervals"`
 	TSIntervalCounts []int64 `ch:"ts_interval_counts"`
@@ -85,17 +85,14 @@ func (analyzer *Analyzer) analyzeBeacon(entry *AnalysisResult) (Beacon, error) {
 	}
 
 	// create beacon
-	// float64 values are cast to float32 for more efficient storage in the database, as the values
-	// are not expected to exceed the range of a float32. The cast is done here at the end of analysis
-	// since most of the go math functions require or return float64
 	beacon = Beacon{
 		// score fields
 		BeaconType:     entry.BeaconType,
-		Score:          float32(score),
-		TimestampScore: float32(tsScore),
-		DataSizeScore:  float32(dsScore),
-		HistogramScore: float32(histScore),
-		DurationScore:  float32(durScore),
+		Score:          score,
+		TimestampScore: tsScore,
+		DataSizeScore:  dsScore,
+		HistogramScore: histScore,
+		DurationScore:  durScore,
 
 		// graphing fields
 		TSIntervals:      intervals,

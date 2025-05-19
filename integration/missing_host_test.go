@@ -91,15 +91,15 @@ func (it *MissingHostSuite) TestThreat() {
 	type expectedResults struct {
 		src              string
 		dst              string
-		finalScore       float32
-		beaconScore      float32
-		longConnScore    float32
+		finalScore       float64
+		beaconScore      float64
+		longConnScore    float64
 		totalDuration    float64
 		totalBytes       float64
 		count            uint64
 		missingHostCount uint64
-		missingHostScore float32
-		prevalence       float32
+		missingHostScore float64
+		prevalence       float64
 		portProtoService []string
 		firstSeen        time.Time
 	}
@@ -183,7 +183,7 @@ func (it *MissingHostSuite) TestThreat() {
 	i = 0
 	for rows.Next() {
 		var name, value string
-		var score float32
+		var score float64
 		err = rows.Scan(&name, &value, &score)
 		require.NoError(t, err)
 

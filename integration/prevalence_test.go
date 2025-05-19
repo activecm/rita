@@ -15,8 +15,8 @@ import (
 
 type prevalenceRes struct {
 	PrevTotal       uint64  `ch:"prevalence_total"`
-	Prevalence      float32 `ch:"prevalence"`
-	PrevalenceScore float32 `ch:"prevalence_score"`
+	Prevalence      float64 `ch:"prevalence"`
+	PrevalenceScore float64 `ch:"prevalence_score"`
 }
 
 func (it *ValidDatasetTestSuite) TestPrevalence() {
@@ -44,7 +44,7 @@ func (it *ValidDatasetTestSuite) TestPrevalence() {
 		WHERE count > 0 AND dst = '64.4.54.254'
 	`)
 	require.NoError(t, err)
-	networkSize := float32(15)
+	networkSize := float64(15)
 	for _, r := range results {
 		require.EqualValues(t, 13, r.PrevTotal)
 		require.InEpsilon(t, 13/networkSize, r.Prevalence, 0.001)
@@ -141,7 +141,7 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 
 	var results []prevalenceRes
 
-	networkSize := float32(15)
+	networkSize := float64(15)
 
 	// destination that is both the source and destination in conn
 	err = db.Conn.Select(db.GetContext(), &results, `--sql

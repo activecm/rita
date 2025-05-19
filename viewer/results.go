@@ -21,33 +21,33 @@ type MixtapeResult struct {
 	Src                      net.IP              `ch:"src" json:"src"`
 	Dst                      net.IP              `ch:"dst" json:"dst"`
 	FQDN                     string              `ch:"fqdn"`
-	FinalScore               float32             `ch:"final_score"`
+	FinalScore               float64             `ch:"final_score"`
 	Count                    uint64              `ch:"count"`
 	ProxyCount               uint64              `ch:"proxy_count"`
-	BeaconScore              float32             `ch:"beacon_score"`
-	StrobeScore              float32             `ch:"strobe_score"`
-	BeaconThreatScore        float32             `ch:"beacon_threat_score"`
-	TotalDuration            float32             `ch:"total_duration"`
-	LongConnScore            float32             `ch:"long_conn_score"`
+	BeaconScore              float64             `ch:"beacon_score"`
+	StrobeScore              float64             `ch:"strobe_score"`
+	BeaconThreatScore        float64             `ch:"beacon_threat_score"`
+	TotalDuration            float64             `ch:"total_duration"`
+	LongConnScore            float64             `ch:"long_conn_score"`
 	FirstSeen                time.Time           `ch:"first_seen_historical"`
-	FirstSeenScore           float32             `ch:"first_seen_score"`
-	Prevalence               float32             `ch:"prevalence"`
-	PrevalenceScore          float32             `ch:"prevalence_score"`
+	FirstSeenScore           float64             `ch:"first_seen_score"`
+	Prevalence               float64             `ch:"prevalence"`
+	PrevalenceScore          float64             `ch:"prevalence_score"`
 	PrevalenceTotal          uint64              `ch:"prevalence_total"`
 	NetworkSize              uint64              `ch:"network_size"`
 	Subdomains               uint64              `ch:"subdomains"`
 	PortProtoService         []string            `ch:"port_proto_service"`
-	C2OverDNSScore           float32             `ch:"c2_over_dns_score"`
-	C2OverDNSDirectConnScore float32             `ch:"c2_over_dns_direct_conn_score"`
-	ThreatIntelScore         float32             `ch:"threat_intel_score"`
-	ThreatIntelDataSizeScore float32             `ch:"threat_intel_data_size_score"`
+	C2OverDNSScore           float64             `ch:"c2_over_dns_score"`
+	C2OverDNSDirectConnScore float64             `ch:"c2_over_dns_direct_conn_score"`
+	ThreatIntelScore         float64             `ch:"threat_intel_score"`
+	ThreatIntelDataSizeScore float64             `ch:"threat_intel_data_size_score"`
 	TotalBytes               uint64              `ch:"total_bytes"`
 	TotalBytesFormatted      string              `ch:"total_bytes_formatted"`
-	MissingHostHeaderScore   float32             `ch:"missing_host_header_score"`
+	MissingHostHeaderScore   float64             `ch:"missing_host_header_score"`
 	MissingHostCount         uint64              `ch:"missing_host_count"`
 	ProxyIPs                 []net.IP            `ch:"proxy_ips"`
 	Modifiers                []map[string]string `ch:"modifiers"`
-	TotalModifierScore       float32             `ch:"total_modifier_score"`
+	TotalModifierScore       float64             `ch:"total_modifier_score"`
 }
 
 type Item MixtapeResult
@@ -114,7 +114,7 @@ func (i *Item) GetFirstSeen(relativeTimestamp time.Time) string {
 	return fmt.Sprintf("%d %s ago", int(math.Floor(timeAgo.Hours())), text)
 }
 func (i *Item) GetTotalDuration() string {
-	return renderIndicator(i.LongConnScore, time.Duration(i.TotalDuration*float32(time.Second)).Truncate(time.Second).String())
+	return renderIndicator(i.LongConnScore, time.Duration(i.TotalDuration*float64(time.Second)).Truncate(time.Second).String())
 }
 func (i *Item) GetPrevalence() string {
 	// prevalence = (prevalence_total / network_size)
@@ -160,7 +160,7 @@ func (i *Item) GetSeverity(color bool) string {
 		}
 
 	} else {
-		severity = config.GetImpactCategoryFromScore(float64(i.FinalScore))
+		severity = config.GetImpactCategoryFromScore(i.FinalScore)
 		if DebugMode {
 			return renderIndicator(i.FinalScore, fmt.Sprintf("%1.2f%%", i.FinalScore*100))
 		}
@@ -231,7 +231,7 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 		c2_over_dns_direct_conn_score,
 		modifiers,
 		total_modifier_score,
-		toFloat32(base_score + total_modifier_score + prevalence_score + first_seen_score + missing_host_header_score + threat_intel_data_size_score + c2_over_dns_direct_conn_score) as final_score
+		base_score + total_modifier_score + prevalence_score + first_seen_score + missing_host_header_score + threat_intel_data_size_score + c2_over_dns_direct_conn_score as final_score
 		-- base_score
 		-- total_modifier_score
 	
@@ -244,25 +244,25 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 			formatReadableSize(total_bytes) as total_bytes_formatted,
 			sum(subdomain_count) as subdomains,
 			flatten(groupArray(port_proto_service)) as port_proto_service,
-			toFloat32(sum(beacon_score)) as beacon_score,
-			toFloat32(sum(beacon_threat_score)) as beacon_threat_score,
-			toFloat32(sum(c2_over_dns_score)) as c2_over_dns_score,
-			toFloat32(sum(strobe_score)) as strobe_score,
-			toFloat32(sum(total_duration)) as total_duration,
-			toFloat32(sum(long_conn_score)) as  long_conn_score,
-			toFloat32(sum(prevalence)) as prevalence,
-			toFloat32(sum(prevalence_score)) as prevalence_score,
+			sum(beacon_score) as beacon_score,
+			sum(beacon_threat_score) as beacon_threat_score,
+			sum(c2_over_dns_score) as c2_over_dns_score,
+			sum(strobe_score) as strobe_score,
+			sum(total_duration) as total_duration,
+			sum(long_conn_score) as  long_conn_score,
+			sum(prevalence) as prevalence,
+			sum(prevalence_score) as prevalence_score,
 			sum(prevalence_total) as prevalence_total, 
 			sum(network_size) as network_size,
 			max(first_seen_historical) as first_seen_historical,
-			toFloat32(sum(first_seen_score)) as first_seen_score,
-			toFloat32(sum(threat_intel_score)) as threat_intel_score,
-			toFloat32(sum(threat_intel_data_size_score)) as threat_intel_data_size_score,
+			sum(first_seen_score) as first_seen_score,
+			sum(threat_intel_score) as threat_intel_score,
+			sum(threat_intel_data_size_score) as threat_intel_data_size_score,
 			sum(missing_host_count) as missing_host_count,
-			toFloat32(sum(missing_host_header_score)) as missing_host_header_score,
-			toFloat32(sum(c2_over_dns_direct_conn_score)) as c2_over_dns_direct_conn_score,
+			sum(missing_host_header_score) as missing_host_header_score,
+			sum(c2_over_dns_direct_conn_score) as c2_over_dns_direct_conn_score,
 			arraySort(groupUniqArrayIf(map('modifier_name', modifier_name, 'modifier_value', modifier_value), modifier_name != '')) as modifiers,
-			toFloat32(sum(modifier_score)) as total_modifier_score,
+			sum(modifier_score) as total_modifier_score,
 			greatest(beacon_threat_score, long_conn_score, strobe_score, c2_over_dns_score, threat_intel_score) as base_score
 		FROM threat_mixtape t
 		INNER JOIN (SELECT hash, argMax(import_id, last_seen) as import_id, max(last_seen) as max_last_seen FROM threat_mixtape GROUP BY hash) x
@@ -316,7 +316,7 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 		}
 
 		if filter.Beacon.Value != "" && filter.Beacon.Operator != "" {
-			havingConditions = append(havingConditions, "beacon_score "+filter.Beacon.Operator+" {beacon:Float32}")
+			havingConditions = append(havingConditions, "beacon_score "+filter.Beacon.Operator+" {beacon:Float64}")
 			params["beacon"] = filter.Beacon.Value
 		}
 
@@ -352,7 +352,7 @@ func BuildResultsQuery(filter *Filter, currentPage, pageSize int, minTimestamp t
 		if len(filter.Severity) > 0 {
 			for i, op := range filter.Severity {
 				paramName := fmt.Sprintf("final_score_%d", i)
-				outerWhereConditions = append(outerWhereConditions, "final_score "+op.Operator+fmt.Sprintf("{%s:Float32}", paramName))
+				outerWhereConditions = append(outerWhereConditions, "final_score "+op.Operator+fmt.Sprintf("{%s:Float64}", paramName))
 				params[paramName] = op.Value
 			}
 			query += "WHERE " + strings.Join(outerWhereConditions, " AND ")

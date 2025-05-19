@@ -17,7 +17,7 @@ var sideBarStyle = lipgloss.NewStyle()
 type modifier struct {
 	label string
 	value string
-	delta float32
+	delta float64
 }
 
 type sidebarModel struct {

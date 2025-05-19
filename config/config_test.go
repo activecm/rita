@@ -523,15 +523,15 @@ func TestConfig_ParseImpactCategoryScores(t *testing.T) {
 	t.Run("Valid Categories", func(t *testing.T) {
 		cfg := &Config{Scoring: Scoring{ThreatScoring: ThreatScoring{StrobeImpact: ScoreImpact{Category: HighThreat}, ThreatIntelImpact: ScoreImpact{Category: LowThreat}}}}
 		require.NoError(t, cfg.parseImpactCategoryScores())
-		require.InDelta(t, float32(HIGH_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
-		require.InDelta(t, float32(LOW_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
+		require.InDelta(t, float64(HIGH_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
+		require.InDelta(t, float64(LOW_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
 	})
 
 	t.Run("More Valid Categories", func(t *testing.T) {
 		cfg := &Config{Scoring: Scoring{ThreatScoring: ThreatScoring{StrobeImpact: ScoreImpact{Category: MediumThreat}, ThreatIntelImpact: ScoreImpact{Category: NoneThreat}}}}
 		require.NoError(t, cfg.parseImpactCategoryScores())
-		require.InDelta(t, float32(MEDIUM_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
-		require.InDelta(t, float32(NONE_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
+		require.InDelta(t, float64(MEDIUM_CATEGORY_SCORE), cfg.Scoring.StrobeImpact.Score, 0.0001, "StrobeImpact.Score should match expected value")
+		require.InDelta(t, float64(NONE_CATEGORY_SCORE), cfg.Scoring.ThreatIntelImpact.Score, 0.0001, "ThreatIntelImpact.Score should match expected value")
 	})
 
 	t.Run("Invalid Category for StrobeImpact", func(t *testing.T) {
@@ -812,7 +812,7 @@ func TestGetScoreFromImpactCategory(t *testing.T) {
 	tests := []struct {
 		name          string
 		impact        ImpactCategory
-		expectedScore float32
+		expectedScore float64
 		expectedError error
 	}{
 		{

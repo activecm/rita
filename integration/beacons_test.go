@@ -154,7 +154,7 @@ func (it *ValidDatasetTestSuite) TestBeacons() { // used by valid dataset test s
 				}))
 				var res analysis.ThreatMixtape
 				err = it.db.Conn.QueryRow(ctx, `
-							SELECT src, src_nuid, dst, dst_nuid, fqdn, sum(count) as count, toFloat32(sum(beacon_score)) as beacon_score, toFloat32(sum(ts_score)) as ts_score, toFloat32(sum(ds_score)) as ds_score, toFloat32(sum(dur_score)) as dur_score, toFloat32(sum(hist_score)) as hist_score FROM threat_mixtape
+							SELECT src, src_nuid, dst, dst_nuid, fqdn, sum(count) as count, sum(beacon_score) as beacon_score, sum(ts_score) as ts_score, sum(ds_score) as ds_score, sum(dur_score) as dur_score, sum(hist_score) as hist_score FROM threat_mixtape
 							WHERE hash = unhex({hash:String})
 							GROUP BY src, src_nuid, dst, dst_nuid, fqdn
 						`).ScanStruct(&res)
