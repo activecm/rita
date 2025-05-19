@@ -1230,13 +1230,13 @@ func TestWalkFiles(t *testing.T) {
 					require.NoError(t, err)
 				}
 			} else {
-				today := time.Now().Truncate(24 * time.Hour)
+				today := time.Now().UTC().Truncate(24 * time.Hour)
 				files := []string{"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log"}
 				switch test.name {
 				case "Rolling Logs - Old":
 					// test should keep all 11 days because none were in the past 2 weeks
 					for i := -cmd.RollingLogDaysToKeep * 2; i < -cmd.RollingLogDaysToKeep; i++ {
-						subdirectory := today.Add(time.Duration(i) * 24 * time.Hour).Format("2006-01-02")
+						subdirectory := today.Add(time.Duration(i) * 24 * time.Hour).UTC().Format("2006-01-02")
 						require.NoError(t, afs.MkdirAll(filepath.Join(test.directory, subdirectory), test.directoryPermissions))
 						fullPath := fmt.Sprintf("%s/%s/", test.directory, subdirectory)
 
@@ -1249,7 +1249,7 @@ func TestWalkFiles(t *testing.T) {
 				case "Rolling Logs - New":
 					// test should keep only the first RollingLogDaysToKeep days
 					for i := -cmd.RollingLogDaysToKeep - 5; i < 1; i++ {
-						subdirectory := today.Add(time.Duration(i) * 24 * time.Hour).Format("2006-01-02")
+						subdirectory := today.Add(time.Duration(i) * 24 * time.Hour).UTC().Format("2006-01-02")
 						require.NoError(t, afs.MkdirAll(filepath.Join(test.directory, subdirectory), test.directoryPermissions))
 						fullPath := fmt.Sprintf("%s/%s/", test.directory, subdirectory)
 
@@ -1258,11 +1258,10 @@ func TestWalkFiles(t *testing.T) {
 							test.files = append(test.files, filePath)
 						}
 
-						if i > -cmd.RollingLogDaysToKeep {
+						if i >= -cmd.RollingLogDaysToKeep {
 							test.expectedFiles = append(test.expectedFiles, basicRollingHourLogs(fullPath))
 						}
 					}
-					fmt.Println(test.files[len(test.files)-1])
 
 				}
 				test.expectedFiles = createExpectedResults(test.expectedFiles)
