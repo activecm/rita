@@ -467,16 +467,16 @@ func GetScoreFromImpactCategory(category ImpactCategory) (float64, error) {
 func GetImpactCategoryFromScore(score float64) ImpactCategory {
 	switch {
 	// >80%
-	case score > MEDIUM_CATEGORY_SCORE:
+	case score >= MEDIUM_CATEGORY_SCORE:
 		return HighThreat
-	// >40% and <=60%
-	case score > LOW_CATEGORY_SCORE && score <= MEDIUM_CATEGORY_SCORE:
+	// >40% and <60%
+	case score >= LOW_CATEGORY_SCORE && score < MEDIUM_CATEGORY_SCORE:
 		return MediumThreat
-	// >20% and <=40%
-	case score > NONE_CATEGORY_SCORE && score <= LOW_CATEGORY_SCORE:
+	// >20% and <40%
+	case score >= NONE_CATEGORY_SCORE && score < LOW_CATEGORY_SCORE:
 		return LowThreat
 	// <=20%
-	case score > 0 && score <= NONE_CATEGORY_SCORE:
+	case score > 0 && score < NONE_CATEGORY_SCORE:
 		return NoneThreat
 	}
 
