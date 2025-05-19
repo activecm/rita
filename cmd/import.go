@@ -446,19 +446,19 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		// add file if it hasn't been seen before
 		case !exists:
 			fTracker[trimmedFileName] = fileTrack{
-				lastModified: info.ModTime(),
+				lastModified: info.ModTime().UTC(),
 				path:         path,
 			}
 		// if trimmed version of the file exists in the map and the currently marked file for import
 		// was last modified more recently than this current file, replace it with this file
-		case exists && fileData.lastModified.Before(info.ModTime()):
+		case exists && fileData.lastModified.UTC().Before(info.ModTime().UTC()):
 
 			// warn the user so that this isn't a silent operation
 			walkErrors = append(walkErrors, WalkError{Path: fTracker[trimmedFileName].path, Error: ErrSkippedDuplicateLog})
 			// logger.Warn().Str("original_path", fTracker[trimmedFileName].path).Str("replacement_path", path).Msg("encountered file with same name but different extension, potential duplicate log, skipping")
 
 			fTracker[trimmedFileName] = fileTrack{
-				lastModified: info.ModTime(),
+				lastModified: info.ModTime().UTC(),
 				path:         path,
 			}
 		// if the current file is older than the one we have already seen or no other conditions are met, skip it
@@ -592,13 +592,13 @@ func GatherDailyLogs(logMap map[time.Time]HourlyZeekLogs, days []time.Time, roll
 	slices.SortFunc(days, func(a, b time.Time) int { return a.Compare(b) })
 
 	// determine if there are any logs that are in the range to keep
-	today := time.Now().Truncate(24 * time.Hour)
-	nDaysAgo := today.Add(time.Duration(-RollingLogDaysToKeep) * 24 * time.Hour)
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	nDaysAgo := today.Add(time.Duration(-RollingLogDaysToKeep) * 24 * time.Hour).UTC()
 
 	// only filter rolling!
 	if rolling {
 		//  determine if there are any logs that are in the range to keep by checking the newest day (last in the array)
-		if days[len(days)-1].Compare(nDaysAgo) > -1 {
+		if days[len(days)-1].UTC().Compare(nDaysAgo) > -1 {
 			shouldFilter = true
 		}
 	}
