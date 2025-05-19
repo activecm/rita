@@ -128,30 +128,40 @@ func (s *SubnetSuite) TestNewSubnetList() {
 func (s *SubnetSuite) TestSubnet_UnmarshalJSON() {
 	t := s.T()
 	tests := []struct {
-		name          string
-		input         string
-		expected      Subnet
-		expectedError error
+		name            string
+		input           string
+		expected        Subnet
+		expectedMarshal string
+		expectedString  string
+		expectedError   error
 	}{
 		{
-			name:     "IPv4 Subnet with /24 CIDR",
-			input:    `"::ffff:192.168.1.0/120"`,
-			expected: NewSubnet(&net.IPNet{IP: net.IPv4(192, 168, 1, 0).To16(), Mask: net.CIDRMask(120, 128)}),
+			name:            "IPv4 Subnet with /24 CIDR",
+			input:           `"::ffff:192.168.1.0/120"`,
+			expected:        NewSubnet(&net.IPNet{IP: net.IPv4(192, 168, 1, 0).To16(), Mask: net.CIDRMask(120, 128)}),
+			expectedMarshal: `"192.168.1.0/24"`,
+			expectedString:  "::ffff:192.168.1.0/120",
 		},
 		{
-			name:     "IPv6 Subnet with /64 CIDR",
-			input:    `"2001:db8::/64"`,
-			expected: NewSubnet(&net.IPNet{IP: net.ParseIP("2001:db8::").To16(), Mask: net.CIDRMask(64, 128)}),
+			name:            "IPv6 Subnet with /64 CIDR",
+			input:           `"2001:db8::/64"`,
+			expected:        NewSubnet(&net.IPNet{IP: net.ParseIP("2001:db8::").To16(), Mask: net.CIDRMask(64, 128)}),
+			expectedMarshal: `"2001:db8::/64"`,
+			expectedString:  "2001:db8::/64",
 		},
 		{
-			name:     "IPv4 Address without CIDR",
-			input:    `"::ffff:10.1.1.1"`,
-			expected: NewSubnet(&net.IPNet{IP: net.IPv4(10, 1, 1, 1).To16(), Mask: net.CIDRMask(128, 128)}),
+			name:            "IPv4 Address without CIDR",
+			input:           `"::ffff:10.1.1.1"`,
+			expected:        NewSubnet(&net.IPNet{IP: net.IPv4(10, 1, 1, 1).To16(), Mask: net.CIDRMask(128, 128)}),
+			expectedMarshal: `"10.1.1.1"`,
+			expectedString:  "::ffff:10.1.1.1/128",
 		},
 		{
-			name:     "IPv6 Address without CIDR",
-			input:    `"::1"`,
-			expected: NewSubnet(&net.IPNet{IP: net.ParseIP("::1").To16(), Mask: net.CIDRMask(128, 128)}),
+			name:            "IPv6 Address without CIDR",
+			input:           `"::1"`,
+			expected:        NewSubnet(&net.IPNet{IP: net.ParseIP("::1").To16(), Mask: net.CIDRMask(128, 128)}),
+			expectedMarshal: `"::1"`,
+			expectedString:  "::1/128",
 		},
 		{
 			name:          "Invalid Input",
@@ -183,7 +193,7 @@ func (s *SubnetSuite) TestSubnet_UnmarshalJSON() {
 				// marshal back to json to verify that the marshalled value matches the original input
 				marshalled, err := subnet.MarshalJSON()
 				require.NoError(t, err)
-				require.JSONEq(t, test.input, string(marshalled))
+				require.JSONEq(t, test.expectedMarshal, string(marshalled))
 
 				// parse back from the newly marshalled value verify match to both the original and expected values
 				var parsedSubnet Subnet
@@ -191,6 +201,9 @@ func (s *SubnetSuite) TestSubnet_UnmarshalJSON() {
 				require.NoError(t, err)
 				require.Equal(t, subnet, parsedSubnet)
 				require.Equal(t, test.expected, parsedSubnet)
+
+				// verify ToString() value
+				require.Equal(t, test.expectedString, parsedSubnet.ToString())
 			}
 		})
 	}
@@ -199,35 +212,40 @@ func (s *SubnetSuite) TestSubnet_UnmarshalJSON() {
 func (s *SubnetSuite) TestSubnet_MarshalJSON() {
 	t := s.T()
 	tests := []struct {
-		name          string
-		subnet        Subnet
-		expected      string
-		expectedError error
+		name            string
+		subnet          Subnet
+		expectedMarshal string
+		expectedString  string
+		expectedError   error
 	}{
 		{
-			name:     "IPv4 Subnet with /24 CIDR",
-			subnet:   NewSubnet(&net.IPNet{IP: net.IPv4(192, 168, 1, 0).To16(), Mask: net.CIDRMask(120, 128)}),
-			expected: `"::ffff:192.168.1.0/120"`,
+			name:            "IPv4 Subnet with /24 CIDR",
+			subnet:          NewSubnet(&net.IPNet{IP: net.IPv4(192, 168, 1, 0).To16(), Mask: net.CIDRMask(120, 128)}),
+			expectedMarshal: `"192.168.1.0/24"`,
+			expectedString:  "::ffff:192.168.1.0/120",
 		},
 		{
-			name:     "IPv6 Subnet with /64 CIDR",
-			subnet:   NewSubnet(&net.IPNet{IP: net.ParseIP("2001:db8::").To16(), Mask: net.CIDRMask(64, 128)}),
-			expected: `"2001:db8::/64"`,
+			name:            "IPv6 Subnet with /64 CIDR",
+			subnet:          NewSubnet(&net.IPNet{IP: net.ParseIP("2001:db8::").To16(), Mask: net.CIDRMask(64, 128)}),
+			expectedMarshal: `"2001:db8::/64"`,
+			expectedString:  "2001:db8::/64",
 		},
 		{
-			name:     "IPv4 Address without CIDR",
-			subnet:   NewSubnet(&net.IPNet{IP: net.IPv4(10, 1, 1, 1).To16(), Mask: net.CIDRMask(128, 128)}),
-			expected: `"::ffff:10.1.1.1"`,
+			name:            "IPv4 Address without CIDR",
+			subnet:          NewSubnet(&net.IPNet{IP: net.IPv4(10, 1, 1, 1).To16(), Mask: net.CIDRMask(128, 128)}),
+			expectedMarshal: `"10.1.1.1"`,
+			expectedString:  "::ffff:10.1.1.1/128",
 		},
 		{
-			name:     "IPv6 Address without CIDR",
-			subnet:   NewSubnet(&net.IPNet{IP: net.ParseIP("::1").To16(), Mask: net.CIDRMask(128, 128)}),
-			expected: `"::1"`,
+			name:            "IPv6 Address without CIDR",
+			subnet:          NewSubnet(&net.IPNet{IP: net.ParseIP("::1").To16(), Mask: net.CIDRMask(128, 128)}),
+			expectedMarshal: `"::1"`,
+			expectedString:  `"::1/128"`,
 		},
 		{
 			name:          "IP is nil",
 			subnet:        NewSubnet(&net.IPNet{IP: nil, Mask: net.CIDRMask(0, 0)}),
-			expectedError: ErrIPIsNIl,
+			expectedError: ErrIPIsNil,
 		},
 	}
 
@@ -243,7 +261,7 @@ func (s *SubnetSuite) TestSubnet_MarshalJSON() {
 				require.NoError(t, err)
 
 				// verify that the marshalled value matches the expected value
-				require.JSONEq(t, test.expected, string(result))
+				require.JSONEq(t, test.expectedMarshal, string(result))
 
 				// pass to parse subnet
 				trimmedResult := strings.Trim(string(result), `"`)
@@ -256,7 +274,7 @@ func (s *SubnetSuite) TestSubnet_MarshalJSON() {
 				// marshal the newly parsed subnet and compare to the original marshalled result and expected value
 				marshalledSubnet, err := parsedSubnet.MarshalJSON()
 				require.NoError(t, err)
-				require.JSONEq(t, string(marshalledSubnet), test.expected)
+				require.JSONEq(t, string(marshalledSubnet), test.expectedMarshal)
 				require.JSONEq(t, string(marshalledSubnet), string(result))
 			}
 		})
@@ -309,7 +327,7 @@ func (s *SubnetSuite) TestSubnet_ToIPString() {
 		{
 			name:          "Nil IP",
 			subnet:        NewSubnet(&net.IPNet{IP: nil, Mask: net.CIDRMask(0, 0)}),
-			expectedError: ErrIPIsNIl,
+			expectedError: ErrIPIsNil,
 		},
 	}
 

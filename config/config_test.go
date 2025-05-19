@@ -340,6 +340,9 @@ func TestConfig_Validate(t *testing.T) {
 		}},
 		{"Env", []testCase{
 			{name: "DBConnection Not Host:Port", config: func(cfg *Config) { cfg.Env.DBConnection = "invalid" }, expectedErrs: []string{"'DBConnection' failed on the 'hostname_port' tag"}},
+			{name: "DBConnection IP:Port", config: func(cfg *Config) { cfg.Env.DBConnection = "192.168.0.1:8123" }, expectedErrs: []string{}},
+			{name: "DBConnection Docker Service:Port", config: func(cfg *Config) { cfg.Env.DBConnection = "db:8123" }, expectedErrs: []string{}},
+			{name: "DBConnection localhost:Port", config: func(cfg *Config) { cfg.Env.DBConnection = "localhost:8123" }, expectedErrs: []string{}},
 			{name: "HTTPExtensionsFilePath Not Valid File", config: func(cfg *Config) { cfg.Env.HTTPExtensionsFilePath = "--" }, expectedErrs: []string{"'HTTPExtensionsFilePath' failed on the 'file' tag"}},
 			{name: "LogLevel < Min", config: func(cfg *Config) { cfg.Env.LogLevel = -1 }, expectedErrs: []string{"'LogLevel' failed on the 'min' tag"}},
 			{name: "LogLevel > Max", config: func(cfg *Config) { cfg.Env.LogLevel = 7 }, expectedErrs: []string{"'LogLevel' failed on the 'max' tag"}},
@@ -363,10 +366,10 @@ func TestConfig_Validate(t *testing.T) {
 			// should never be empty after mandatory subnets are added
 			{name: "NeverIncludedSubnets Nil", config: func(cfg *Config) { cfg.Filtering.NeverIncludedSubnets = nil }, expectedErrs: []string{"'NeverIncludedSubnets' failed on the 'required' tag"}},
 			{name: "NeverIncludedSubnets Empty", config: func(cfg *Config) { cfg.Filtering.NeverIncludedSubnets = []util.Subnet{} }, expectedErrs: []string{"'NeverIncludedSubnets' failed on the 'gt' tag"}},
-			{name: "AlwaysIncludedDomains Not Domains", config: func(cfg *Config) { cfg.Filtering.AlwaysIncludedDomains = []string{"notadomain"} }, expectedErrs: []string{"'AlwaysIncludedDomains[0]' failed on the 'fqdn' tag"}},
-			{name: "AlwaysIncludedDomains Mixed Validity", config: func(cfg *Config) { cfg.Filtering.AlwaysIncludedDomains = []string{"valid.com", "notadomain"} }, expectedErrs: []string{"'AlwaysIncludedDomains[1]' failed on the 'fqdn' tag"}},
-			{name: "NeverIncludedDomains Not Domains", config: func(cfg *Config) { cfg.Filtering.NeverIncludedDomains = []string{"notadomain"} }, expectedErrs: []string{"'NeverIncludedDomains[0]' failed on the 'fqdn' tag"}},
-			{name: "NeverIncludedDomains Mixed Validity", config: func(cfg *Config) { cfg.Filtering.NeverIncludedDomains = []string{"valid.com", "notadomain"} }, expectedErrs: []string{"'NeverIncludedDomains[1]' failed on the 'fqdn' tag"}},
+			{name: "AlwaysIncludedDomains Not Domains", config: func(cfg *Config) { cfg.Filtering.AlwaysIncludedDomains = []string{"notadomain"} }, expectedErrs: []string{"'AlwaysIncludedDomains[0]' failed on the 'wildcard_fqdn' tag"}},
+			{name: "AlwaysIncludedDomains Mixed Validity", config: func(cfg *Config) { cfg.Filtering.AlwaysIncludedDomains = []string{"valid.com", "notadomain"} }, expectedErrs: []string{"'AlwaysIncludedDomains[1]' failed on the 'wildcard_fqdn' tag"}},
+			{name: "NeverIncludedDomains Not Domains", config: func(cfg *Config) { cfg.Filtering.NeverIncludedDomains = []string{"notadomain"} }, expectedErrs: []string{"'NeverIncludedDomains[0]' failed on the 'wildcard_fqdn' tag"}},
+			{name: "NeverIncludedDomains Mixed Validity", config: func(cfg *Config) { cfg.Filtering.NeverIncludedDomains = []string{"valid.com", "notadomain"} }, expectedErrs: []string{"'NeverIncludedDomains[1]' failed on the 'wildcard_fqdn' tag"}},
 			{name: "Empty Struct", config: func(cfg *Config) { cfg.Filtering = Filtering{} }, expectedErrs: []string{"'Filtering' failed on the 'required' tag"}},
 		}},
 		{"Scoring", []testCase{

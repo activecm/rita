@@ -16,7 +16,7 @@ var (
 	ErrParseCIDRInvalidIP      = fmt.Errorf("unable to parse CIDR as subnet, invalid IP address")
 	ErrParseCIDRInvalidMask    = fmt.Errorf("unable to parse CIDR as subnet, invalid mask")
 	errParseCIDRInvalidNumMask = fmt.Errorf("unable to parse CIDR as subnet, invalid numerical value for cidr mask")
-	ErrIPIsNIl                 = fmt.Errorf("ip is nil")
+	ErrIPIsNil                 = fmt.Errorf("ip is nil")
 )
 
 type Subnet struct {
@@ -72,13 +72,17 @@ func (s *Subnet) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-// MarshalJSON marshals the Subnet struct into JSON bytes
+/*
+MarshalJSON marshals the Subnet struct into JSON bytes
+The IP is formatted into its most human readable format.
+If the CIDR mask is full/max (128 or 32), then it is not displayed.
+For IPv4, the address is specifically formatted to not display IPv4 in IPv6.
+*/
 func (s *Subnet) MarshalJSON() ([]byte, error) {
-	// convert the Subnet struct to a string
-	// ip, err := s.ToIPString()
-	// if err != nil {
-	// 	return nil, err
-	// }
+
+	if s.IP == nil {
+		return nil, ErrIPIsNil
+	}
 
 	ip := s.IP.String()
 
@@ -94,10 +98,14 @@ func (s *Subnet) MarshalJSON() ([]byte, error) {
 
 }
 
-// ToIPString gets string representation of the IP address in the Subnet struct
+/*
+ToIPString gets string representation of the IP address in the Subnet struct
+The CIDR is always included.
+IPv4 is always formatted as IPv4 in IPv6.
+*/
 func (s *Subnet) ToIPString() (string, error) {
 	if s.IP == nil {
-		return "", ErrIPIsNIl
+		return "", ErrIPIsNil
 	}
 
 	// verify IPv6 notation for both the ip and mask

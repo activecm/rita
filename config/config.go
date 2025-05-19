@@ -48,7 +48,7 @@ type (
 	}
 
 	Env struct { // set by .env file
-		DBConnection                    string `validate:"required"` // DB_ADDRESS
+		DBConnection                    string `validate:"required,hostname_port"` // DB_ADDRESS
 		DBUsername                      string `json:"-"`
 		DBPassword                      string `json:"-"`
 		HTTPExtensionsFilePath          string `validate:"file"`        // CONFIG_DIR/http_extensions_list.csv

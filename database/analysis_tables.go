@@ -154,6 +154,7 @@ func (db *DB) createHistoricalFirstSeenMaterializedViews(ctx context.Context) er
 				minSimpleState(ts) as first_seen,
 				maxSimpleState(ts) as last_seen
 		FROM {database:Identifier}.http
+		WHERE host != ''
 		GROUP BY ( fqdn, ip)
 	`); err != nil {
 		return err
@@ -168,6 +169,7 @@ func (db *DB) createHistoricalFirstSeenMaterializedViews(ctx context.Context) er
 				minSimpleState(ts) as first_seen,
 				maxSimpleState(ts) as last_seen
 		FROM {database:Identifier}.openhttp
+		WHERE host != ''
 		GROUP BY ( fqdn, ip)
 	`); err != nil {
 		return err
