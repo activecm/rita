@@ -516,7 +516,7 @@ func defaultConfig() Config {
 		RITA: RITA{
 			UpdateCheckEnabled:              true,
 			BatchSize:                       100000,
-			MaxQueryExecutionTime:           240,
+			MaxQueryExecutionTime:           600,
 			MonthsToKeepHistoricalFirstSeen: 3,
 			ThreatIntel: ThreatIntel{
 				OnlineFeeds: []string{
