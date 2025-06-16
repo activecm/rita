@@ -676,9 +676,16 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 		-- keep tlds which had zero non-dns-server ips in direct connections
 		),
 		historical AS (
-			SELECT min(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
-			FROM metadatabase.historical_first_seen
-			LEFT JOIN exploded_dns USING tld
+			SELECT
+				min(first_seen) AS first_seen,
+    				tld
+			FROM (
+   				SELECT
+       					first_seen,
+	    				cutToFirstSignificantSubdomain(fqdn) AS tld
+	 			FROM metadatabase.historical_first_seen
+     			) AS historical
+			LEFT JOIN zeeklogs.exploded_dns USING (tld)
 			GROUP BY tld
 		),
 		totaled_exploded AS (
