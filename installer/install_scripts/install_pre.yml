@@ -227,11 +227,15 @@
 #Add repositories
     - name: "RITA Pre: Add Docker Ubuntu GPG apt key."
       # Note that apt-key is deprecated and that directly downloading the key to trusted.gpg.d WITH A .asc EXTENSION is the correct way now.
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
-        mode: '0644'
-        force: true
+      # Unfortunately get_url crashes with 
+      # An unknown error occurred: HTTPSConnection.__init__() got an unexpected keyword argument 'cert_file'
+      # with some combinations of ansible and python.  Using curl instead.
+      #get_url:
+      #  url: https://download.docker.com/linux/ubuntu/gpg
+      #  dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
+      #  mode: '0644'
+      #  force: true
+      shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/trusted.gpg.d/docker-ubuntu.asc
       when: ( ansible_distribution == 'Ubuntu' )
       tags:
         - packages
@@ -239,11 +243,15 @@
         - linuxdeb
 
     - name: "RITA Pre: Add Docker Debian GPG apt key."
-      get_url:
-        url: https://download.docker.com/linux/debian/gpg
-        dest: /etc/apt/trusted.gpg.d/docker-debian.asc
-        mode: '0644'
-        force: true
+      # Unfortunately get_url crashes with 
+      # An unknown error occurred: HTTPSConnection.__init__() got an unexpected keyword argument 'cert_file'
+      # with some combinations of ansible and python.  Using curl instead.
+      #get_url:
+      #  url: https://download.docker.com/linux/debian/gpg
+      #  dest: /etc/apt/trusted.gpg.d/docker-debian.asc
+      #  mode: '0644'
+      #  force: true
+      shell: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/trusted.gpg.d/docker-debian.asc
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Zorin OS' )
       tags:
         - packages
