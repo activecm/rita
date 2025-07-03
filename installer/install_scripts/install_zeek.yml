@@ -19,6 +19,7 @@
     zeek_container_image: "activecm/zeek:{{  zeek_version }}"
     clickhouse_container_image: clickhouse/clickhouse-server:latest
     ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
+    local_known_hosts: "{{ lookup('env', 'HOME') }}/.ssh/known_hosts"
 
 #The install_pre.yml script should already have been run by this point
 
@@ -99,6 +100,50 @@
         - linuxdeb
         - linuxrpm
 
+    #FIXME - place zeek_log_transport.sh in (local) opt for transfer
+    - name: "Zeek Install: Transfer zeek_log_transport.sh shell script to target system."
+      copy:
+        src: ./opt/zeek_log_transport.sh
+        dest: /usr/local/bin/zeek_log_transport.sh
+        owner: root
+        group: root
+        mode: 0755
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "Zeek Install: Transfer zeek_log_transport.cron to target system."
+      copy:
+        src: "{{ lookup('env', 'PWD') }}/zeek_log_transport.cron"
+        dest: /etc/cron.d/zeek_log_transport
+        owner: root
+        group: root
+        mode: 0755
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "Zeek Install: Place name of remote user in zeek_log_transport cron file"
+      ansible.builtin.replace:
+        path: /etc/cron.d/zeek_log_transport
+        regexp: '^(.*)NON_ROOT_ACCOUNT_NAME(.*)$'
+        replace: '\1{{ lookup("env", "USER") }}\2'
+        mode: '755'
+        owner: root
+        group: root
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
+
     #- name: "Zeek Install: Transfer zeek install files to /opt/zeek."
     #  copy:
     #    src: ./opt/
@@ -113,6 +158,7 @@
     #    - linuxdeb
     #    - linuxrpm
 
+
     #- name: "Zeek Install: Transfer zeek user files to /opt/zeek/etc."
     #  copy:
     #    src: ./etc/
@@ -126,6 +172,91 @@
     #    - linux
     #    - linuxdeb
     #    - linuxrpm
+
+    - name: "Zeek Install: check whether node.cfg exists to decide if this is the first time running zeek."
+      stat:
+        path: /opt/zeek/etc/node.cfg
+      register: node_stat
+
+    # We can't do this the first time.  zeek start runs zeekcfg on the first pass, which is an
+    # interactive CLI tool to pick interface(s).  The user has to run this by hand.
+    - name: "Zeek Install: Start Zeek"
+      shell: "/usr/local/bin/zeek start"
+      when: (node_stat.stat.exists == true)
+      tags:
+        - docker
+        - hunt
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    # We also can't run this the first time, as it requires a running zeek.
+    - name: "Zeek Install: Start Zeek on future reboots"
+      shell: "/usr/local/bin/zeek enable"
+      when: (node_stat.stat.exists == true)
+      tags:
+        - docker
+        - hunt
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "Zeek Install: Create .ssh directory."
+      ansible.builtin.file:
+        path: "{{  lookup('env', 'HOME') }}/.ssh"
+        state: directory
+        owner: "{{  lookup('env', 'USER') }}"
+        mode: 0700
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "Zeek Install: Transfer dataimport private key to .ssh"
+      copy:
+        src: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport"
+        dest: "{{  lookup('env', 'HOME') }}/.ssh/"
+        owner: "{{  lookup('env', 'USER') }}"
+        mode: 0600
+        backup: true
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "Zeek Install: Transfer dataimport public key to .ssh"
+      copy:
+        src: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport.pub"
+        dest: "{{  lookup('env', 'HOME') }}/.ssh/"
+        owner: "{{  lookup('env', 'USER') }}"
+        mode: 0644
+        backup: true
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
+
+    - name: "Zeek Install: Update known_hosts with entries from known_hosts on this system"
+      ansible.builtin.blockinfile:
+        block: "{{ lookup('ansible.builtin.file', '{{ local_known_hosts }}') }}"
+        path: "{{  lookup('env', 'HOME') }}/.ssh/known_hosts"
+        marker: "# {mark} ANSIBLE MANAGED BLOCK APPENDED DURING ZEEK INSTALL"
+        owner: "{{  lookup('env', 'USER') }}"
+        backup: true
+        create: true
+        mode: 0644
+      tags:
+        - docker
+        - zeek
+        - linux
+        - linuxdeb
+        - linuxrpm
 
 
 #The install_post.yml script should be run next

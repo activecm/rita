@@ -67,5 +67,11 @@ Brought to you by Active CounterMeasures©
 "
 echo "RITA was successfully installed!"
 
+if [ "$_INSTALL_ZEEK" = 'true' ]; then
+	echo "Please run the following commands on any new zeek sensors"
+	echo "	zeek start ; zeek enable"
+	echo ""
+fi
+
 # switch back to original working directory
 popd > /dev/null
