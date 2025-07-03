@@ -40,10 +40,10 @@ type PerformedZoneTransfer struct {
 }
 
 type ZoneTransferConnectivityErrors struct {
-	NameServerUnreachableUDPError error `json:"name_server_unreachable_udp"`
-	NameServerUnreachableTCPError error `json:"name_server_unreachable_tcp"`
-	UDPQueryFailedError           error `json:"udp_query_failed"`
-	AXFRFailedError               error `json:"axfr_failed"`
+	NameServerUnreachableUDPError string `json:"name_server_unreachable_udp"`
+	NameServerUnreachableTCPError string `json:"name_server_unreachable_tcp"`
+	UDPQueryFailedError           string `json:"udp_query_failed"`
+	AXFRFailedError               string `json:"axfr_failed"`
 }
 
 type ZoneTransfer struct {
@@ -250,12 +250,12 @@ func (zt *ZoneTransfer) TestConnectivity() ZoneTransferConnectivityErrors {
 	zlog := logger.GetLogger()
 
 	if err := zt.TestNetConnectivity("udp"); err != nil {
-		result.NameServerUnreachableUDPError = err
+		result.NameServerUnreachableUDPError = err.Error()
 		zlog.Error().Err(err).Str("name_server", zt.nameServer).Msg("name server unreachable via UDP")
 	}
 
 	if err := zt.TestNetConnectivity("tcp"); err != nil {
-		result.NameServerUnreachableTCPError = err
+		result.NameServerUnreachableTCPError = err.Error()
 		zlog.Error().Err(err).Str("name_server", zt.nameServer).Msg("name server unreachable via TCP")
 	}
 
@@ -266,7 +266,7 @@ func (zt *ZoneTransfer) TestConnectivity() ZoneTransferConnectivityErrors {
 
 	_, _, err := client.Exchange(msg, zt.nameServer)
 	if err != nil {
-		result.UDPQueryFailedError = err
+		result.UDPQueryFailedError = err.Error()
 		zlog.Error().Err(err).Str("name_server", zt.nameServer).Str("domain_name", zt.domainName).Msg("failed to perform SOA query over UDP")
 	}
 
@@ -276,7 +276,7 @@ func (zt *ZoneTransfer) TestConnectivity() ZoneTransferConnectivityErrors {
 
 	_, err = t.In(m, zt.nameServer)
 	if err != nil {
-		result.AXFRFailedError = err
+		result.AXFRFailedError = err.Error()
 		zlog.Error().Err(err).Str("name_server", zt.nameServer).Str("domain_name", zt.domainName).Msg("failed to perform AXFR zone transfer")
 	}
 
