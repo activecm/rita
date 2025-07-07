@@ -121,7 +121,7 @@
         dest: /etc/cron.d/zeek_log_transport
         owner: root
         group: root
-        mode: 0755
+        mode: 0644
       tags:
         - docker
         - zeek
@@ -134,7 +134,7 @@
         path: /etc/cron.d/zeek_log_transport
         regexp: '^(.*)NON_ROOT_ACCOUNT_NAME(.*)$'
         replace: '\1{{ lookup("env", "USER") }}\2'
-        mode: '755'
+        mode: 0644
         owner: root
         group: root
       tags:
