@@ -3,7 +3,8 @@ name: Tests
 on: 
   pull_request:
   push:
-    branches: 'main'
+    branches:
+      - 'main'
 
 # Temporarily splitting out tests into separate jobs for improving workflow execution time 
 jobs:
@@ -16,7 +17,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Install dependencies
         run: go get .
       - name: Build
@@ -41,7 +42,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Install dependencies
         run: go get .
       - name: Build
@@ -67,7 +68,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Install dependencies
         run: go get .
       - name: Build
@@ -92,7 +93,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Install dependencies
         run: go get .
       - name: Build
@@ -118,7 +119,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Install dependencies
         run: go get .
       - name: Build
