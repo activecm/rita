@@ -1,6 +1,6 @@
 ---
 # ansible install playbook that does the prep work for rita V2.
-# Version: 202408061413
+# Version: 202504081445
 # sample runs:
 # 	Optional: Add the following block, without #'s  to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
 # The hosts must each be on their own line.  These can be full or short hostnames or a name following "Host" in ~/.ssh/config .
@@ -23,6 +23,15 @@
 
   vars:
     ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
+
+  #The following variables are populated by adding these variables and their values after "-e" on the ansible-playbook command line.  Example:
+  #ansible-playbook -K -i "ro810,ub2404," -e "ANS_HTTP_PROXY=http://yourproxy:port ANS_HTTPS_PROXY=http://yourproxy:port NO_PROXY=localhost,127.0.0.1,db,logger install_hosts=ro810,ub2404," install_pre.yml
+  environment:
+    HTTP_PROXY: "{{ ANS_HTTP_PROXY }}"
+    HTTPS_PROXY: "{{ ANS_HTTPS_PROXY }}"
+    http_proxy: "{{ ANS_HTTP_PROXY }}"
+    https_proxy: "{{ ANS_HTTPS_PROXY }}"
+    NO_PROXY: "{{ NO_PROXY }}"
 
 #Early tasks needed to support the rest of the install
   pre_tasks:
@@ -47,6 +56,37 @@
       ansible.builtin.fail:
         msg: "Unsupported CPU architecture: {{  ansible_architecture  }}"
       when: ( ansible_architecture != "x86_64" ) 	#and ansible_architecture != "aarch64" ) # "aarch64" for pi.  #pi0w is armv6l.  i386.  amd64?
+
+#Teach package managers how to use a proxy
+    #Must precede "name: Start AC-Hunter"
+    - name: Add proxy environment variable to /etc/apt/apt.conf file
+      lineinfile:
+        path: /etc/apt/apt.conf
+        line: 'Acquire::http::Proxy "{{ ANS_HTTP_PROXY }}";'
+        insertafter: EOF
+        create: yes
+      tags:
+        - linux
+        - linuxdeb
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
+
+#Note: following configuration honors neither an embedded username nor password.  These would have to be specified as proxy_username=U and proxy_password=P lines as well.
+#This configuration works for rhel 8.0 and above.  It should work for Alma/Centos/Oracle/Rocky 8.0 and above too, as well as Fedora 22 and above.
+#Ref: https://linuxiac.com/how-to-use-yum-dnf-command-with-a-proxy-server/
+#Note: for centos 7 (no longer supported), one needs to add the proxy line to /etc/yum.conf instead (and see above note about proxy_username=U and proxy_password=P lines needed too.)
+#Ref: https://www.rosehosting.com/blog/how-to-enable-proxy-settings-for-yum-command-on-centos-7/
+    - name: Add proxy configuration to dnf and yum
+      lineinfile:
+        path: /etc/dnf/dnf.conf
+        line: "{{ item }}"
+        insertafter: EOF
+        create: yes
+      loop:
+        - "proxy={{ ANS_HTTP_PROXY }}"
+      tags:
+        - linux
+        - linuxrpm
+      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
 
 #Add tools needed by later stages
     # Provides "needs-restarting" for ansible's ability to manage rebooting after patching
@@ -409,7 +449,7 @@
 
     - name: "RITA Pre: replace python3-requests with a new version installed by pip."
       block:
-        - name: "RITA Pre: Uninstall unofficial docker packages on rpm-based distributions."
+        - name: "RITA Pre: Uninstall python3-requests on rpm-based distributions."
           yum:
             name:
               - python3-requests								#As of 20240618, issue with requests code: "Error connecting: Error while fetching server API version: Not supported URL scheme http+docker".  Installing requests with pip appears to install a newer version that handles the issue.
