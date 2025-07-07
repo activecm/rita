@@ -58,7 +58,7 @@ func (d *DatabaseTestSuite) SetupSuite() {
 	d.SetupClickHouse(t)
 
 	// update the config to use the clickhouse container connection
-	cfg.DBConnection = d.clickhouseConnection
+	cfg.Env.DBConnection = d.clickhouseConnection
 	d.cfg = cfg
 
 	// connect to clickhouse server
@@ -146,7 +146,7 @@ func (d *DatabaseTestSuite) TestConnectToServer() {
 	d.Run("Failed Server Connection", func() {
 		t := d.T()
 		invalidCfg := *d.cfg
-		invalidCfg.DBConnection = "invalid connection string"
+		invalidCfg.Env.DBConnection = "invalid connection string"
 
 		server, err := database.ConnectToServer(context.Background(), &invalidCfg)
 		require.Error(t, err, "connecting with invalid configuration should produce an error")

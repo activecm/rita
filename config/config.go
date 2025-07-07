@@ -3,9 +3,15 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 
+	"github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
+	"github.com/go-playground/validator/v10"
 
 	"github.com/hjson/hjson-go/v4"
 	"github.com/spf13/afero"
@@ -15,7 +21,8 @@ var Version string
 
 const DefaultConfigPath = "./config.hjson"
 
-var errInvalidImpactCategory = errors.New("invalid impact category: must be 'critical', 'high', 'medium', 'low', or 'none'")
+var errInvalidImpactCategory = errors.New("invalid impact category: must be 'high', 'medium', 'low', or 'none'")
+var errReadingConfigFile = errors.New("encountered an error while reading the config file")
 
 const (
 	NONE_CATEGORY_SCORE   = 0.2
@@ -31,156 +38,252 @@ const (
 )
 
 type (
+	Config struct {
+		Env          Env `json:"env" validate:"required"`
+		RITA         `validate:"required"`
+		Filtering    Filtering    `json:"filtering" validate:"required"`
+		Scoring      Scoring      `json:"scoring" validate:"required"`
+		Modifiers    Modifiers    `json:"modifiers" validate:"required"`
+		ZoneTransfer ZoneTransfer `json:"zone_transfer"`
+	}
+
+	Env struct { // set by .env file
+		DBConnection                    string `validate:"required,hostname_port"` // DB_ADDRESS
+		DBUsername                      string `json:"-"`
+		DBPassword                      string `json:"-"`
+		HTTPExtensionsFilePath          string `validate:"file"`        // CONFIG_DIR/http_extensions_list.csv
+		LogLevel                        int8   `validate:"min=0,max=6"` // LOG_LEVEL
+		ThreatIntelCustomFeedsDirectory string `validate:"dir"`         // CONFIG_DIR/threat_intel_feeds
+	}
+
+	RITA struct {
+		UpdateCheckEnabled              bool  `ch:"update_check_enabled" json:"update_check_enabled" validate:"boolean"`
+		BatchSize                       int32 `ch:"batch_size" json:"batch_size" validate:"gte=25000,lte=2000000"`
+		MaxQueryExecutionTime           int32 `ch:"max_query_execution_time" json:"max_query_execution_time" validate:"gte=1,lte=2000000"`
+		MonthsToKeepHistoricalFirstSeen int32 `ch:"months_to_keep_historical_first_seen" json:"months_to_keep_historical_first_seen" validate:"gte=1,lte=60"`
+		ThreatIntel                     `json:"threat_intel"`
+	}
+
 	ThreatIntel struct {
-		OnlineFeeds          []string `json:"online_feeds"`
-		CustomFeedsDirectory string   `json:"custom_feeds_directory"`
+		OnlineFeeds []string `ch:"threat_intel_online_feeds" json:"online_feeds" validate:"omitempty,dive,url"`
+	}
+
+	Filtering struct {
+		// subnets do not need a validate tag because they are validated when they are unmarshalled
+		InternalSubnets          []util.Subnet `ch:"internal_subnets" json:"internal_subnets" validate:"required,gt=0"`
+		AlwaysIncludedSubnets    []util.Subnet `ch:"always_included_subnets" json:"always_included_subnets"`
+		AlwaysIncludedDomains    []string      `ch:"always_included_domains" json:"always_included_domains" validate:"omitempty,dive,wildcard_fqdn"`
+		NeverIncludedSubnets     []util.Subnet `ch:"never_included_subnets" json:"never_included_subnets" validate:"required,gt=0"`
+		NeverIncludedDomains     []string      `ch:"never_included_domains" json:"never_included_domains" validate:"omitempty,dive,wildcard_fqdn"`
+		FilterExternalToInternal bool          `ch:"filter_external_to_internal" json:"filter_external_to_internal" validate:"boolean"`
+	}
+
+	Scoring struct {
+		Beacon        BeaconScoring `json:"beacon" validate:"required"`
+		ThreatScoring `validate:"required"`
+	}
+
+	ZoneTransfer struct {
+		Enabled    bool   `ch:"enabled" json:"enabled"`
+		DomainName string `ch:"domain_name" json:"domain_name" validate:"required_if=Enabled true,omitempty,fqdn"`
+		NameServer string `ch:"name_server" json:"name_server" validate:"required_if=Enabled true,omitempty,hostname_port"`
+	}
+
+	BeaconScoring struct {
+		UniqueConnectionThreshold         int64           `ch:"unique_connection_threshold" json:"unique_connection_threshold" validate:"gte=4"`
+		TimestampScoreWeight              float64         `ch:"timestamp_score_weight" json:"timestamp_score_weight" validate:"gte=0,lte=1"`
+		DatasizeScoreWeight               float64         `ch:"datasize_score_weight" json:"datasize_score_weight" validate:"gte=0,lte=1"`
+		DurationScoreWeight               float64         `ch:"duration_score_weight" json:"duration_score_weight" validate:"gte=0,lte=1"`
+		HistogramScoreWeight              float64         `ch:"histogram_score_weight" json:"histogram_score_weight" validate:"gte=0,lte=1"`
+		DurationMinHoursSeen              int32           `ch:"duration_min_hours_seen" json:"duration_min_hours_seen" validate:"gte=1,lte=24"`
+		DurationConsistencyIdealHoursSeen int32           `ch:"duration_consistency_ideal_hours_seen" json:"duration_consistency_ideal_hours_seen" validate:"gte=1,lte=24"`
+		HistogramModeSensitivity          float64         `ch:"histogram_mode_sensitivity" json:"histogram_mode_sensitivity" validate:"gte=0,lte=1"`
+		HistogramBimodalOutlierRemoval    int32           `ch:"histogram_bimodal_outlier_removal" json:"histogram_bimodal_outlier_removal" validate:"gte=0,lte=24"`
+		HistogramBimodalMinHoursSeen      int32           `ch:"histogram_bimodal_min_hours_seen" json:"histogram_bimodal_min_hours_seen" validate:"gte=3,lte=24"`
+		ScoreThresholds                   ScoreThresholds `ch:"score_thresholds" json:"score_thresholds" validate:"score_thresholds_range=0 100"`
+	}
+
+	ThreatScoring struct {
+		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds" validate:"score_thresholds_range=1 86400"` // 24 * 3600
+		C2ScoreThresholds             ScoreThresholds `json:"c2_score_thresholds" validate:"score_thresholds_range=1 -1"`
+		StrobeImpact                  ScoreImpact     `ch:"strobe_impact_category" json:"strobe_impact" validate:"impact_category"`
+		ThreatIntelImpact             ScoreImpact     `ch:"threat_intel_impact_category" json:"threat_intel_impact" validate:"impact_category"`
+	}
+
+	Modifiers struct {
+		ThreatIntelScoreIncrease         float64 `ch:"threat_intel_score_increase" json:"threat_intel_score_increase" validate:"gte=0,lte=1"`
+		ThreatIntelDataSizeThreshold     int64   `ch:"threat_intel_datasize_threshold" json:"threat_intel_datasize_threshold"  validate:"gte=1,lte=5000000000"`
+		PrevalenceScoreIncrease          float64 `ch:"prevalence_score_increase" json:"prevalence_score_increase" validate:"gte=0,lte=1"`
+		PrevalenceIncreaseThreshold      float64 `ch:"prevalence_increase_threshold" json:"prevalence_increase_threshold" validate:"gte=0,lte=1"`
+		PrevalenceScoreDecrease          float64 `ch:"prevalence_score_decrease" json:"prevalence_score_decrease" validate:"gte=0,lte=1"`
+		PrevalenceDecreaseThreshold      float64 `ch:"prevalence_decrease_threshold" json:"prevalence_decrease_threshold" validate:"gte=0,lte=1,gtfield=PrevalenceIncreaseThreshold"`
+		FirstSeenScoreIncrease           float64 `ch:"first_seen_score_increase" json:"first_seen_score_increase" validate:"gte=0,lte=1"`
+		FirstSeenIncreaseThreshold       float64 `ch:"first_seen_increase_threshold" json:"first_seen_increase_threshold" validate:"gte=1,lte=90"`
+		FirstSeenScoreDecrease           float64 `ch:"first_seen_score_decrease" json:"first_seen_score_decrease" validate:"gte=0,lte=1"`
+		FirstSeenDecreaseThreshold       float64 `ch:"first_seen_decrease_threshold" json:"first_seen_decrease_threshold" validate:"gte=1,lte=90,gtfield=FirstSeenIncreaseThreshold"`
+		MissingHostCountScoreIncrease    float64 `ch:"missing_host_count_score_increase" json:"missing_host_count_score_increase" validate:"gte=0,lte=1"`
+		RareSignatureScoreIncrease       float64 `ch:"rare_signature_score_increase" json:"rare_signature_score_increase" validate:"gte=0,lte=1"`
+		C2OverDNSDirectConnScoreIncrease float64 `ch:"c2_over_dns_direct_conn_score_increase" json:"c2_over_dns_direct_conn_score_increase" validate:"gte=0,lte=1"`
+		MIMETypeMismatchScoreIncrease    float64 `ch:"mime_type_mismatch_score_increase" json:"mime_type_mismatch_score_increase" validate:"gte=0,lte=1"`
 	}
 
 	// ScoreThresholds is used for indicators that have prorated (graduated) values rather than
 	// binary outcomes. This allows for the definition of the severity of an indicator by categorizing
-	// it into one of several buckets (Base, Low, Med, High), each representing a range of values
+	// it into one of several buckets (Base, Low, Med, High), each representing a range of values. These
+	// values must be in increasing order and unique.
 	ScoreThresholds struct {
-		Base int `json:"base"`
-		Low  int `json:"low"`
-		Med  int `json:"medium"`
-		High int `json:"high"`
+		Base int32 `json:"base" ch:"base" validate:"ltfield=Low"`
+		Low  int32 `json:"low" ch:"low" validate:"ltfield=Med"`
+		Med  int32 `json:"medium" ch:"med" validate:"ltfield=High"`
+		High int32 `json:"high" ch:"high"`
 	}
-
-	ImpactCategory string
 
 	// ScoreImpact is used for indicators that have a binary outcomes but still need to express the
 	// impact of being true on the overall score.
 	ScoreImpact struct {
 		Category ImpactCategory `json:"category"`
-		Score    float32
+		Score    float64
 	}
 
-	Scoring struct {
-		Beacon Beacon `json:"beacon"`
-
-		LongConnectionScoreThresholds ScoreThresholds `json:"long_connection_score_thresholds"`
-
-		C2ScoreThresholds ScoreThresholds `json:"c2_score_thresholds"`
-
-		StrobeImpact ScoreImpact `json:"strobe_impact"`
-
-		ThreatIntelImpact ScoreImpact `json:"threat_intel_impact"`
-	}
-
-	Modifiers struct {
-		ThreatIntelScoreIncrease     float32 `json:"threat_intel_score_increase"`
-		ThreatIntelDataSizeThreshold int64   `json:"threat_intel_datasize_threshold"`
-
-		PrevalenceScoreIncrease     float32 `json:"prevalence_score_increase"`
-		PrevalenceIncreaseThreshold float32 `json:"prevalence_increase_threshold"`
-		PrevalenceScoreDecrease     float32 `json:"prevalence_score_decrease"`
-		PrevalenceDecreaseThreshold float32 `json:"prevalence_decrease_threshold"`
-
-		FirstSeenScoreIncrease     float32 `json:"first_seen_score_increase"`
-		FirstSeenIncreaseThreshold float32 `json:"first_seen_increase_threshold"`
-		FirstSeenScoreDecrease     float32 `json:"first_seen_score_decrease"`
-		FirstSeenDecreaseThreshold float32 `json:"first_seen_decrease_threshold"`
-
-		MissingHostCountScoreIncrease float32 `json:"missing_host_count_score_increase"`
-
-		RareSignatureScoreIncrease float32 `json:"rare_signature_score_increase"`
-
-		C2OverDNSDirectConnScoreIncrease float32 `json:"c2_over_dns_direct_conn_score_increase"`
-
-		MIMETypeMismatchScoreIncrease float32 `json:"mime_type_mismatch_score_increase"`
-	}
-
-	Beacon struct {
-		UniqueConnectionThreshold       int64           `json:"unique_connection_threshold"`
-		TsWeight                        float64         `json:"timestamp_score_weight"`
-		DsWeight                        float64         `json:"datasize_score_weight"`
-		DurWeight                       float64         `json:"duration_score_weight"`
-		HistWeight                      float64         `json:"histogram_score_weight"`
-		DurMinHours                     int             `json:"duration_min_hours_seen"`
-		DurIdealNumberOfConsistentHours int             `json:"duration_consistency_ideal_hours_seen"`
-		HistModeSensitivity             float64         `json:"histogram_mode_sensitivity"`
-		HistBimodalOutlierRemoval       int             `json:"histogram_bimodal_outlier_removal"`
-		HistBimodalMinHours             int             `json:"histogram_bimodal_min_hours_seen"`
-		ScoreThresholds                 ScoreThresholds `json:"score_thresholds"`
-	}
-
-	Config struct {
-		DBConnection       string // set by .env file
-		UpdateCheckEnabled bool   `json:"update_check_enabled"`
-		Filter             Filter `json:"filtering"`
-
-		HTTPExtensionsFilePath string `json:"http_extensions_file_path"`
-
-		// writer
-		BatchSize             int `json:"batch_size"`
-		MaxQueryExecutionTime int `json:"max_query_execution_time"`
-
-		// historical first seen
-		MonthsToKeepHistoricalFirstSeen int `json:"months_to_keep_historical_first_seen"`
-
-		Scoring Scoring `json:"scoring"`
-
-		Modifiers Modifiers `json:"modifiers"`
-
-		ThreatIntel ThreatIntel `json:"threat_intel"`
-	}
+	ImpactCategory string
 )
 
 // ReadFileConfig attempts to read the config file at the specified path and
 // returns a config object, using the default config if the file was unable to be read.
 func ReadFileConfig(afs afero.Fs, path string) (*Config, error) {
 	// read the config file
-	contents, err := readFile(afs, path)
+	contents, err := util.GetFileContents(afs, path)
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println("contents:", contents)
 	var cfg Config
-	// parse the JSON config file
-	if err := hjson.Unmarshal(contents, &cfg); err != nil {
-		return nil, err
+	// // parse the JSON config file
+	// if err := hjson.Unmarshal(contents, &cfg); err != nil {
+	// 	return nil, err
+	// }
+	if err := unmarshal(contents, &cfg, nil); err != nil {
+		return nil, fmt.Errorf("%w, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", errReadingConfigFile, path, err)
 	}
+	// // set the environment variables
+	// if err := setEnv(&cfg); err != nil {
+	// 	return nil, fmt.Errorf("unable to set environment: %w", err)
+	// }
 
 	return &cfg, nil
 }
 
-// UnmarshalJSON unmarshals the JSON bytes into the config struct
-// overrides the default unmarshalling method to allow for custom parsing
+// ReadConfigFromMemory reads the config from bytes already read into memory as opposed to reading from a file
+// It also provides its own environment struct that must already be completely set
+func ReadConfigFromMemory(data []byte, env Env) (*Config, error) {
+	var cfg Config
+	if err := unmarshal(data, &cfg, &env); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+
+}
+
+func (c *Config) setEnv() error {
+	// get the database connection string
+	connection := os.Getenv("DB_ADDRESS")
+	if connection == "" {
+		return errors.New("environment variable DB_ADDRESS not set")
+	}
+	c.Env.DBConnection = connection
+
+	dbUsername := os.Getenv("CLICKHOUSE_USERNAME")
+	if dbUsername == "" {
+		return errors.New("environment variable CLICKHOUSE_USERNAME not set")
+	}
+	c.Env.DBUsername = dbUsername
+	dbPassword := os.Getenv("CLICKHOUSE_PASSWORD")
+	// don't check if CLICKHOUSE_PASSWORD is set because it can be empty
+	c.Env.DBPassword = dbPassword
+
+	// get the log level
+	logLevelStr := os.Getenv("LOG_LEVEL")
+	if logLevelStr == "" {
+		return errors.New("environment variable LOG_LEVEL not set")
+	}
+	logLevel, err := strconv.Atoi(logLevelStr)
+	if err != nil {
+		return fmt.Errorf("unable to convert LOG_LEVEL to int: %w", err)
+	}
+	c.Env.LogLevel = int8(logLevel)
+
+	configDir := os.Getenv("CONFIG_DIR")
+	if configDir == "" {
+		return errors.New("environment variable CONFIG_DIR not set")
+	}
+	configDirFull, err := filepath.Abs(configDir)
+	if err != nil {
+		return fmt.Errorf("unable to get absolute path to CONFIG_DIR environment variable: %s, err: %w", configDir, err)
+	}
+	c.Env.HTTPExtensionsFilePath = filepath.Join(configDirFull, "http_extensions_list.csv")
+	c.Env.ThreatIntelCustomFeedsDirectory = filepath.Join(configDirFull, "threat_intel_feeds")
+	return nil
+}
+
+// unmarshal unmarshals the data into the config struct, sets the environment variables, and validates the values
+func unmarshal(data []byte, cfg *Config, env *Env) error {
+	// unmarshal the JSON config file
+	if err := hjson.Unmarshal(data, &cfg); err != nil {
+		// fmt.Println("UNMARSHAL HAS ERROR :(", string(data))
+		return err
+	}
+
+	// set the environment struct
+	// this MUST be done before validating the values, because the
+	// validation checks for the presence of the environment variables
+	if env == nil {
+		// set the environment variables from the actual environment
+		if err := cfg.setEnv(); err != nil {
+			return fmt.Errorf("unable to set environment: %w", err)
+		}
+	} else {
+		// set the environment variables from the provided environment struct
+		cfg.Env = *env
+	}
+
+	// validate values
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// // UnmarshalJSON unmarshals the JSON bytes into the config struct
+// // overrides the default unmarshalling method to allow for custom parsing
 func (c *Config) UnmarshalJSON(bytes []byte) error {
 	// create temporary config struct to unmarshal into
 	// not doing this would result in an infinite unmarshalling loop
-
 	type tmpConfig Config
-	// init default config
-	defaultCfg, err := GetDefaultConfig()
-	if err != nil {
-		return err
-	}
+	defaultCfg := GetDefaultConfig()
 
 	// set the default config to a variable of the temporary type
 	tmpCfg := tmpConfig(defaultCfg)
 
 	// unmarshal json into the default config struct
-	err = hjson.Unmarshal(bytes, &tmpCfg)
+	err := hjson.Unmarshal(bytes, &tmpCfg)
 	if err != nil {
 		return err
 	}
 
 	// convert the temporary config struct to a config struct
 	cfg := Config(tmpCfg)
+	// validate internal subnets
+	cfg.Filtering.InternalSubnets = util.CompactSubnets(cfg.Filtering.InternalSubnets)
 
-	// parse the new subnet filter values
-	if err := cfg.parseFilter(); err != nil {
-		return err
-	}
+	// validate never included subnets
+	cfg.Filtering.NeverIncludedSubnets = util.IncludeMandatorySubnets(cfg.Filtering.NeverIncludedSubnets, GetMandatoryNeverIncludeSubnets())
+	cfg.Filtering.NeverIncludedSubnets = util.CompactSubnets(cfg.Filtering.NeverIncludedSubnets)
+
+	// clean up always included subnets
+	cfg.Filtering.AlwaysIncludedSubnets = util.CompactSubnets(cfg.Filtering.AlwaysIncludedSubnets)
 
 	// parse impact category scores
 	if err := cfg.parseImpactCategoryScores(); err != nil {
-		return err
-	}
-
-	// validate values
-	err = cfg.Validate()
-	if err != nil {
 		return err
 	}
 
@@ -191,7 +294,7 @@ func (c *Config) UnmarshalJSON(bytes []byte) error {
 }
 
 // GetDefaultConfig returns a Config object with default values
-func GetDefaultConfig() (Config, error) {
+func GetDefaultConfig() Config {
 	// set version to dev if not set
 	if Version == "" {
 		Version = "dev"
@@ -200,258 +303,106 @@ func GetDefaultConfig() (Config, error) {
 	// set default config values
 	cfg := defaultConfig()
 
-	// get the database connection string
-	connection := os.Getenv("DB_ADDRESS")
-	if connection == "" {
-		return Config{}, errors.New("environment variable DB_ADDRESS not set")
-	}
-	cfg.DBConnection = connection
-
-	// set up the filter based on default values
-	// (must be done to convert strings in the default config variable to net.IPNet)
-	err := cfg.parseFilter()
-	if err != nil {
-		return cfg, err
-	}
-
-	return cfg, nil
+	return cfg
 }
 
-// readFile reads the config file at the specified path and returns its contents
-func readFile(afs afero.Fs, path string) ([]byte, error) {
-	// validate file
-	err := util.ValidateFile(afs, path)
-	if err != nil {
-		return nil, err
-	}
+// Reset resets the config values to default
+// note: Env values are not reset
+func (cfg *Config) Reset() error {
+	// store the environment values before resetting
+	env := cfg.Env
 
-	file, err := afero.ReadFile(afs, path)
-	if err != nil {
-		return nil, err
-	}
+	// get the default config
+	newConfig := GetDefaultConfig()
 
-	return file, nil
-}
-
-// ResetConfig resets the config values to default
-func (cfg *Config) ResetConfig() error {
-	newConfig, err := GetDefaultConfig()
-	if err != nil {
-		return err
-	}
 	*cfg = newConfig
+	cfg.Env = env
+
+	// validate the config struct
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
+// Validate validates the config struct values
 func (cfg *Config) Validate() error {
-	// validate the configured values
-	if err := cfg.verifyConfig(); err != nil {
+	zlog := logger.GetLogger()
+	zlog.Debug().Interface("config", cfg).Msg("validating config")
+
+	// create a new validator
+	validate, err := NewValidator()
+	if err != nil {
 		return err
 	}
+
+	// validate the config struct
+	if err := validate.Struct(cfg); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// verifyConfig validates the configuration settings
-func (cfg *Config) verifyConfig() error {
-	if cfg.DBConnection == "" {
-		return fmt.Errorf("DBConnection cannot be empty")
+// NewValidator creates a new validator with custom validation rules
+func NewValidator() (*validator.Validate, error) {
+	v := validator.New(validator.WithRequiredStructEnabled())
+
+	// register custom validation for impact category
+	if err := v.RegisterValidation("impact_category", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Interface().(ScoreImpact)
+		err := ValidateImpactCategory(value.Category)
+		return err == nil
+	}); err != nil {
+		return nil, err
 	}
 
-	// validate that there is at least one internal subnet, or else we cannot do analysis
-	if len(cfg.Filter.InternalSubnets) < 1 {
-		return fmt.Errorf("the list of internal subnets is empty, got %v", cfg.Filter.InternalSubnets)
-	}
-
-	if len(cfg.HTTPExtensionsFilePath) < 1 {
-		return fmt.Errorf("the valid HTTP extensions file path is not set, got %v", cfg.HTTPExtensionsFilePath)
-	}
-
-	// validate the batch size
-	if cfg.BatchSize < 25000 || cfg.BatchSize > 2000000 {
-		return fmt.Errorf("the batch size for writing to the database must be between 25k and 2 million")
-	}
-
-	// validate the max query execution time
-	if cfg.MaxQueryExecutionTime < 1 || cfg.MaxQueryExecutionTime > 2000000 {
-		return fmt.Errorf("the max database query execution time must be between 1 second and 2 million seconds")
-	}
-
-	// validate historical first seen months
-	if cfg.MonthsToKeepHistoricalFirstSeen < 1 || cfg.MonthsToKeepHistoricalFirstSeen > 60 {
-		return fmt.Errorf("the historical first seen months must be between 1 and 60, got %v", cfg.MonthsToKeepHistoricalFirstSeen)
-	}
-
-	// validate the configured unique connection threshold (need at least 3 intervals, which means at least 4 connections)
-	if cfg.Scoring.Beacon.UniqueConnectionThreshold < 4 {
-		return fmt.Errorf("the unique connection threshold must be at least 4, got %v", cfg.Scoring.Beacon.UniqueConnectionThreshold)
-	}
-
-	// validate the configured score weights
-	totalWeight := 0.0
-	weights := []float64{
-		cfg.Scoring.Beacon.TsWeight,
-		cfg.Scoring.Beacon.DsWeight,
-		cfg.Scoring.Beacon.DurWeight,
-		cfg.Scoring.Beacon.HistWeight,
-	}
-	for _, weight := range weights {
-		if weight < 0 || weight > 1 {
-			return fmt.Errorf("the weight must be between 0 and 1, got %v", weight)
+	if err := v.RegisterValidation("score_thresholds_range", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Interface().(ScoreThresholds)
+		// get the param string and parse it into two integers (min and max)
+		params := strings.Split(fl.Param(), " ")
+		if len(params) != 2 {
+			return false
 		}
-		totalWeight += weight
+		min, err1 := strconv.ParseInt(params[0], 10, 32)
+		max, err2 := strconv.ParseInt(params[1], 10, 32)
+		if err1 != nil || err2 != nil {
+			return false
+		}
+		err := validateScoreThresholdsRange(value, int32(min), int32(max))
+		return err == nil
+	}); err != nil {
+		return nil, err
 	}
 
-	// sum of weights must equal 1
-	if totalWeight != 1 {
-		return fmt.Errorf("the sum of the weights must equal 1, got %v", totalWeight)
+	v.RegisterStructValidation(func(sl validator.StructLevel) {
+		value := sl.Current().Interface().(BeaconScoring)
+		totalWeight := value.TimestampScoreWeight + value.DatasizeScoreWeight + value.DurationScoreWeight + value.HistogramScoreWeight
+		if totalWeight != 1 {
+			sl.ReportError(value, "TimestampScoreWeight", "BeaconScoring", "beacon_weights", "")
+			sl.ReportError(value, "DatasizeScoreWeight", "BeaconScoring", "beacon_weights", "")
+			sl.ReportError(value, "DurationScoreWeight", "BeaconScoring", "beacon_weights", "")
+			sl.ReportError(value, "HistogramScoreWeight", "BeaconScoring", "beacon_weights", "")
+		}
+	}, BeaconScoring{})
+
+	// validate fqdns and fqdns with wildcards
+	if err := v.RegisterValidation("wildcard_fqdn", func(fl validator.FieldLevel) bool {
+		value := fl.Field().Interface().(string)
+		// If it starts with "*.", strip it out
+		value = strings.TrimPrefix(value, "*.")
+		return v.Var(value, "fqdn") == nil
+	}); err != nil {
+		return nil, err
 	}
 
-	// validate the configured minimum hours seen for duration
-	if cfg.Scoring.Beacon.DurMinHours < 1 {
-		return fmt.Errorf("the minimum hours seen for duration must be at least 1, got %v", cfg.Scoring.Beacon.DurMinHours)
-	}
-
-	// validate the configured ideal number of consistent hours seen
-	if cfg.Scoring.Beacon.DurIdealNumberOfConsistentHours < 1 {
-		return fmt.Errorf("the ideal number of consistent hours seen must be at least 1, got %v", cfg.Scoring.Beacon.DurIdealNumberOfConsistentHours)
-	}
-
-	// validate the configured mode sensitivity
-	if cfg.Scoring.Beacon.HistModeSensitivity < 0 || cfg.Scoring.Beacon.HistModeSensitivity > 1 {
-		return fmt.Errorf("the mode sensitivity must be between 0 and 1, got %v", cfg.Scoring.Beacon.HistModeSensitivity)
-	}
-
-	// validate the configured bimodal outlier removal
-	if cfg.Scoring.Beacon.HistBimodalOutlierRemoval < 0 {
-		return fmt.Errorf("the bimodal outlier removal must be at least 0, got %v", cfg.Scoring.Beacon.HistBimodalOutlierRemoval)
-	}
-
-	// validate the configured min hours seen for histogram
-	// this is to ensure that the bimodal fit score is not calculated for histograms with too few hours, as in that case
-	// a histogram with 1-2 bars will always be given a high bimoal fit score as it technically has 1-2 modes
-	if cfg.Scoring.Beacon.HistBimodalMinHours < 3 {
-		return fmt.Errorf("the minimum hours seen for histogram must be at least 3, got %v", cfg.Scoring.Beacon.HistBimodalMinHours)
-	}
-
-	// validate the configured beacon score thresholds ( scores are between 0 and 100 )
-	if err := validateScoreThresholds(cfg.Scoring.Beacon.ScoreThresholds, 0, 100); err != nil {
-		return err
-	}
-
-	// validate the configured long connection minimum duration
-	if cfg.Scoring.LongConnectionScoreThresholds.Base <= 0 {
-		return fmt.Errorf("the long connection minimum duration must be at least greater than 0, got %v", cfg.Scoring.LongConnectionScoreThresholds.Base)
-	}
-
-	// validate the configured long connection score thresholds ( between 0 and 24 hours )
-	if err := validateScoreThresholds(cfg.Scoring.LongConnectionScoreThresholds, 0, 24*3600); err != nil {
-		return err
-	}
-
-	// validate the configured C2 subdomain threshold
-	if cfg.Scoring.C2ScoreThresholds.Base <= 0 {
-		return fmt.Errorf("the C2 subdomain threshold must be at least greater than 0, got %v", cfg.Scoring.C2ScoreThresholds.Base)
-	}
-
-	// validate the configured C2 score thresholds ( no max limit )
-	if err := validateScoreThresholds(cfg.Scoring.C2ScoreThresholds, 0, -1); err != nil {
-		return err
-	}
-
-	// validate the configured strobe impact category
-	if err := ValidateImpactCategory(cfg.Scoring.StrobeImpact.Category); err != nil {
-		return err
-	}
-
-	// threat intel struct can be empty, so no need for validation
-
-	// validate the configured threat intel impact category
-	if err := ValidateImpactCategory(cfg.Scoring.ThreatIntelImpact.Category); err != nil {
-		return err
-	}
-
-	// validate the configured threat intel modifier values
-	if cfg.Modifiers.ThreatIntelScoreIncrease < 0 || cfg.Modifiers.ThreatIntelScoreIncrease > 1 {
-		return fmt.Errorf("the threat intel modifier score increase must be between 0 and 1, got %v", cfg.Modifiers.ThreatIntelScoreIncrease)
-	}
-	// validate the configured threat intel modifier data size threshold (must be greater than 0 and less than the max int64 value)
-	if cfg.Modifiers.ThreatIntelDataSizeThreshold < 1 {
-		return fmt.Errorf("the threat intel modifier data size threshold must be greater than 0, got %v", cfg.Modifiers.ThreatIntelScoreIncrease)
-	}
-
-	// validate the configured prevalence score increase modifier values
-	if cfg.Modifiers.PrevalenceScoreIncrease < 0 || cfg.Modifiers.PrevalenceScoreIncrease > 1 {
-		return fmt.Errorf("the prevalence modifier score increase must be between 0 and 1, got %v", cfg.Modifiers.PrevalenceScoreIncrease)
-	}
-	// validate score increase threshold
-	if cfg.Modifiers.PrevalenceIncreaseThreshold < 0 || cfg.Modifiers.PrevalenceIncreaseThreshold > 1 {
-		return fmt.Errorf("the prevalence modifier increase threshold must be between 0 and 1, got %v", cfg.Modifiers.PrevalenceIncreaseThreshold)
-	}
-
-	// validate the configured prevalence score decrease modifier values
-	if cfg.Modifiers.PrevalenceScoreDecrease < 0 || cfg.Modifiers.PrevalenceScoreDecrease > 1 {
-		return fmt.Errorf("the prevalence modifier score decrease must be between 0 and 1, got %v", cfg.Modifiers.PrevalenceScoreDecrease)
-	}
-	// validate score decrease threshold (must be between 0 and 1 and greater than the increase threshold)
-	if cfg.Modifiers.PrevalenceDecreaseThreshold < 0 || cfg.Modifiers.PrevalenceDecreaseThreshold > 1 {
-		return fmt.Errorf("the prevalence modifier decrease threshold must be between 0 and 1, got %v", cfg.Modifiers.PrevalenceDecreaseThreshold)
-	}
-	if cfg.Modifiers.PrevalenceDecreaseThreshold <= cfg.Modifiers.PrevalenceIncreaseThreshold {
-		return fmt.Errorf("the prevalence modifier decrease threshold must be greater than the increase threshold, got %v", cfg.Modifiers.PrevalenceDecreaseThreshold)
-	}
-
-	// validate the configured first seen score increase modifier values (must be between 0 and 1)
-	if cfg.Modifiers.FirstSeenScoreIncrease < 0 || cfg.Modifiers.FirstSeenScoreIncrease > 1 {
-		return fmt.Errorf("the first seen modifier score increase must be between 0 and 1, got %v", cfg.Modifiers.FirstSeenScoreIncrease)
-	}
-	// validate first seen score increase threshold (must be a positive number)
-	if cfg.Modifiers.FirstSeenIncreaseThreshold < 0 {
-		return fmt.Errorf("the first seen modifier increase threshold must be a positive number of days, got %v", cfg.Modifiers.FirstSeenIncreaseThreshold)
-	}
-
-	// validate the configured first seen score decrease modifier values (must be between 0 and 1)
-	if cfg.Modifiers.FirstSeenScoreDecrease < 0 || cfg.Modifiers.FirstSeenScoreDecrease > 1 {
-		return fmt.Errorf("the first seen modifier score decrease must be between 0 and 1, got %v", cfg.Modifiers.FirstSeenScoreDecrease)
-	}
-
-	// validate first seen score decrease threshold (positive number and greater than the increase threshold)
-	if cfg.Modifiers.FirstSeenDecreaseThreshold < 0 {
-		return fmt.Errorf("the first seen modifier decrease threshold must be between 0 and 90 days, got %v", cfg.Modifiers.FirstSeenDecreaseThreshold)
-	}
-	if cfg.Modifiers.FirstSeenDecreaseThreshold <= cfg.Modifiers.FirstSeenIncreaseThreshold {
-		return fmt.Errorf("the first seen modifier decrease threshold must be greater than the increase threshold, got %v", cfg.Modifiers.FirstSeenDecreaseThreshold)
-	}
-
-	// validate the configured missing host count score increase (must be between 0 and 1)
-	if cfg.Modifiers.MissingHostCountScoreIncrease < 0 || cfg.Modifiers.MissingHostCountScoreIncrease > 1 {
-		return fmt.Errorf("the missing host count score increase must be between 0 and 1, got %v", cfg.Modifiers.MissingHostCountScoreIncrease)
-	}
-
-	// validate the configured rare signature score increase
-	if cfg.Modifiers.RareSignatureScoreIncrease < 0 || cfg.Modifiers.RareSignatureScoreIncrease > 1 {
-		return fmt.Errorf("the rare signature score increase must be between 0 and 1, got %v", cfg.Modifiers.RareSignatureScoreIncrease)
-	}
-
-	// validate the configured c2 over DNS direct connection score increase
-	if cfg.Modifiers.C2OverDNSDirectConnScoreIncrease < 0 || cfg.Modifiers.C2OverDNSDirectConnScoreIncrease > 1 {
-		return fmt.Errorf("the c2 over DNS direct connection score increase must be between 0 and 1, got %v", cfg.Modifiers.C2OverDNSDirectConnScoreIncrease)
-	}
-
-	// validate the configured MIME type/URI mismatch score increase
-	if cfg.Modifiers.MIMETypeMismatchScoreIncrease < 0 || cfg.Modifiers.MIMETypeMismatchScoreIncrease > 1 {
-		return fmt.Errorf("the MIME type/URI mismatch score increase must be between 0 and 1, got %v", cfg.Modifiers.MIMETypeMismatchScoreIncrease)
-	}
-
-	return nil
+	return v, nil
 }
 
-// validateScoreThresholds validates the score thresholds based on the provided min and max values
-func validateScoreThresholds(s ScoreThresholds, min int, max int) error {
-	// check if values are in increasing order and unique
-	if s.Base >= s.Low || s.Low >= s.Med || s.Med >= s.High {
-		return fmt.Errorf("score thresholds must be in increasing order and unique: %v", s)
-	}
-
+// validateScoreThresholdsRange validates that the score thresholds are in range based on the provided min and max values.
+// A value of -1 for either min or max indicates the lack of that boundary.
+func validateScoreThresholdsRange(s ScoreThresholds, min int32, max int32) error {
 	// validate that base is in range (if min is provided)
 	if min > -1 && s.Base < min {
 		return fmt.Errorf("base score threshold must be greater than or equal to %d", min)
@@ -499,7 +450,7 @@ func ValidateImpactCategory(value ImpactCategory) error {
 	}
 }
 
-func GetScoreFromImpactCategory(category ImpactCategory) (float32, error) {
+func GetScoreFromImpactCategory(category ImpactCategory) (float64, error) {
 	switch {
 	case category == HighThreat:
 		return HIGH_CATEGORY_SCORE, nil
@@ -513,53 +464,91 @@ func GetScoreFromImpactCategory(category ImpactCategory) (float32, error) {
 	return 0, errInvalidImpactCategory
 }
 
-func GetImpactCategoryFromScore(score float32) ImpactCategory {
+func GetImpactCategoryFromScore(score float64) ImpactCategory {
 	switch {
 	// >80%
-	case score > MEDIUM_CATEGORY_SCORE:
+	case score >= MEDIUM_CATEGORY_SCORE:
 		return HighThreat
-		// >40% and <=60%
-	case score > LOW_CATEGORY_SCORE && score <= MEDIUM_CATEGORY_SCORE:
+	// >40% and <60%
+	case score >= LOW_CATEGORY_SCORE && score < MEDIUM_CATEGORY_SCORE:
 		return MediumThreat
-		// >20% and <=40%
-	case score > NONE_CATEGORY_SCORE && score <= LOW_CATEGORY_SCORE:
+	// >20% and <40%
+	case score >= NONE_CATEGORY_SCORE && score < LOW_CATEGORY_SCORE:
 		return LowThreat
-		// <=20%
-	case score <= NONE_CATEGORY_SCORE:
+	// <=20%
+	case score > 0 && score < NONE_CATEGORY_SCORE:
 		return NoneThreat
 	}
 
 	return NoneThreat
 }
 
+func (s *ScoreThresholds) ToMap() map[string]int32 {
+	return map[string]int32{
+		"base": s.Base,
+		"low":  s.Low,
+		"med":  s.Med,
+		"high": s.High,
+	}
+
+}
+
+func (s ScoreImpact) String() string {
+	return string(s.Category)
+}
+
+func (s *ScoreImpact) Scan(src any) error {
+	if t, ok := src.(string); ok {
+		s.Category = ImpactCategory(t)
+		score, err := GetScoreFromImpactCategory(s.Category)
+		if err != nil {
+			return err
+		}
+		s.Score = score
+		return nil
+	}
+	return fmt.Errorf("cannot scan %T into ScoreImpact", src)
+}
+
 // return a copy of the default config object
 func defaultConfig() Config {
 	return Config{
-		UpdateCheckEnabled: true,
-		Filter: Filter{
-			InternalSubnetsJSON:       []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"},
-			AlwaysIncludedSubnetsJSON: []string{},
-			NeverIncludedSubnetsJSON:  GetMandatoryNeverIncludeSubnets(),
-			AlwaysIncludedDomains:     []string{},
-			NeverIncludedDomains:      []string{},
-			FilterExternalToInternal:  true,
+		RITA: RITA{
+			UpdateCheckEnabled:              true,
+			BatchSize:                       100000,
+			MaxQueryExecutionTime:           600,
+			MonthsToKeepHistoricalFirstSeen: 3,
+			ThreatIntel: ThreatIntel{
+				OnlineFeeds: []string{
+					"https://feodotracker.abuse.ch/downloads/ipblocklist.txt",
+				},
+			},
 		},
-		HTTPExtensionsFilePath:          "./http_extensions_list.csv",
-		BatchSize:                       100000,
-		MaxQueryExecutionTime:           120,
-		MonthsToKeepHistoricalFirstSeen: 3,
+		Filtering: Filtering{
+			InternalSubnets: []util.Subnet{
+				{IPNet: &net.IPNet{IP: net.IP{10, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},    // "10.0.0.0/8"
+				{IPNet: &net.IPNet{IP: net.IP{172, 16, 0, 0}.To16(), Mask: net.CIDRMask(108, 128)}},  // "172.16.0.0/12"
+				{IPNet: &net.IPNet{IP: net.IP{192, 168, 0, 0}.To16(), Mask: net.CIDRMask(112, 128)}}, // "192.168.0.0/16"
+				{IPNet: &net.IPNet{IP: net.ParseIP("fd00::"), Mask: net.CIDRMask(8, 128)}},           // "fd00::/8"
+			},
+			AlwaysIncludedSubnets:    []util.Subnet{},
+			NeverIncludedSubnets:     GetMandatoryNeverIncludeSubnets(),
+			AlwaysIncludedDomains:    []string{},
+			NeverIncludedDomains:     []string{},
+			FilterExternalToInternal: true,
+		},
 		Scoring: Scoring{
-			Beacon: Beacon{
-				UniqueConnectionThreshold:       4,
-				TsWeight:                        0.25,
-				DsWeight:                        0.25,
-				DurWeight:                       0.25,
-				HistWeight:                      0.25,
-				DurMinHours:                     6,
-				DurIdealNumberOfConsistentHours: 12,
-				HistModeSensitivity:             0.05,
-				HistBimodalOutlierRemoval:       1,
-				HistBimodalMinHours:             11,
+			Beacon: BeaconScoring{
+				UniqueConnectionThreshold:         4,
+				TimestampScoreWeight:              0.25,
+				DatasizeScoreWeight:               0.25,
+				DurationScoreWeight:               0.25,
+				HistogramScoreWeight:              0.25,
+				DurationMinHoursSeen:              6,
+				DurationConsistencyIdealHoursSeen: 12,
+				HistogramModeSensitivity:          0.05,
+				HistogramBimodalOutlierRemoval:    1,
+				HistogramBimodalMinHoursSeen:      11,
 				ScoreThresholds: ScoreThresholds{
 					Base: 50,
 					Low:  75,
@@ -567,24 +556,25 @@ func defaultConfig() Config {
 					High: 100,
 				},
 			},
+			ThreatScoring: ThreatScoring{
+				LongConnectionScoreThresholds: ScoreThresholds{
+					Base: 1 * 3600, // 1 hour (in seconds),
+					Low:  4 * 3600,
+					Med:  8 * 3600,
+					High: 12 * 3600,
+				},
 
-			LongConnectionScoreThresholds: ScoreThresholds{
-				Base: 1 * 3600, // 1 hour (in seconds),
-				Low:  4 * 3600,
-				Med:  8 * 3600,
-				High: 12 * 3600,
+				C2ScoreThresholds: ScoreThresholds{
+					Base: 100,
+					Low:  500,
+					Med:  800,
+					High: 1000,
+				},
+
+				StrobeImpact: ScoreImpact{Category: HighThreat, Score: HIGH_CATEGORY_SCORE},
+
+				ThreatIntelImpact: ScoreImpact{Category: HighThreat, Score: HIGH_CATEGORY_SCORE},
 			},
-
-			C2ScoreThresholds: ScoreThresholds{
-				Base: 100,
-				Low:  500,
-				Med:  800,
-				High: 1000,
-			},
-
-			StrobeImpact: ScoreImpact{Category: HighThreat, Score: HIGH_CATEGORY_SCORE},
-
-			ThreatIntelImpact: ScoreImpact{Category: HighThreat, Score: HIGH_CATEGORY_SCORE},
 		},
 		Modifiers: Modifiers{
 			ThreatIntelScoreIncrease:     0.15,   // score +15% if data size >= 25 MB
@@ -609,9 +599,44 @@ func defaultConfig() Config {
 
 			MIMETypeMismatchScoreIncrease: 0.15, // +15% score for connections with mismatched MIME type/URI
 		},
-		ThreatIntel: ThreatIntel{
-			OnlineFeeds:          []string{},
-			CustomFeedsDirectory: "/etc/rita/threat_intel_feeds",
+		ZoneTransfer: ZoneTransfer{
+			Enabled:    false,
+			DomainName: "",
+			NameServer: "",
 		},
 	}
+}
+
+// ONLY TO BE CALLED IN TESTS
+// helper function to set the env variables that are reliant on paths since tests use the path of the package
+func (c *Config) SetTestEnv() {
+	fmt.Println(c)
+	c.setEnv()
+	c.Env.HTTPExtensionsFilePath = "../deployment/http_extensions_list.csv"
+	c.Env.ThreatIntelCustomFeedsDirectory = "../deployment/threat_intel_feeds"
+}
+
+// ReadTestFileConfig is for TESTS only
+func ReadTestFileConfig(afs afero.Fs, path string) (*Config, error) {
+	// read the config file
+	contents, err := util.GetFileContents(afs, path)
+	if err != nil {
+		return nil, err
+	}
+
+	// create a temporary config just to generate the environment
+	var tmpCfg Config
+	if err := tmpCfg.setEnv(); err != nil {
+		return nil, fmt.Errorf("unable to set environment variables for TEST environment")
+	}
+	// override path based variables since tests use their package directory
+	tmpCfg.Env.HTTPExtensionsFilePath = "../deployment/http_extensions_list.csv"
+	tmpCfg.Env.ThreatIntelCustomFeedsDirectory = "../deployment/threat_intel_feeds"
+
+	var cfg Config
+	if err := unmarshal(contents, &cfg, &tmpCfg.Env); err != nil {
+		return nil, fmt.Errorf("%w, located by default at '%s', please correct the issue in the config and try again:\n\t- %w", errReadingConfigFile, path, err)
+	}
+
+	return &cfg, nil
 }

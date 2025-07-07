@@ -43,39 +43,40 @@ type ThreatMixtape struct {
 	// Base connection details
 	AnalysisResult
 
-	FinalScore float32 `ch:"final_score"`
+	FinalScore float64 `ch:"final_score"`
 	// BEACONS
 	Beacon
-	BeaconThreatScore float32 `ch:"beacon_threat_score"` // bucketed beacon score
+	BeaconThreatScore float64 `ch:"beacon_threat_score"` // bucketed beacon score
 	BeaconType        string  `ch:"beacon_type"`
 
 	//  LONG CONNECTIONS
-	LongConnScore float32 `ch:"long_conn_score"`
+	LongConnScore float64 `ch:"long_conn_score"`
 
 	// Strobe
 	Strobe      bool    `ch:"strobe"`
-	StrobeScore float32 `ch:"strobe_score"`
+	StrobeScore float64 `ch:"strobe_score"`
 
 	// C2 over DNS
-	C2OverDNSScore           float32 `ch:"c2_over_dns_score"`
-	C2OverDNSDirectConnScore float32 `ch:"c2_over_dns_direct_conn_score"`
+	C2OverDNSScore           float64 `ch:"c2_over_dns_score"`
+	C2OverDNSDirectConnScore float64 `ch:"c2_over_dns_direct_conn_score"`
 
 	// Threat Intel
 	ThreatIntel      bool    `ch:"threat_intel"`
-	ThreatIntelScore float32 `ch:"threat_intel_score"`
+	ThreatIntelScore float64 `ch:"threat_intel_score"`
 
 	// **** MODIFIERS ****
 	// for modifiers detected during the modifiers phase
 	ModifierName  string  `ch:"modifier_name"`
-	ModifierScore float32 `ch:"modifier_score"`
+	ModifierScore float64 `ch:"modifier_score"`
 	ModifierValue string  `ch:"modifier_value"`
 
 	// modifiers that are able to be added to the same row as the threat indicator scores
 	// these are detected during the analysis phase (in the spagooper)
-	PrevalenceScore          float32 `ch:"prevalence_score"`
-	FirstSeenScore           float32 `ch:"first_seen_score"`
-	ThreatIntelDataSizeScore float32 `ch:"threat_intel_data_size_score"`
-	MissingHostHeaderScore   float32 `ch:"missing_host_header_score"`
+	PrevalenceScore          float64 `ch:"prevalence_score"`
+	NetworkSize              uint64  `ch:"network_size"`
+	FirstSeenScore           float64 `ch:"first_seen_score"`
+	ThreatIntelDataSizeScore float64 `ch:"threat_intel_data_size_score"`
+	MissingHostHeaderScore   float64 `ch:"missing_host_header_score"`
 }
 
 // NewAnalyzer returns a new Analyzer object
@@ -169,6 +170,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 			ImportID:       analyzer.ImportID,
 			AnalysisResult: entry,
 			BeaconType:     entry.BeaconType,
+			NetworkSize:    analyzer.networkSize,
 		}
 
 		// set the first seen historical value
@@ -213,7 +215,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 				hasThreatIndicator = true
 				mixtape.C2OverDNSScore = c2OverDNSScore
 				// run c2 over dns direct connection analysis
-				if shouldHaveC2OverDNSDirectConnModifier(entry.DirectConns, entry.QueriedBy) {
+				if mixtape.HasC2OverDNSDirectConnectionsModifier {
 					mixtape.C2OverDNSDirectConnScore = analyzer.Config.Modifiers.C2OverDNSDirectConnScoreIncrease
 				}
 			}
@@ -260,7 +262,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 
 			// Threat Intel Data Size Score
 			if entry.OnThreatIntel {
-				if entry.TotalBytes >= analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold {
+				if entry.TotalBytes >= uint64(analyzer.Config.Modifiers.ThreatIntelDataSizeThreshold) {
 					mixtape.ThreatIntelDataSizeScore = analyzer.Config.Modifiers.ThreatIntelScoreIncrease
 				}
 			}
@@ -274,7 +276,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 			// use the current time to score against unless useCurrentTime is false
 			relativeTime := util.GetRelativeFirstSeenTimestamp(analyzer.useCurrentTime, analyzer.firstSeenMaxTS)
 			timeSince := relativeTime.Sub(entry.FirstSeenHistorical)
-			daysSinceFirstSeen := float32(timeSince.Hours() / 24)
+			daysSinceFirstSeen := float64(timeSince.Hours() / 24)
 
 			// Historical First Seen Scoring
 			// only apply to rolling datasets
@@ -307,7 +309,7 @@ func (analyzer *Analyzer) runAnalysis() error {
 	return nil
 }
 
-func calculateBucketedScore(value float64, thresholds config.ScoreThresholds) float32 {
+func calculateBucketedScore(value float64, thresholds config.ScoreThresholds) float64 {
 	base := float64(thresholds.Base)
 	low := float64(thresholds.Low)
 	medium := float64(thresholds.Med)
@@ -319,7 +321,7 @@ func calculateBucketedScore(value float64, thresholds config.ScoreThresholds) fl
 	mediumScore := config.MEDIUM_CATEGORY_SCORE * 100
 	highScore := config.HIGH_CATEGORY_SCORE * 100
 
-	score := float32(0)
+	score := float64(0)
 
 	// interpolate scores between the threat category bucket thresholds
 	switch {
@@ -327,15 +329,15 @@ func calculateBucketedScore(value float64, thresholds config.ScoreThresholds) fl
 	case value < base:
 		return 0
 	case value < low:
-		score = float32(noneScore + (value-base)/(low-base)*(lowScore-noneScore))
+		score = float64(noneScore + (value-base)/(low-base)*(lowScore-noneScore))
 	// (Medium) 4-8hrs
 	case value >= low && value < medium:
-		score = float32(lowScore + (value-low)/(medium-low)*(mediumScore-lowScore))
+		score = float64(lowScore + (value-low)/(medium-low)*(mediumScore-lowScore))
 	// (High)   8-12hrs+
 	case value >= medium:
 		// cap the maximum duration score value to the High category threshold because we're not scoring any higher than this
 		cappedValue := math.Min(value, high)
-		score = float32(mediumScore + (cappedValue-medium)/(high-medium)*(highScore-mediumScore))
+		score = float64(mediumScore + (cappedValue-medium)/(high-medium)*(highScore-mediumScore))
 	}
 	return score / 100
 }

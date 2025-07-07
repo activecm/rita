@@ -34,8 +34,8 @@ type AnalysisResult struct {
 	TSList              []uint32         `ch:"ts_list"`
 	TotalDuration       float64          `ch:"total_duration"`
 	OpenTotalDuration   float64          `ch:"open_total_duration"`
-	BytesList           []float64        `ch:"bytes"`
-	TotalBytes          int64            `ch:"total_bytes"`
+	BytesList           []float64        `ch:"bytes"` //TODO: do we need to change this since bytes are now uint64?
+	TotalBytes          uint64           `ch:"total_bytes"`
 	PortProtoService    []string         `ch:"port_proto_service"`
 	FirstSeenHistorical time.Time        `ch:"first_seen_historical"`
 	LastSeen            time.Time        `ch:"last_seen"`
@@ -44,12 +44,11 @@ type AnalysisResult struct {
 	MissingHostCount    uint64           `ch:"missing_host_count"`
 
 	// C2 OVER DNS Connection Info
-	DirectConns []net.IP `ch:"direct_conns"`
-	QueriedBy   []net.IP `ch:"queried_by"`
+	HasC2OverDNSDirectConnectionsModifier bool `ch:"has_c2_direct_conns_mod"`
 
 	// Prevalence
 	PrevalenceTotal uint64  `ch:"prevalence_total"`
-	Prevalence      float32 `ch:"prevalence"`
+	Prevalence      float64 `ch:"prevalence"`
 
 	// C2 over DNS
 	TLD            string `ch:"tld"`
@@ -160,9 +159,10 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 		"min_ts":                      fmt.Sprintf("%d", analyzer.minTSBeacon.UTC().Unix()),
 		"unique_connection_threshold": fmt.Sprint(analyzer.Config.Scoring.Beacon.UniqueConnectionThreshold),
 		"network_size":                fmt.Sprint(analyzer.networkSize),
-		"rolling":                     strconv.FormatBool(analyzer.Database.Rolling),
+		// historical first seen is used for rolling dbs, but if the db is >24hrs old it must use the first seen from the current import due to the ttl on the historical_first_seen table
+		"use_historical": strconv.FormatBool(analyzer.Database.Rolling && analyzer.useCurrentTime),
 	}))
-	// panic(strconv.FormatBool(analyzer.Database.Rolling))
+
 	rows, err := analyzer.Database.Conn.Query(chCtx, `--sql
 	WITH unique_sni AS (
 		SELECT DISTINCT hash FROM sniconn_tmp
@@ -305,8 +305,8 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 	SELECT  s.hash AS hash, s.src AS src, s.src_nuid AS src_nuid, s.fqdn AS fqdn, 
 			if(t.fqdn != '', true, false) AS on_threat_intel,
 			prevalence_total, 
-			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
-			if({rolling:Bool}, h.first_seen, s.first_seen) AS first_seen_historical,
+      prevalence_total / {network_size:UInt64} AS prevalence,
+			if({use_historical:Bool}, h.first_seen, s.first_seen) AS first_seen_historical,
 			'sni' AS beacon_type,
 			count,
 			open_count,
@@ -386,7 +386,9 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 		"min_ts":                      fmt.Sprintf("%d", analyzer.minTSBeacon.UTC().Unix()),
 		"unique_connection_threshold": fmt.Sprint(analyzer.Config.Scoring.Beacon.UniqueConnectionThreshold),
 		"network_size":                fmt.Sprint(analyzer.networkSize),
-		"rolling":                     strconv.FormatBool(analyzer.Database.Rolling),
+		// historical first seen is used for rolling dbs, but if the db is >24hrs old it must use the first seen from the current import due to the ttl on the historical_first_seen table
+		"use_historical":              strconv.FormatBool(analyzer.Database.Rolling && analyzer.useCurrentTime),
+		"long_connection_base_thresh": fmt.Sprintf("%f", float64(analyzer.Config.Scoring.LongConnectionScoreThresholds.Base)),
 	}))
 
 	query := `--sql
@@ -405,14 +407,15 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 			)
 			GROUP BY ip
 		),  
-		sniconns AS ( -- usni connections that will be beacons in this import
-			SELECT hash, uniqExactMerge(u.unique_ts_count) AS unique_count, countMerge(u.count) AS total_count
+		sniconns AS ( -- usni connections that will be beacons or long connections in this import
+			SELECT hash, uniqExactMerge(u.unique_ts_count) AS unique_count, countMerge(u.count) AS total_count, sumMerge(total_duration) AS duration
 			FROM usni u
 			LEFT SEMI JOIN sniconn_tmp t USING hash
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
 			GROUP BY hash
-			HAVING unique_count >= {unique_connection_threshold:UInt64} AND total_count < 86400
-
+			-- is beacon or longconn
+			HAVING (unique_count >= {unique_connection_threshold:UInt64} AND total_count < 86400) OR
+			duration >= {long_connection_base_thresh:Float64}
 		), uid_list AS ( -- list of unique Zeek UID's used by SNI beacons in this import
 			SELECT DISTINCT zeek_uid FROM sniconn_tmp
 			INNER JOIN sniconns USING hash
@@ -531,9 +534,9 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 				total_bytes,
 				last_seen,
 				if(t.ip != '::', true, false) AS on_threat_intel,
-				prevalence_total, 
-				toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
-				if({rolling:Bool}, h.first_seen, i.first_seen) AS first_seen_historical,
+				prevalence_total,
+				prevalence_total / {network_size:UInt64} AS prevalence,
+				if({use_historical:Bool}, h.first_seen, i.first_seen) AS first_seen_historical,
 				po.port_proto_service as port_proto_service
 		FROM totaled_ipconns i 
 		LEFT JOIN prevalence_counts p ON if(src_local = true, i.dst, i.src) = p.ip
@@ -599,8 +602,9 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 		// use minTS (not minTSBeacon) because DNS logs don't get correlated with conn logs
 		"min_ts":              fmt.Sprintf("%d", analyzer.minTS.UTC().Unix()),
 		"subdomain_threshold": fmt.Sprint(analyzer.Config.Scoring.C2ScoreThresholds.Base),
-		"rolling":             strconv.FormatBool(analyzer.Database.Rolling),
-		"network_size":        fmt.Sprint(analyzer.networkSize),
+		// historical first seen is used for rolling dbs, but if the db is >24hrs old it must use the first seen from the current import due to the ttl on the historical_first_seen table
+		"use_historical": strconv.FormatBool(analyzer.Database.Rolling && analyzer.useCurrentTime),
+		"network_size":   fmt.Sprint(analyzer.networkSize),
 	}))
 
 	rows, err := analyzer.Database.Conn.Query(chCtx, `--sql
@@ -663,23 +667,29 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			WHERE day >= toStartOfDay(fromUnixTimestamp({min_ts:Int64}))
 		-- get all source ips that made a connection to the resolved ips
 		), direct_connections AS (
-			SELECT tld, groupUniqArray(src) as direct_conns FROM uconn u
+			SELECT tld, src as direct_conn FROM uconn u
 			RIGHT JOIN resolved_ips r ON u.dst = r.resolved_ip
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			GROUP BY tld
 		-- get all systems that performed a dns query to the tld
 		), queried_by AS (
-			SELECT tld, groupUniqArray(src) as queried FROM udns
+			SELECT tld, src as queried FROM udns
 			INNER JOIN sussy_subdomains USING tld
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
-			GROUP BY tld
 		-- keep tlds which had zero non-dns-server ips in direct connections
-		),
-		historical AS (
-			SELECT min(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
-			FROM metadatabase.historical_first_seen
-			LEFT JOIN exploded_dns USING tld
+		), queried_by_count AS (
+			SELECT tld, count() as qcount FROM queried_by
 			GROUP BY tld
+		), direct_conns_modifier AS (
+			-- tld has modifier if queried count == 0 or if 
+			SELECT ddx.tld AS tld, greatest(if(qc.qcount > 0, 0, 1), 1 - inverse_has_mod) AS has_mod FROM (
+				-- direct conns mod checks if there are any IPs in queried that are not also in direct_conns
+				-- if there is an IP in queried that isn't in direct_conns, then q.queried is empty
+				-- max will return 1 if there was at least 1 ip that wasn't in direct conns
+				SELECT d.tld AS tld, max(empty(q.queried)) AS inverse_has_mod FROM direct_connections d
+				LEFT JOIN queried_by q ON d.tld = q.tld AND d.direct_conn = q.queried
+				GROUP BY tld
+			) ddx
+			LEFT JOIN queried_by_count qc ON qc.tld = ddx.tld
 		),
 		totaled_exploded AS (
 			SELECT tld, uniqExactMerge(subdomains) AS subdomain_count
@@ -687,22 +697,29 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			WHERE hour >= toStartOfHour(fromUnixTimestamp({min_ts:Int64}))
 			GROUP BY tld
 			HAVING subdomain_count >= {subdomain_threshold:Int32}
+		),
+		historical AS (
+			SELECT min(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
+			-- SELECT minMerge(first_seen) AS first_seen, cutToFirstSignificantSubdomain(fqdn) as tld 
+			FROM metadatabase.historical_first_seen
+			INNER JOIN totaled_exploded USING tld
+			GROUP BY tld
 		)
 		-- get the subdomain counts and the last seen count for each tld
 		SELECT e.tld AS tld, e.subdomain_count as subdomain_count, 
 			'dns' AS beacon_type,
-			d.direct_conns as direct_conns, q.queried as queried_by, u.last_seen as last_seen,
+			 u.last_seen as last_seen,
 			prevalence_total, 
-			toFloat32(prevalence_total / {network_size:UInt64}) AS prevalence,
-			-- use the historical first seen value if this dataset is rolling
-			if({rolling:Bool}, h.first_seen, u.first_seen) AS first_seen_historical,
+			if(dm.has_mod > 0, true, false) as has_c2_direct_conns_mod,
+			prevalence_total / {network_size:UInt64} AS prevalence,
+			-- use the historical first seen value if this dataset is rolling and <= 24 hours old
+			if({use_historical:Bool}, h.first_seen, u.first_seen) AS first_seen_historical,
 			if(cutToFirstSignificantSubdomain(t.fqdn) != '', true, false) AS on_threat_intel
 		FROM totaled_exploded e
 		INNER JOIN unique_dns u ON e.tld = u.tld
 		LEFT JOIN prevalence_counts p ON e.tld = p.tld
 		LEFT JOIN historical h ON e.tld = h.tld
-		LEFT JOIN direct_connections d ON e.tld = d.tld
-		LEFT JOIN queried_by q ON e.tld = q.tld
+		LEFT JOIN direct_conns_modifier dm ON e.tld = dm.tld
 		LEFT JOIN metadatabase.threat_intel t ON e.tld = cutToFirstSignificantSubdomain(t.fqdn)	
 	`)
 	if err != nil {

@@ -78,38 +78,38 @@ enable_repositories() {
 			$SUDO dnf install -y epel-release
 			;;
 		centos/7)
-			yum install epel-release
+			$SUDO yum install epel-release
 			;;
 		centos/8)
-			dnf config-manager --set-enabled powertools
-			dnf install epel-release epel-next-release
+			$SUDO dnf config-manager --set-enabled powertools
+			$SUDO dnf install epel-release epel-next-release
 			;;
 		centos/9)
-			dnf config-manager --set-enabled crb
-			dnf install epel-release epel-next-release
+			$SUDO dnf config-manager --set-enabled crb
+			$SUDO dnf install epel-release epel-next-release
 			;;
 		debian/12|zorin/16)
 			:	#Does not appear that any extra repositories are needed
 			;;
 		kali/*)
-			sudo apt update
-			sudo apt install software-properties-common || sudo apt install python-software-properties
-			sudo add-apt-repository --yes --update ppa:ansible/ansible
+			$SUDO apt update
+			$SUDO apt install software-properties-common || sudo apt install python-software-properties
+			$SUDO add-apt-repository --yes --update ppa:ansible/ansible
 			;;
 		ol/*)											#Oracle linux, which is also the base for security onion 2470
 			:
 			;;
 		rhel/7)
-			subscription-manager repos --enable rhel-*-optional-rpms --enable rhel-*-extras-rpms --enable rhel-ha-for-rhel-*-server-rpms
-			yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+			$SUDO subscription-manager repos --enable rhel-*-optional-rpms --enable rhel-*-extras-rpms --enable rhel-ha-for-rhel-*-server-rpms
+			$SUDO yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 			;;
 		rhel/8)
-			subscription-manager repos --enable codeready-builder-for-rhel-8-$(arch)-rpms
-			dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+			$SUDO subscription-manager repos --enable codeready-builder-for-rhel-8-$(arch)-rpms
+			$SUDO dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 			;;
-		rhel/9)
-			subscription-manager repos --enable codeready-builder-for-rhel-9-$(arch)-rpms
-			dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+		rhel/9*)
+			$SUDO subscription-manager repos --enable codeready-builder-for-rhel-9-$(arch)-rpms
+			$SUDO dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
 			;;
 		fedora/*)
 			:										#It does not appear that fedora needs any extra repositories
@@ -118,9 +118,9 @@ enable_repositories() {
 			:										#popos does not appear to need any extra repositories
 			;;
 		ubuntu/*)
-			sudo apt update
-			sudo apt install software-properties-common || sudo apt install python-software-properties
-			sudo add-apt-repository --yes --update ppa:ansible/ansible
+			$SUDO apt update
+			$SUDO apt install software-properties-common || sudo apt install python-software-properties
+			$SUDO add-apt-repository --yes --update ppa:ansible/ansible
 			;;
 		*)
 			fail "unknown OS $ID/$VERSION_ID"
@@ -136,7 +136,7 @@ patch_system() {
 	status "Patching system"		#================
 	if [ -x /usr/bin/apt-get -a -x /usr/bin/dpkg-query ]; then
 		if [ -s /etc/os-release ] && egrep -iq '(^ID=ubuntu|^ID=pop|^ID=Zorin OS)' /etc/os-release ; then	#The "universe" repository is only available on Ubuntu (and, in theory, popos and Zorin)  Kali DOES NOT have universe
-			while ! $SUDO add-apt-repository universe ; do
+			while ! $SUDO add-apt-repository --yes universe ; do
 				echo "Error subscribing to universe repository, perhaps because a system update is running; will wait 60 seconds and try again." >&2
 				sleep 60
 			done

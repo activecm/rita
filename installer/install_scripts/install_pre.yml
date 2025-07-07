@@ -30,16 +30,14 @@
     - name: "RITA Pre: Checking Linux distribution."
       ansible.builtin.fail:
         msg: "Distribution name: {{  ansible_distribution  }} does not appear to be recognized - please contact ACM"
-      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' )
-      # and ansible_distribution != 'RedHat'
+      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' and ansible_distribution != 'RedHat' )
       tags:
         - linux
 
     - name: "RITA Pre: Checking Linux distribution version."
       ansible.builtin.fail:
         msg: "Warning: Linux distribution {{  ansible_distribution  }} {{  ansible_distribution_major_version  }} may not have been tested - please contact ACM and report whether the install worked or not"
-      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) )
-      #or ( ansible_distribution != 'RedHat' and (ansible_distribution_major_version == '9') )
+      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) or ( ansible_distribution == 'RedHat' and (ansible_distribution_major_version != '9') ) )
       ignore_errors: True		#We print a warning but do not abort if this is an unknown combination of distribution and major version.
       tags:
         - linux
@@ -49,31 +47,6 @@
       ansible.builtin.fail:
         msg: "Unsupported CPU architecture: {{  ansible_architecture  }}"
       when: ( ansible_architecture != "x86_64" ) 	#and ansible_architecture != "aarch64" ) # "aarch64" for pi.  #pi0w is armv6l.  i386.  amd64?
-
-#Selinux checks
-    - name: "RITA Pre: /sys/fs/selinux/enforce  exists."
-      stat:
-        path: "/sys/fs/selinux/enforce"
-      check_mode: true
-      changed_when: false
-      register: selinuxenforce_check
-      tags:
-        - linux
-
-    - name: "RITA Pre: sys filesystem check for selinux."
-      lineinfile:
-        path: /sys/fs/selinux/enforce
-        regexp: '^1'
-        line: 0
-        create: false
-        unsafe_writes: true									#Needed because the original file in the sys filesystem and Ansible's tmp directory are on different filesystems.
-        state: present
-      #check_mode: yes
-      changed_when: false
-      #register: enforce_check
-      when: selinuxenforce_check.stat.exists
-      tags:
-        - linux
 
 #Add tools needed by later stages
     # Provides "needs-restarting" for ansible's ability to manage rebooting after patching
@@ -401,12 +374,10 @@
               - docker-compose
               - docker-compose-v2
               - docker-doc
-              - docker-engine-selinux
               - docker-engine
               - docker-latest
               - docker-latest-logrotate
               - docker-logrotate
-              - docker-selinux
               - docker.io
               - docker
               - podman-docker
@@ -434,7 +405,6 @@
             - linux
             - linuxrpm
       when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-      #Reminder that RedHat/RHEL 9 is broken as of 20240618
 
 
     - name: "RITA Pre: replace python3-requests with a new version installed by pip."

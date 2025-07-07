@@ -31,8 +31,8 @@ type ConnEntry struct {
 	Dst                  net.IP           `ch:"dst"`
 	SrcNUID              uuid.UUID        `ch:"src_nuid"`
 	DstNUID              uuid.UUID        `ch:"dst_nuid"`
-	SrcPort              uint16           `ch:"src_port"`
-	DstPort              uint16           `ch:"dst_port"`
+	SrcPort              uint32           `ch:"src_port"`
+	DstPort              uint32           `ch:"dst_port"`
 	MissingHostHeader    bool             `ch:"missing_host_header"`    // used to mark HTTP entries that have a missing host header
 	MissingHostUseragent string           `ch:"missing_host_useragent"` // useragent for connections that have a missing host header
 	Proto                string           `ch:"proto"`
@@ -40,16 +40,16 @@ type ConnEntry struct {
 	Duration             float64          `ch:"duration"`
 	SrcLocal             bool             `ch:"src_local"`
 	DstLocal             bool             `ch:"dst_local"`
-	ICMPType             int              `ch:"icmp_type"`
-	ICMPCode             int              `ch:"icmp_code"`
-	SrcBytes             int64            `ch:"src_bytes"`
-	DstBytes             int64            `ch:"dst_bytes"`
-	SrcIPBytes           int64            `ch:"src_ip_bytes"`
-	DstIPBytes           int64            `ch:"dst_ip_bytes"`
-	SrcPackets           int64            `ch:"src_packets"`
-	DstPackets           int64            `ch:"dst_packets"`
+	ICMPType             int64            `ch:"icmp_type"`
+	ICMPCode             int64            `ch:"icmp_code"`
+	SrcBytes             uint64           `ch:"src_bytes"`
+	DstBytes             uint64           `ch:"dst_bytes"`
+	SrcIPBytes           uint64           `ch:"src_ip_bytes"`
+	DstIPBytes           uint64           `ch:"dst_ip_bytes"`
+	SrcPackets           uint64           `ch:"src_packets"`
+	DstPackets           uint64           `ch:"dst_packets"`
 	ConnState            string           `ch:"conn_state"`
-	MissedBytes          int64            `ch:"missed_bytes"`
+	MissedBytes          uint64           `ch:"missed_bytes"`
 	ZeekHistory          string           `ch:"zeek_history"`
 }
 
@@ -71,12 +71,12 @@ type ZeekUIDRecord struct {
 	LinkedToHTTPEntry bool
 	NumUsedByHTTP     int
 	Duration          float64
-	SrcBytes          int64
-	DstBytes          int64
-	SrcIPBytes        int64
-	DstIPBytes        int64
-	SrcPackets        int64
-	DstPackets        int64
+	SrcBytes          uint64
+	DstBytes          uint64
+	SrcIPBytes        uint64
+	DstIPBytes        uint64
+	SrcPackets        uint64
+	DstPackets        uint64
 	ConnState         string
 	Proto             string
 	Service           string
@@ -133,11 +133,11 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 	}
 
 	// check if the connection is an icmp connection
-	icmpType, icmpCode := -1, -1
+	icmpType, icmpCode := int64(-1), int64(-1)
 
 	if parseConn.Proto == "icmp" {
-		icmpType = parseConn.SourcePort
-		icmpCode = parseConn.DestinationPort
+		icmpType = int64(parseConn.SourcePort)
+		icmpCode = int64(parseConn.DestinationPort)
 	}
 
 	srcNUID := util.ParseNetworkID(srcIP, parseConn.AgentUUID)
@@ -153,7 +153,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		return nil, err
 	}
 
-	filtered := cfg.Filter.FilterConnPair(srcIP, dstIP)
+	filtered := cfg.Filtering.FilterConnPair(srcIP, dstIP)
 
 	entry := &ConnEntry{
 		ImportTime:  importTime,
@@ -166,15 +166,15 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 		Dst:         dstIP,
 		SrcNUID:     srcNUID,
 		DstNUID:     dstNUID,
-		SrcPort:     uint16(parseConn.SourcePort),
-		DstPort:     uint16(parseConn.DestinationPort),
+		SrcPort:     parseConn.SourcePort,
+		DstPort:     parseConn.DestinationPort,
 		ZeekHistory: parseConn.History,
 		MissedBytes: parseConn.MissedBytes,
 		Proto:       parseConn.Proto,
 		Service:     parseConn.Service,
 		Duration:    parseConn.Duration,
-		SrcLocal:    cfg.Filter.CheckIfInternal(srcIP),
-		DstLocal:    cfg.Filter.CheckIfInternal(dstIP),
+		SrcLocal:    cfg.Filtering.CheckIfInternal(srcIP),
+		DstLocal:    cfg.Filtering.CheckIfInternal(dstIP),
 		ICMPType:    icmpType,
 		ICMPCode:    icmpCode,
 		SrcBytes:    parseConn.OrigBytes,
@@ -192,7 +192,7 @@ func formatConnRecord(cfg *config.Config, parseConn *zeektypes.Conn, importID ut
 	// it will never get populated
 	// Filter out from never included list before adding it to the uconn map to allow blocking subnets
 	// that could end up overcommitting memory
-	ignore := cfg.Filter.FilterConnPairForHTTP(srcIP, dstIP)
+	ignore := cfg.Filtering.FilterConnPairForHTTP(srcIP, dstIP)
 	if ignore {
 		return nil, nil
 	}

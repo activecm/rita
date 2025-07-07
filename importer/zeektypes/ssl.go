@@ -13,13 +13,13 @@ type SSL struct {
 	// Source is the source address for this connection
 	Source string `zeek:"id.orig_h" zeektype:"addr" json:"id.orig_h"`
 	// SourcePort is the source port of this connection
-	SourcePort int `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
+	SourcePort uint32 `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
 	// Destination is the destination of the connection
 	Destination string `zeek:"id.resp_h" zeektype:"addr" json:"id.resp_h"`
 	// DestinationPort is the port at the destination host
-	DestinationPort int `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
+	DestinationPort uint32 `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
 	// VersionNum  : Numeric SSL/TLS version that the server chose
-	VersionNum int `zeek:"version_num" zeektype:"count" json:"version_num"`
+	VersionNum uint64 `zeek:"version_num" zeektype:"count" json:"version_num"`
 	// Version : SSL/TLS version that the server chose
 	Version string `zeek:"version" zeektype:"string" json:"version"`
 	// Cipher : SSL/TLS cipher suite that the server chose
@@ -48,7 +48,7 @@ type SSL struct {
 	// ServerAppData : Count to track if the server already sent an application
 	// data packet for TLS 1.3. Used to track when a session was established
 	// Note: may not be present in older zeek versions.
-	ServerAppData int `zeek:"server_appdata" zeektype:"count" json:"server_appdata"`
+	ServerAppData uint64 `zeek:"server_appdata" zeektype:"count" json:"server_appdata"`
 	// ClientAppData : Flag to track if the client already sent an application
 	// data packet for TLS 1.3. Used to track when a session was established
 	// Note: may not be present in older zeek versions.
@@ -61,7 +61,7 @@ type SSL struct {
 	// AnalyzerID : The analyzer ID used for the analyzer instance attached to
 	// each connection. It is not used for logging since it’s a meaningless
 	// arbitrary number. Note: may not be present in older zeek versions.
-	AnalyzerID int `zeek:"analyzer_id" zeektype:"count" json:"analyzer_id"`
+	AnalyzerID uint64 `zeek:"analyzer_id" zeektype:"count" json:"analyzer_id"`
 	// Established : Flag to indicate if this ssl session has been established
 	// successfully, or if it was aborted during the handshake
 	Established bool `zeek:"established" zeektype:"bool" json:"established"`
