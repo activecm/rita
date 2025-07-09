@@ -471,6 +471,7 @@
         ssh_key_type: "rsa"
         ssh_key_bits: 4096
         ssh_key_file: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport"
+      # when: ansible_connection != "local"
       tags:
         - docker
         - linux

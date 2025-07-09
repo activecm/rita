@@ -81,7 +81,6 @@
         - linuxdeb
         - linuxrpm
 
-    #FIXME - place zeek_log_transport.sh in (local) opt for transfer
     - name: "Zeek Install: Transfer zeek_log_transport.sh shell script to target system."
       copy:
         src: ./opt/zeek_log_transport.sh
@@ -89,6 +88,7 @@
         owner: root
         group: root
         mode: 0755
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
@@ -103,6 +103,7 @@
         owner: root
         group: root
         mode: 0644
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
@@ -118,6 +119,7 @@
         mode: 0644
         owner: root
         group: root
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
@@ -159,6 +161,7 @@
         state: directory
         owner: "{{ lookup('env', 'USER') }}"
         mode: 0700
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
@@ -173,6 +176,7 @@
         owner: "{{ lookup('env', 'USER') }}"
         mode: 0600
         backup: true
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
@@ -187,6 +191,7 @@
         owner: "{{ lookup('env', 'USER') }}"
         mode: 0644
         backup: true
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
@@ -203,6 +208,7 @@
         backup: true
         create: true
         mode: 0644
+      when: ansible_connection != "local"
       tags:
         - docker
         - zeek
