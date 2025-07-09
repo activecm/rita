@@ -193,14 +193,19 @@
         - linuxdeb
       when: ( ansible_distribution == 'Kali' )
 
-    #Add repositories
+    # Add repositories
+    # Note that apt-key is deprecated and that directly downloading the key to trusted.gpg.d WITH A .asc EXTENSION is the correct way now.
     - name: "RITA Pre: Add Docker Ubuntu GPG apt key."
-      # Note that apt-key is deprecated and that directly downloading the key to trusted.gpg.d WITH A .asc EXTENSION is the correct way now.
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
-        mode: "0644"
-        force: true
+      block:
+        - name: "RITA Pre: Download Docker Ubuntu GPG apt key with get_url module."
+          get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
+            mode: "0644"
+            force: true
+      rescue:
+        - name: "RITA Pre: Download failed with get_url module. Falling back to curl."
+          shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/trusted.gpg.d/docker-ubuntu.asc
       when: ( ansible_distribution == 'Ubuntu' )
       tags:
         - packages
@@ -208,11 +213,16 @@
         - linuxdeb
 
     - name: "RITA Pre: Add Docker Debian GPG apt key."
-      get_url:
-        url: https://download.docker.com/linux/debian/gpg
-        dest: /etc/apt/trusted.gpg.d/docker-debian.asc
-        mode: "0644"
-        force: true
+      block:
+        - name: "RITA Pre: Download Docker Ubuntu GPG apt key with get_url module."
+          get_url:
+            url: https://download.docker.com/linux/debian/gpg
+            dest: /etc/apt/trusted.gpg.d/docker-debian.asc
+            mode: "0644"
+            force: true
+      rescue:
+        - name: "RITA Pre: Download failed with get_url module. Falling back to curl."
+          shell: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/trusted.gpg.d/docker-debian.asc
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Zorin OS' )
       tags:
         - packages
