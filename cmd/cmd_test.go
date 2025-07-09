@@ -72,8 +72,8 @@ func (c *CmdTestSuite) SetupSuite() {
 	c.SetupClickHouse(t)
 
 	// update the config to use the clickhouse container connection
-	cfg.DBConnection = c.clickhouseConnection
-	cfg.UpdateCheckEnabled = false
+	cfg.Env.DBConnection = c.clickhouseConnection
+	cfg.RITA.UpdateCheckEnabled = false
 	c.cfg = cfg
 
 	// connect to clickhouse server
@@ -208,7 +208,7 @@ func TestCheckForUpdate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			// set update check enabled in config
 			if test.cfg != nil {
-				test.cfg.UpdateCheckEnabled = test.updateCheckEnabled
+				test.cfg.RITA.UpdateCheckEnabled = test.updateCheckEnabled
 			}
 
 			// override global variables and functions

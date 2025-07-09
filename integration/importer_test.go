@@ -29,7 +29,7 @@ func TestValidTSV(t *testing.T) {
 	require.NoError(t, err)
 
 	// validTSVSuite.SetupClickHouse(t)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// connect to clickhouse server
 	server, err := database.ConnectToServer(context.Background(), cfg)
@@ -63,7 +63,7 @@ func TestValidJSON(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// // import data
 	results, err := cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_json", "dnscat2_ja3_strobe_json", false, false)
@@ -120,14 +120,14 @@ func (it *ValidDatasetTestSuite) TestCounts() {
 		},
 		{
 			table:               "http",
-			expectedDBCount:     26150 - 1023,
+			expectedDBCount:     26150, // includes 1023
 			expectedImportCount: 26181,
 			importResultCount:   it.importResults.HTTP,
 			msg:                 "written http record count matches imported record count",
 		},
 		{
 			table:               "openhttp",
-			expectedDBCount:     26150 - 1023,
+			expectedDBCount:     26150,
 			expectedImportCount: 26181,
 			importResultCount:   it.importResults.OpenHTTP,
 			msg:                 "written openhttp record count should be zero because they were closed",
@@ -611,8 +611,8 @@ func TestTSVLogFieldParsing(t *testing.T) {
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	cfg.Filter.FilterExternalToInternal = false
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Filtering.FilterExternalToInternal = false
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/open_conns/open", "test_tsv_field_parsing", false, false)
@@ -643,7 +643,7 @@ func TestJSONLogFieldParsing(t *testing.T) {
 	require.NoError(t, err)
 
 	// update config with clickhouse connection
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/json_with_all_fields", "json_with_all_fields", false, false)

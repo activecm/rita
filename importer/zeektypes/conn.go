@@ -32,11 +32,11 @@ type Conn struct {
 	// Source is the source address for this connection
 	Source string `zeek:"id.orig_h" zeektype:"addr" json:"id.orig_h"`
 	// SourcePort is the source port of this connection
-	SourcePort int `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
+	SourcePort uint32 `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
 	// Destination is the destination of the connection
 	Destination string `zeek:"id.resp_h" zeektype:"addr" json:"id.resp_h"`
 	// DestinationPort is the port at the destination host
-	DestinationPort int `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
+	DestinationPort uint32 `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
 	// Proto is the string protocol identifier for this connection
 	Proto string `zeek:"proto" zeektype:"enum" json:"proto"`
 	// Service describes the service of this connection if there was one
@@ -44,9 +44,9 @@ type Conn struct {
 	// Duration is the floating point representation of connection length
 	Duration float64 `zeek:"duration" zeektype:"interval" json:"duration"`
 	// OrigBytes is the byte count coming from the origin
-	OrigBytes int64 `zeek:"orig_bytes" zeektype:"count" json:"orig_bytes"`
+	OrigBytes uint64 `zeek:"orig_bytes" zeektype:"count" json:"orig_bytes"`
 	// RespBytes is the byte count coming in on response
-	RespBytes int64 `zeek:"resp_bytes" zeektype:"count" json:"resp_bytes"`
+	RespBytes uint64 `zeek:"resp_bytes" zeektype:"count" json:"resp_bytes"`
 	// ConnState has data describing the state of a connection
 	ConnState string `zeek:"conn_state" zeektype:"string" json:"conn_state"`
 	// LocalOrigin denotes that the connection originated locally
@@ -54,17 +54,17 @@ type Conn struct {
 	// LocalResponse denote that the connection responded locally
 	LocalResponse bool `zeek:"local_resp" zeektype:"bool" json:"local_resp"`
 	// MissedBytes keeps a count of bytes missed
-	MissedBytes int64 `zeek:"missed_bytes" zeektype:"count" json:"missed_bytes"`
+	MissedBytes uint64 `zeek:"missed_bytes" zeektype:"count" json:"missed_bytes"`
 	// History is a string containing historical information
 	History string `zeek:"history" zeektype:"string" json:"history"`
 	// OrigPkts is a count of origin packets
-	OrigPackets int64 `zeek:"orig_pkts" zeektype:"count" json:"orig_pkts"`
+	OrigPackets uint64 `zeek:"orig_pkts" zeektype:"count" json:"orig_pkts"`
 	// OrigIpBytes is another origin data count
-	OrigIPBytes int64 `zeek:"orig_ip_bytes" zeektype:"count" json:"orig_ip_bytes"`
+	OrigIPBytes uint64 `zeek:"orig_ip_bytes" zeektype:"count" json:"orig_ip_bytes"`
 	// RespPackets counts response packets
-	RespPackets int64 `zeek:"resp_pkts" zeektype:"count" json:"resp_pkts"`
+	RespPackets uint64 `zeek:"resp_pkts" zeektype:"count" json:"resp_pkts"`
 	// RespIpBytes gives the bytecount of response data
-	RespIPBytes int64 `zeek:"resp_ip_bytes" zeektype:"count" json:"resp_ip_bytes"`
+	RespIPBytes uint64 `zeek:"resp_ip_bytes" zeektype:"count" json:"resp_ip_bytes"`
 	// TunnelParents lists tunnel parents
 	TunnelParents []string `zeek:"tunnel_parents" zeektype:"set[string]" json:"tunnel_parents"`
 	// AgentHostname names which sensor recorded this event. Only set when combining logs from multiple sensors.

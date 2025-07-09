@@ -45,7 +45,7 @@ type ThreatModifier struct {
 	FQDN          string           `ch:"fqdn"`
 	LastSeen      time.Time        `ch:"last_seen"`
 	ModifierName  string           `ch:"modifier_name"`
-	ModifierScore float32          `ch:"modifier_score"`
+	ModifierScore float64          `ch:"modifier_score"`
 }
 
 func NewModifier(db *database.DB, cfg *config.Config, importID util.FixedString, minTS time.Time) (*Modifier, error) {
@@ -128,7 +128,7 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 	SELECT hash, src, src_nuid, dst, dst_nuid, fqdn, 
 		   r.modifier_value as modifier_value, 
 		   last_seen, 
-		   toFloat32(if(length(fqdn) > 0, 
+		   toFloat64(if(length(fqdn) > 0, 
 		   times_used_fqdn, times_used_dst)) as modifier_score
 	FROM threat_mixtape t 
 	SEMI JOIN rare_sig_modifiers r USING src, src_nuid, dst, dst_nuid, fqdn

@@ -29,19 +29,15 @@ func (db *DB) createThreatMixtapeTable(ctx context.Context) error {
 			proxy_count UInt64,
 			open_count UInt64,
 
-			-- c2 over dns connection info
-			direct_conns Array(IPv6),
-			queried_by Array(IPv6),
-
 			-- **** THREAT INDICATORS ****
 			-- BEACONING
 			beacon_type LowCardinality(String),
-			beacon_score Float32,
-			beacon_threat_score Float32,
-			ts_score Float32,
-			ds_score Float32,
-			dur_score Float32,
-			hist_score Float32,
+			beacon_score Float64,
+			beacon_threat_score Float64,
+			ts_score Float64,
+			ds_score Float64,
+			dur_score Float64,
+			hist_score Float64,
 			ts_intervals Array(Int64),
 			ts_interval_counts Array(Int64),
 			ds_sizes Array(Int64),
@@ -49,40 +45,41 @@ func (db *DB) createThreatMixtapeTable(ctx context.Context) error {
 			
 			-- LONG CONNECTIONS
 			total_duration Float64,
-			long_conn_score Float32,
+			long_conn_score Float64,
 
 			-- STROBE
-			strobe_score Float32,
+			strobe_score Float64,
 
 			-- C2 OVER DNS
 			subdomain_count UInt64,
-			c2_over_dns_score Float32,
-			c2_over_dns_direct_conn_score Float32,
+			c2_over_dns_score Float64,
+			c2_over_dns_direct_conn_score Float64,
 
 			-- THREAT INTEL
 			threat_intel Bool,
-			threat_intel_score Float32,
+			threat_intel_score Float64,
 
 			-- **** MODIFIERS ****
 			modifier_name LowCardinality(String),
-			modifier_score Float32,
+			modifier_score Float64,
 			modifier_value String,
 
 			-- PREVALENCE
 			prevalence_total UInt64,
-			prevalence Float32,
-			prevalence_score Float32,
+			prevalence Float64,
+			prevalence_score Float64,
+			network_size UInt64,
 
 			first_seen_historical DateTime(),
-			first_seen_score Float32,
+			first_seen_score Float64,
 
 			-- THREAT INTEL DATA SIZE
-			threat_intel_data_size_score Float32,
+			threat_intel_data_size_score Float64,
 
 
 			-- MISSING HOST HEADER
 			missing_host_count UInt64,
-			missing_host_header_score Float32
+			missing_host_header_score Float64
 
 		) ENGINE = MergeTree()
 		PRIMARY KEY (analyzed_at, dst_nuid, src_nuid, src, fqdn, dst, hash)
@@ -157,6 +154,7 @@ func (db *DB) createHistoricalFirstSeenMaterializedViews(ctx context.Context) er
 				minSimpleState(ts) as first_seen,
 				maxSimpleState(ts) as last_seen
 		FROM {database:Identifier}.http
+		WHERE host != ''
 		GROUP BY ( fqdn, ip)
 	`); err != nil {
 		return err
@@ -171,6 +169,7 @@ func (db *DB) createHistoricalFirstSeenMaterializedViews(ctx context.Context) er
 				minSimpleState(ts) as first_seen,
 				maxSimpleState(ts) as last_seen
 		FROM {database:Identifier}.openhttp
+		WHERE host != ''
 		GROUP BY ( fqdn, ip)
 	`); err != nil {
 		return err
@@ -266,7 +265,7 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			times_used_fqdn AggregateFunction(uniqExact, String)
 		)
 		ENGINE = AggregatingMergeTree()
-		PRIMARY KEY (src_nuid, src, dst, dst_nuid, fqdn, signature )
+		PRIMARY KEY (hour, src_nuid, src, dst, dst_nuid, fqdn, signature )
 	`)
 
 	if err != nil {
@@ -287,7 +286,7 @@ func (db *DB) createRareSignatureTable(ctx context.Context) error {
 			uniqExactState(dst) as times_used_dst,
 			uniqExactState(host) as times_used_fqdn
 		FROM {database:Identifier}.http
-		WHERE length(useragent) > 0
+		WHERE length(useragent) > 0 AND length(host) > 0
 		GROUP BY (import_hour, hour, src, src_nuid, fqdn, signature, is_ja3)
 	`)
 
@@ -352,15 +351,15 @@ func (db *DB) createPortInfoTable(ctx context.Context) error {
 			dst IPv6,
 			dst_nuid UUID,
 			fqdn String,
-			dst_port UInt16,
+			dst_port UInt32,
 			proto LowCardinality(String),
 			service LowCardinality(String),
-			icmp_type UInt16,
-			icmp_code UInt16,
+			icmp_type Int64,
+			icmp_code Int64,
 			conn_state LowCardinality(String),
 			count AggregateFunction(count, UInt64),
-			bytes_sent AggregateFunction(sum, Int64),
-			bytes_received AggregateFunction(sum, Int64)
+			bytes_sent AggregateFunction(sum, UInt64),
+			bytes_received AggregateFunction(sum, UInt64)
 		)
 		ENGINE = AggregatingMergeTree()
 		PRIMARY KEY (hour, hash, dst_port, proto, service, conn_state, icmp_type, icmp_code)

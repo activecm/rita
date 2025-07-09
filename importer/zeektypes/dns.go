@@ -13,29 +13,29 @@ type DNS struct {
 	// Source is the source address for this connection
 	Source string `zeek:"id.orig_h" zeektype:"addr" json:"id.orig_h"`
 	// SourcePort is the source port of this connection
-	SourcePort int `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
+	SourcePort uint32 `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
 	// Destination is the destination of the connection
 	Destination string `zeek:"id.resp_h" zeektype:"addr" json:"id.resp_h"`
 	// DestinationPort is the port at the destination host
-	DestinationPort int `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
+	DestinationPort uint32 `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
 	// Proto is the string protocol identifier for this connection
 	Proto string `zeek:"proto" zeektype:"enum" json:"proto"`
 	// TransID contains a 16 bit identifier assigned by the program that generated the query
-	TransID int64 `zeek:"trans_id" zeektype:"count" json:"trans_id"`
+	TransID uint64 `zeek:"trans_id" zeektype:"count" json:"trans_id"`
 	// RTT contains the round trip time of this request / response
 	RTT float64 `zeek:"rtt" zeektype:"interval" json:"rtt"`
 	// Query contains the query string
 	Query string `zeek:"query" zeektype:"string" json:"query"`
 	// QClass contains a the qclass of the query
-	QClass int64 `zeek:"qclass" zeektype:"count" json:"qclass"`
+	QClass uint64 `zeek:"qclass" zeektype:"count" json:"qclass"`
 	// QClassName contains a descriptive name for the query
 	QClassName string `zeek:"qclass_name" zeektype:"string" json:"qclass_name"`
 	// QType contains the value of the query type
-	QType int64 `zeek:"qtype" zeektype:"count" json:"qtype"`
+	QType uint64 `zeek:"qtype" zeektype:"count" json:"qtype"`
 	// QTypeName provides a descriptive name for the query
 	QTypeName string `zeek:"qtype_name" zeektype:"string" json:"qtype_name"`
 	// RCode contains the response code value from the DNS messages
-	RCode int64 `zeek:"rcode" zeektype:"count" json:"rcode"`
+	RCode uint64 `zeek:"rcode" zeektype:"count" json:"rcode"`
 	// RCodeName provides a descriptive name for RCode
 	RCodeName string `zeek:"rcode_name" zeektype:"string" json:"rcode_name"`
 	// AA represents the state of the authoritive answer bit of the resp messages
@@ -47,7 +47,7 @@ type DNS struct {
 	// RA represents the recursion available bit of the message
 	RA bool `bson:"RA" zeek:"RA" zeektype:"bool" json:"RA"`
 	// Z represents the state of a reseverd field that should be zero in qll queries
-	Z int64 `bson:"Z" zeek:"Z" zeektype:"count" json:"Z"`
+	Z uint64 `bson:"Z" zeek:"Z" zeektype:"count" json:"Z"`
 	// Answers contains the set of resource descriptions in the query answer
 	Answers []string `zeek:"answers" zeektype:"vector[string]" json:"answers"`
 	// TTLs contains a vector of interval type time to live values

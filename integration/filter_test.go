@@ -11,6 +11,7 @@ import (
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/progressbar"
+	"github.com/activecm/rita/v5/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/charmbracelet/bubbles/progress"
@@ -40,13 +41,13 @@ func (it *FilterTestSuite) SetupSuite() {
 
 func (it *FilterTestSuite) SetupTest() {
 	t := it.T()
-	err := it.cfg.ResetConfig()
+	err := it.cfg.Reset()
 	require.NoError(t, err)
 }
 
 func (it *FilterTestSuite) TearDownSuite() {
 	t := it.T()
-	err := it.cfg.ResetConfig()
+	err := it.cfg.Reset()
 	require.NoError(t, err)
 }
 
@@ -73,9 +74,9 @@ func (it *FilterTestSuite) TestNeverIncludeSubnets() {
 
 	cfg, err := config.ReadFileConfig(afs, "testsuite_config.hjson")
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
-	require.Contains(t, cfg.Filter.NeverIncludedSubnets, &net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}})
+	require.Contains(t, cfg.Filtering.NeverIncludedSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}))
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs2, "../test_data/valid_tsv", "never_include_subnet", false, true)
@@ -164,11 +165,11 @@ func (it *FilterTestSuite) TestNeverIncludeDomains() {
 
 	cfg, err := config.ReadFileConfig(afs, "testsuite_config2.hjson")
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
 
-	require.Contains(t, cfg.Filter.NeverIncludedDomains, "*.microsoft.com")
-	require.Contains(t, cfg.Filter.NeverIncludedDomains, "businessinsider.com")
+	require.Contains(t, cfg.Filtering.NeverIncludedDomains, "*.microsoft.com")
+	require.Contains(t, cfg.Filtering.NeverIncludedDomains, "businessinsider.com")
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs2, "../test_data/valid_tsv", "never_include_domain", false, true)
@@ -272,11 +273,11 @@ func (it *FilterTestSuite) TestAlwaysIncludeSubnets() {
 
 	cfg, err := config.ReadFileConfig(afs, "testsuite_config3.hjson")
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
 
-	require.Contains(t, cfg.Filter.NeverIncludedSubnets, &net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}, "never included subnets should contain 10.0.0.0/8")
-	require.Contains(t, cfg.Filter.AlwaysIncludedSubnets, &net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}, "always included subnets should contain 10.55.100.0/24")
+	require.Contains(t, cfg.Filtering.NeverIncludedSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{10, 0, 0, 0}, Mask: net.IPMask{255, 0, 0, 0}}), "never included subnets should contain 10.0.0.0/8")
+	require.Contains(t, cfg.Filtering.AlwaysIncludedSubnets, util.NewSubnet(&net.IPNet{IP: net.IP{10, 55, 100, 0}, Mask: net.IPMask{255, 255, 255, 0}}), "always included subnets should contain 10.55.100.0/24")
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs2, "../test_data/valid_tsv", "always_include_subnet", false, true)
@@ -290,7 +291,7 @@ func (it *FilterTestSuite) TestAlwaysIncludeSubnets() {
 
 	// verify that not all connections in 10.0.0.0/8 were filtered
 	conn := 12591
-	http := 1982
+	http := 1982 + 176 // regular http + http missing host
 	ssl := 5531
 
 	err = db.Conn.QueryRow(db.GetContext(), `
@@ -369,14 +370,14 @@ func (it *FilterTestSuite) TestAlwaysIncludeDomains() {
 
 	cfg, err := config.ReadFileConfig(afs, "testsuite_config4.hjson")
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
 
-	require.Contains(t, cfg.Filter.NeverIncludedDomains, "*.microsoft.com")
-	require.Contains(t, cfg.Filter.NeverIncludedDomains, "businessinsider.com")
+	require.Contains(t, cfg.Filtering.NeverIncludedDomains, "*.microsoft.com")
+	require.Contains(t, cfg.Filtering.NeverIncludedDomains, "businessinsider.com")
 
-	require.Contains(t, cfg.Filter.AlwaysIncludedDomains, "*.mp.microsoft.com")
-	require.Contains(t, cfg.Filter.AlwaysIncludedDomains, "analytics.businessinsider.com")
+	require.Contains(t, cfg.Filtering.AlwaysIncludedDomains, "*.mp.microsoft.com")
+	require.Contains(t, cfg.Filtering.AlwaysIncludedDomains, "analytics.businessinsider.com")
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs2, "../test_data/valid_tsv", "always_include_domain", false, true)
@@ -482,12 +483,12 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	cfg.Filter.FilterExternalToInternal = false
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Filtering.FilterExternalToInternal = false
 	it.cfg = cfg
 	require.NoError(t, err, "updating config should not return an error")
 
-	require.False(t, cfg.Filter.FilterExternalToInternal)
+	require.False(t, cfg.Filtering.FilterExternalToInternal)
 
 	// // import data
 	importResults, err := cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "filter_ext_to_int", false, true)
@@ -502,8 +503,8 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	type protoInfo struct {
 		PortProtoService string `ch:"port_proto_service"`
 		ConnCount        uint64 `ch:"conn_count"`
-		BytesSent        int64  `ch:"bytes_sent"`
-		BytesReceived    int64  `ch:"bytes_received"`
+		BytesSent        uint64 `ch:"bytes_sent"`
+		BytesReceived    uint64 `ch:"bytes_received"`
 	}
 
 	type testData struct {
@@ -626,7 +627,7 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 	type foundEntry struct {
 		PortProtoService string
 		ConnCount        uint64
-		TotalBytes       int64
+		TotalBytes       uint64
 	}
 	type resData struct {
 		src          string
