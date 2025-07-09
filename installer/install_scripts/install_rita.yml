@@ -2,38 +2,37 @@
 # ansible install playbook for rita V2.
 # Version: 202408061413
 # sample runs:
-# 	Optional: Add the following block, without #'s  to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
-# The hosts must each be on their own line.  These can be full or short hostnames or a name following "Host" in ~/.ssh/config .
+#   Optional: Add the following block, without #'s to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
+# The hosts must each be on their own line. These can be full or short hostnames or a name following "Host" in ~/.ssh/config.
 #
 # [allritas]
 # ro810
 # ub2404
 #
-# 	Then run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
+#   Then run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
 #
-# 	ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '	#-C (no changes) means do a dry run
-# 	ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '
+#   ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '  #-C (no changes) means do a dry run
+#   ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '
 
 # Many thanks to but-i-am-dominator for his help with this playbook.
 
-
 - name: "RITA Install: RITA installer."
-  hosts: "{{  install_hosts  }}"
+  hosts: "{{ install_hosts }}"
   become: true
 
   vars:
-    rita_version: "REPLACE_ME"								
-    rita_container_image: "ghcr.io/activecm/rita:{{  rita_version  }}"
+    rita_version: "REPLACE_ME"
+    rita_container_image: "ghcr.io/activecm/rita:{{ rita_version }}"
     clickhouse_container_image: clickhouse/clickhouse-server:latest
-    ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
+    ansible_python_interpreter: /bin/python3 # Centos 7 defaults to using python2, so we force python 3. This change does not break any other distros
 
-#The install_pre.yml script should already have been run by this point
+  #The install_pre.yml script should already have been run by this point
 
   tasks:
-#Make directories
+    #Make directories
     - name: "RITA Install: Create configuration directories."
       ansible.builtin.file:
-        path: "{{  item  }}"
+        path: "{{ item }}"
         state: directory
         owner: root
         group: root
@@ -48,31 +47,31 @@
         - linuxdeb
         - linuxrpm
 
-#Install RITA
-    #Following pulls right from dockerhub.  We may not be able to do this if the system is airgapped
-    - name: "RITA Install: Install {{  rita_container_image  }} docker image."
+    #Install RITA
+    #Following pulls right from dockerhub. We may not be able to do this if the system is airgapped
+    - name: "RITA Install: Install {{ rita_container_image }} docker image."
       block:
         - name: "Pull from Github.io Container repo"
           community.docker.docker_image:
-            name: "{{  rita_container_image  }}"
+            name: "{{ rita_container_image }}"
             source: pull
             force_source: true
       rescue:
         - name: "RITA Install: Transfer RITA container image to target system"
           copy:
-            src: "rita-{{  rita_version  }}-image.tar"
+            src: "rita-{{ rita_version }}-image.tar"
             dest: /opt/rita
             owner: root
             group: root
             mode: 0644
         - name: "Install {{ rita_container_name }} container image from file"
           community.docker.docker_image_load:
-            path: "/opt/rita/rita-{{  rita_version  }}-image.tar"
+            path: "/opt/rita/rita-{{ rita_version }}-image.tar"
           register: load_result
           #This final one prints a list of the loaded images if we use the above 2 stanzas to load from a file.
         - name: "RITA Install: Print loaded image names."
           ansible.builtin.debug:
-            msg: "Loaded the following images: {{  load_result.image_names | join(', ')  }}"
+            msg: "Loaded the following images: {{ load_result.image_names | join(', ') }}"
       tags:
         - docker
         - rita
@@ -121,6 +120,4 @@
         - linux
         - linuxdeb
         - linuxrpm
-
-
 #The install_post.yml script should be run next

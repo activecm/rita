@@ -50,6 +50,13 @@ else
 	./scripts/sshprep "$install_target"
 	status "If asked for a 'BECOME password', that is your non-root sudo password on $install_target ."
 	if [ "$_INSTALL_ZEEK" = 'true' ]; then
+		status "Creating Zeek log transport Cron file"
+		rm -f zeek_log_transport.cron ; touch zeek_log_transport.cron
+		for one_sys in $achunter_dests ; do
+			#NON_ROOT_ACCOUNT_NAME will be replaced after being placed on the target system (by an ansible recipe in install_zeek.yml
+			echo "5 * * * * NON_ROOT_ACCOUNT_NAME /usr/local/bin/zeek_log_transport.sh --dest $one_sys" >>zeek_log_transport.cron
+		done
+
 		ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_pre.yml install_rita.yml install_zeek.yml install_post.yml
 	else
 		ansible-playbook -K -i "${install_target}," -e "install_hosts=${install_target}," install_pre.yml install_rita.yml install_post.yml
@@ -66,6 +73,12 @@ echo \
 Brought to you by Active CounterMeasures©
 "
 echo "RITA was successfully installed!"
+
+if [ "$_INSTALL_ZEEK" = 'true' ]; then
+	echo "Please run the following commands on any new zeek sensors"
+	echo "	zeek start ; zeek enable"
+	echo ""
+fi
 
 # switch back to original working directory
 popd > /dev/null

@@ -61,6 +61,8 @@ cp ../default_config.hjson "$INSTALL_ETC"/config.hjson
 cp ../rita.sh "$INSTALL_OPT"/rita.sh
 curl --fail --silent --show-error -o "$INSTALL_OPT"/zeek https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
 chmod +x "$INSTALL_OPT"/zeek
+curl --fail --silent --show-error -o "$INSTALL_OPT"/zeek_log_transport.sh https://raw.githubusercontent.com/activecm/zeek-log-transport/refs/heads/master/zeek_log_transport.sh
+chmod +x "$INSTALL_OPT"/zeek_log_transport.sh
 cp ../.env.production "$INSTALL_OPT"/.env
 cp ../docker-compose.prod.yml "$INSTALL_OPT"/docker-compose.yml
 cp ../LICENSE "$INSTALL_OPT"/LICENSE
