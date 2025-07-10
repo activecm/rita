@@ -26,7 +26,7 @@
     #Make directories
     - name: "Zeek Install: Create zeek directories."
       ansible.builtin.file:
-        path: "{{  item  }}"
+        path: "{{ item }}"
         state: directory
         owner: root
         group: root
@@ -81,51 +81,54 @@
         - linuxdeb
         - linuxrpm
 
-    - name: "Zeek Install: Transfer zeek_log_transport.sh shell script to target system."
-      copy:
-        src: ./opt/zeek_log_transport.sh
-        dest: /usr/local/bin/zeek_log_transport.sh
-        owner: root
-        group: root
-        mode: 0755
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Transfer zeek_log_transport.sh shell script to target system."
+    #   copy:
+    #     src: ./opt/zeek_log_transport.sh
+    #     dest: /usr/local/bin/zeek_log_transport.sh
+    #     owner: root
+    #     group: root
+    #     mode: 0755
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 
-    - name: "Zeek Install: Transfer zeek_log_transport.cron to target system."
-      copy:
-        src: "{{ lookup('env', 'PWD') }}/zeek_log_transport.cron"
-        dest: /etc/cron.d/zeek_log_transport
-        owner: root
-        group: root
-        mode: 0644
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Transfer zeek_log_transport.cron to target system."
+    #   copy:
+    #     src: "{{ lookup('env', 'PWD') }}/zeek_log_transport.cron"
+    #     dest: /etc/cron.d/zeek_log_transport
+    #     owner: root
+    #     group: root
+    #     mode: 0644
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 
-    - name: "Zeek Install: Place name of remote user in zeek_log_transport cron file"
-      ansible.builtin.replace:
-        path: /etc/cron.d/zeek_log_transport
-        regexp: "^(.*)NON_ROOT_ACCOUNT_NAME(.*)$"
-        replace: '\1{{ lookup("env", "USER") }}\2'
-        mode: 0644
-        owner: root
-        group: root
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Place name of remote user in zeek_log_transport cron file"
+    #   ansible.builtin.replace:
+    #     path: /etc/cron.d/zeek_log_transport
+    #     regexp: "^(.*)NON_ROOT_ACCOUNT_NAME(.*)$"
+    #     replace: '\1{{ lookup("env", "USER") }}\2'
+    #     mode: 0644
+    #     owner: root
+    #     group: root
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 
     - name: "Zeek Install: check whether node.cfg exists to decide if this is the first time running zeek."
       stat:
@@ -155,64 +158,68 @@
         - linuxdeb
         - linuxrpm
 
-    - name: "Zeek Install: Create .ssh directory."
-      ansible.builtin.file:
-        path: "{{ lookup('env', 'HOME') }}/.ssh"
-        state: directory
-        owner: "{{ lookup('env', 'USER') }}"
-        mode: 0700
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Create .ssh directory."
+    #   ansible.builtin.file:
+    #     path: "{{ lookup('env', 'HOME') }}/.ssh"
+    #     state: directory
+    #     owner: "{{ lookup('env', 'USER') }}"
+    #     mode: 0700
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 
-    - name: "Zeek Install: Transfer dataimport private key to .ssh"
-      copy:
-        src: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport"
-        dest: "{{ lookup('env', 'HOME') }}/.ssh/"
-        owner: "{{ lookup('env', 'USER') }}"
-        mode: 0600
-        backup: true
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Transfer dataimport private key to .ssh"
+    #   copy:
+    #     src: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport"
+    #     dest: "{{ lookup('env', 'HOME') }}/.ssh/"
+    #     owner: "{{ lookup('env', 'USER') }}"
+    #     mode: 0600
+    #     backup: true
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 
-    - name: "Zeek Install: Transfer dataimport public key to .ssh"
-      copy:
-        src: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport.pub"
-        dest: "{{ lookup('env', 'HOME') }}/.ssh/"
-        owner: "{{ lookup('env', 'USER') }}"
-        mode: 0644
-        backup: true
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Transfer dataimport public key to .ssh"
+    #   copy:
+    #     src: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport.pub"
+    #     dest: "{{ lookup('env', 'HOME') }}/.ssh/"
+    #     owner: "{{ lookup('env', 'USER') }}"
+    #     mode: 0644
+    #     backup: true
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 
-    - name: "Zeek Install: Update known_hosts with entries from known_hosts on this system"
-      ansible.builtin.blockinfile:
-        block: "{{ lookup('ansible.builtin.file', '{{ local_known_hosts }}') }}"
-        path: "{{ lookup('env', 'HOME') }}/.ssh/known_hosts"
-        marker: "# {mark} ANSIBLE MANAGED BLOCK APPENDED DURING ZEEK INSTALL"
-        owner: "{{ lookup('env', 'USER') }}"
-        backup: true
-        create: true
-        mode: 0644
-      when: ansible_connection != "local"
-      tags:
-        - docker
-        - zeek
-        - linux
-        - linuxdeb
-        - linuxrpm
+    # TODO: Fix and add this back in after RITA#65 is done
+    # - name: "Zeek Install: Update known_hosts with entries from known_hosts on this system"
+    #   ansible.builtin.blockinfile:
+    #     block: "{{ lookup('ansible.builtin.file', '{{ local_known_hosts }}') }}"
+    #     path: "{{ lookup('env', 'HOME') }}/.ssh/known_hosts"
+    #     marker: "# {mark} ANSIBLE MANAGED BLOCK APPENDED DURING ZEEK INSTALL"
+    #     owner: "{{ lookup('env', 'USER') }}"
+    #     backup: true
+    #     create: true
+    #     mode: 0644
+    #   when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - zeek
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm
 #The install_post.yml script should be run next
