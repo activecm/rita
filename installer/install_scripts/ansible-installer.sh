@@ -99,11 +99,11 @@ enable_repositories() {
 		ol/*)											#Oracle linux, which is also the base for security onion 2470
 			:
 			;;
-		rhel/7)
+		rhel/7*)
 			$SUDO subscription-manager repos --enable rhel-*-optional-rpms --enable rhel-*-extras-rpms --enable rhel-ha-for-rhel-*-server-rpms
 			$SUDO yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 			;;
-		rhel/8)
+		rhel/8*)
 			$SUDO subscription-manager repos --enable codeready-builder-for-rhel-8-$(arch)-rpms
 			$SUDO dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 			;;
