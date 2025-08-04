@@ -410,31 +410,6 @@
             - linuxrpm
       when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
 
-    - name: "RITA Pre: replace python3-requests with a new version installed by pip."
-      block:
-        - name: "RITA Pre: Uninstall unofficial docker packages on rpm-based distributions."
-          yum:
-            name:
-              - python3-requests #As of 20240618, issue with requests code: "Error connecting: Error while fetching server API version: Not supported URL scheme http+docker". Installing requests with pip appears to install a newer version that handles the issue.
-            state: absent
-            update_cache: true
-          tags:
-            - docker
-            - linux
-            - linuxrpm
-
-        - name: "RITA Pre: Install docker modules for Python on rpm-based distributions."
-          pip:
-            name:
-              - docker
-              - requests
-          tags:
-            - docker
-            - linux
-            - linuxrpm
-      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-      #OracleLinux and SecurityOnion don't include pip so we can't do these steps there.
-
     - name: "RITA Pre: Start and enable docker in systemd."
       systemd:
         name: docker
