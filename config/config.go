@@ -580,10 +580,10 @@ func defaultConfig() Config {
 			ThreatIntelScoreIncrease:     0.15,   // score +15% if data size >= 25 MB
 			ThreatIntelDataSizeThreshold: 2.5e+7, // 25 MB (as bytes)
 
-			PrevalenceScoreIncrease:     0.15, // score +15% if prevalence <= 2%
+			PrevalenceScoreIncrease:     0, // score +0% if prevalence <= 2%
 			PrevalenceIncreaseThreshold: 0.02,
-			PrevalenceScoreDecrease:     0.15, // score -15% if prevalence >= 50%
-			PrevalenceDecreaseThreshold: 0.5,  // must be greater than the increase threshold
+			PrevalenceScoreDecrease:     0,   // score -0% if prevalence >= 50%
+			PrevalenceDecreaseThreshold: 0.5, // must be greater than the increase threshold
 
 			FirstSeenScoreIncrease:     0.15, // score +15% if first seen <= 7 days ago
 			FirstSeenIncreaseThreshold: 7,
@@ -593,7 +593,7 @@ func defaultConfig() Config {
 
 			MissingHostCountScoreIncrease: 0.10, // +10% score for any (>0) missing hosts
 
-			RareSignatureScoreIncrease: 0.15, // +15% score for connections with a rare signature
+			RareSignatureScoreIncrease: 0, // +0% score for connections with a rare signature
 
 			C2OverDNSDirectConnScoreIncrease: 0.15, // +15% score for domains that were queried but had no direct connections
 
