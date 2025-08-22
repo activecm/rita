@@ -28,7 +28,8 @@
     - name: "RITA Post: Check if reboot required on rpm-based systems."
       command: needs-restarting -r
       register: reboot_result
-      ignore_errors: true
+      ignore_errors: True
+      failed_when: reboot_result.rc is not defined
       when: ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky'
       tags:
         - packages
@@ -40,6 +41,7 @@
       stat:
         path: /var/run/reboot-required
         get_checksum: no
+      ignore_errors: True
       when: ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS'
       tags:
         - packages
