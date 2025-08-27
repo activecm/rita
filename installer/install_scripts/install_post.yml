@@ -28,19 +28,21 @@
     - name: "RITA Post: Check if reboot required on rpm-based systems."
       command: needs-restarting -r
       register: reboot_result
-      ignore_errors: true
-      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
+      ignore_errors: True
+      failed_when: reboot_result.rc is not defined
+      when: ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky'
       tags:
         - packages
         - linux
         - linuxrpm
 
-    - name: "RITA Post: Check if reboot required on Debian/Ubuntu-based systems."
+    - name: "RITA Post: Check if reboot required on deb-based systems."
       register: reboot_required_file
       stat:
         path: /var/run/reboot-required
         get_checksum: no
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
+      ignore_errors: True
+      when: ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS'
       tags:
         - packages
         - linux
@@ -49,10 +51,10 @@
     - name: "RITA Post: Rebooting system if needed."
       reboot:
         reboot_timeout: 120
-      when: ( ansible_connection != 'local' and ( ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' ) and ( reboot_required_file.stat.exists ) ) or ( ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' ) and ( reboot_result.rc == 1 ) ) )
+      when:
+        - ansible_connection != 'local'
+        - (reboot_required_file.stat is defined and reboot_required_file.stat.exists) or (reboot_result.rc is defined and reboot_result.rc == 1)
       register: reboot_status
-      async: 1
-      poll: 0
       ignore_errors: True #If unable to reboot (as ansible refuses to do if installing to localhost) we leave the error at the end of the output but don't treat it as a failure.
       tags:
         - packages
