@@ -241,6 +241,8 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 				max(ts) AS last_seen,
 				min(ts) AS first_seen
 		FROM openhttp
+		-- ignore missing hosts for openhttp, this is automatically handled in usni via MV
+		WHERE host != ''
 		-- Right join unique HTTP hashes to limit analysis to just the connections that updated in this import
 		GROUP BY hash, src, src_nuid, fqdn
 
@@ -305,7 +307,7 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 	SELECT  s.hash AS hash, s.src AS src, s.src_nuid AS src_nuid, s.fqdn AS fqdn, 
 			if(t.fqdn != '', true, false) AS on_threat_intel,
 			prevalence_total, 
-      prevalence_total / {network_size:UInt64} AS prevalence,
+      		prevalence_total / {network_size:UInt64} AS prevalence,
 			if({use_historical:Bool}, h.first_seen, s.first_seen) AS first_seen_historical,
 			'sni' AS beacon_type,
 			count,
