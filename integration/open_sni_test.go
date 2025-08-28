@@ -71,10 +71,10 @@ func (it *OpenSNITestSuite) TestThreats() {
 		portProtoService []string
 	}{
 
-		{src: "10.0.0.238", dst: "::", fqdn: "ce7.stearns.org", finalScore: 0.25468, totalDuration: 14737.061150000001, count: 0, proxyCount: 0, openCount: 2, totalBytes: 24106, serverIPs: []net.IP{sslServerIP}, portProtoService: []string{"8443:tcp:ssl"}},
-		{src: "10.0.0.238", dst: "::", fqdn: "ce7.stearns.org:8000", finalScore: 0.11993, totalDuration: 7376.718848, count: 0, proxyCount: 0, openCount: 1, totalBytes: 8144, serverIPs: []net.IP{sslServerIP}, portProtoService: []string{"8000:tcp:http"}},
-		{src: "10.0.0.238", dst: "34.222.122.143", finalScore: 0.11667, totalDuration: 7200.403186, count: 0, proxyCount: 0, openCount: 1, totalBytes: 2715618, portProtoService: []string{"64590:tcp:"}},
-		{src: "10.0.0.238", dst: "52.33.59.39", finalScore: 0.11667, totalDuration: 7200.169165, count: 0, proxyCount: 0, openCount: 1, totalBytes: 4593763, portProtoService: []string{"64004:tcp:"}},
+		{src: "10.0.0.238", dst: "::", fqdn: "ce7.stearns.org", finalScore: 0.25468 + 0.15, totalDuration: 14737.061150000001, count: 0, proxyCount: 0, openCount: 2, totalBytes: 24106, serverIPs: []net.IP{sslServerIP}, portProtoService: []string{"8443:tcp:ssl"}},
+		{src: "10.0.0.238", dst: "::", fqdn: "ce7.stearns.org:8000", finalScore: 0.11993 + 0.15, totalDuration: 7376.718848, count: 0, proxyCount: 0, openCount: 1, totalBytes: 8144, serverIPs: []net.IP{sslServerIP}, portProtoService: []string{"8000:tcp:http"}},
+		{src: "10.0.0.238", dst: "34.222.122.143", finalScore: 0.11667 + 0.15, totalDuration: 7200.403186, count: 0, proxyCount: 0, openCount: 1, totalBytes: 2715618, portProtoService: []string{"64590:tcp:"}},
+		{src: "10.0.0.238", dst: "52.33.59.39", finalScore: 0.11667 + 0.15, totalDuration: 7200.169165, count: 0, proxyCount: 0, openCount: 1, totalBytes: 4593763, portProtoService: []string{"64004:tcp:"}},
 	}
 
 	min, _, _, _, err := it.db.GetTrueMinMaxTimestamps()
