@@ -105,8 +105,8 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 		proxyCount    uint64
 		proxyIPs      []net.IP
 	}{
-		{src: "10.0.0.238", dst: "75.75.75.75", finalScore: 0.18839, beaconScore: 0.673, totalDuration: 595.72157, count: 1160, totalBytes: 319107},
-		{src: "10.0.0.111", dst: "::", fqdn: "safebrowsing.googleapis.com:443", finalScore: 0.1492, beaconScore: 0.624, totalDuration: 6.569, count: 46, proxyCount: 46, totalBytes: 308421, proxyIPs: []net.IP{proxyIP}},
+		{src: "10.0.0.238", dst: "75.75.75.75", finalScore: 0.18839 + 0.15, beaconScore: 0.673, totalDuration: 595.72157, count: 1160, totalBytes: 319107},
+		{src: "10.0.0.111", dst: "::", fqdn: "safebrowsing.googleapis.com:443", finalScore: 0.1492 + 0.15, beaconScore: 0.624, totalDuration: 6.569, count: 46, proxyCount: 46, totalBytes: 308421, proxyIPs: []net.IP{proxyIP}},
 	}
 
 	min, _, _, err := it.db.GetBeaconMinMaxTimestamps()

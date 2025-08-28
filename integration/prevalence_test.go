@@ -60,7 +60,8 @@ func (it *ValidDatasetTestSuite) TestPrevalence() {
 	for _, r := range results {
 		require.EqualValues(t, 13, r.PrevTotal)
 		require.InEpsilon(t, 13/networkSize, r.Prevalence, 0.001)
-		require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
+		require.Zero(t, r.PrevalenceScore)
+		// require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
 	}
 
 	err = it.db.Conn.Select(it.db.GetContext(), &results, `--sql
@@ -72,7 +73,8 @@ func (it *ValidDatasetTestSuite) TestPrevalence() {
 	for _, r := range results {
 		require.EqualValues(t, 9, r.PrevTotal)
 		require.InEpsilon(t, 9/networkSize, r.Prevalence, 0.001)
-		require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
+		require.Zero(t, r.PrevalenceScore)
+		// require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
 	}
 
 }
@@ -165,7 +167,8 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 	for _, r := range results {
 		require.EqualValues(t, 13, r.PrevTotal)
 		require.InEpsilon(t, 13/networkSize, r.Prevalence, 0.001)
-		require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
+		require.Zero(t, r.PrevalenceScore)
+		// require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
 	}
 
 	err = db.Conn.Select(db.GetContext(), &results, `--sql
