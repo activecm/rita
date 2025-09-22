@@ -38,18 +38,15 @@ The framework ingests [Zeek Logs](https://www.zeek.org/) in TSV or JSON format, 
 
 
 ### Supported Platforms
-- ✅: Official Support
-- ⚠️: Unofficial Support
-- ❌: Unsupported
 
-| OS              | Versions | Platform | Status | 
-| :---------------- | :------ | :---- | :----: | 
-| CentOS         | `9 Stream` | `amd64` | ✅ |
-| Rocky         | `9` | `amd64` | ✅ |
-| Ubuntu        |   `24.04`   | `amd64`| ✅ |
-| Windows        |    | | ❌ |
-<!-- TODO: eventually add support -->
-<!-- | MacOS        |   `Sonoma`   | `intel\|arm` | ✅ | -->
+The following operating systems/versions and CPU architectures are supported:
+
+| OS              | Versions         | Platform |
+| :-------------- | :--------------- | :------- |
+| CentOS          | `9 Stream`       | `amd64`  |
+| Rocky           | `9`              | `amd64`  |
+| RHEL            | `9`              | `amd64`  |
+| Ubuntu          | `22.04`, `24.04` | `amd64`  |
 
 ## Installing Zeek
 If you do not already have Zeek installed, it can be installed from [docker-zeek](https://github.com/activecm/docker-zeek).

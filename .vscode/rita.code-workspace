@@ -11,6 +11,7 @@
             "golang.go",
             "hjson.hjson",
             "Tanh.hjson-formatter",
+            "redhat.vscode-yaml",
         ]
     },
     "settings": {
@@ -51,5 +52,9 @@
             "space": 4,
             "eol": "auto",
         },
+        "[yaml]": {
+            "editor.defaultFormatter": "redhat.vscode-yaml",
+            "editor.formatOnSave": true,
+        }
     }
 }

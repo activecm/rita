@@ -268,7 +268,7 @@ func ParseSearchInput(input string) (*Filter, string) {
 				if numberInt > 100 {
 					return nil, field + " can't be greater than 100"
 				}
-				percentage := float32(numberInt) / 100
+				percentage := float64(numberInt) / 100
 				// divide value by 100 to convert to decimal, must be formatted to two places
 				number = fmt.Sprintf("%1.2f", percentage)
 			}

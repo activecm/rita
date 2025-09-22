@@ -125,7 +125,7 @@ func formatDNSRecord(cfg *config.Config, parseDNS *zeektypes.DNS, importTime tim
 
 	// Run query through filter to filter out certain domains and
 	// filter out traffic which is external -> external or external -> internal (if specified in the config file)
-	ignore := (cfg.Filter.FilterDomain(parseDNS.Query) || cfg.Filter.FilterDNSPair(srcIP, dstIP))
+	ignore := (cfg.Filtering.FilterDomain(parseDNS.Query) || cfg.Filtering.FilterDNSPair(srcIP, dstIP))
 
 	// If domain is not subject to filtering, process
 	if ignore {
@@ -156,8 +156,8 @@ func formatDNSRecord(cfg *config.Config, parseDNS *zeektypes.DNS, importTime tim
 		DstNUID:             dstNUID,
 		SrcPort:             uint16(parseDNS.SourcePort),
 		DstPort:             uint16(parseDNS.DestinationPort),
-		SrcLocal:            cfg.Filter.CheckIfInternal(srcIP),
-		DstLocal:            cfg.Filter.CheckIfInternal(dstIP),
+		SrcLocal:            cfg.Filtering.CheckIfInternal(srcIP),
+		DstLocal:            cfg.Filtering.CheckIfInternal(dstIP),
 		TransactionID:       uint16(parseDNS.TransID),
 		RoundTripTime:       parseDNS.RTT,
 		Query:               parseDNS.Query,

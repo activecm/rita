@@ -56,7 +56,7 @@ func NewBulkWriter(db Database, conf *config.Config, numWorkers int, database st
 		ProgChannel:  make(chan int),
 		WriteWg:      analysisErrGroup,
 		writerName:   writerName,
-		batchSize:    conf.BatchSize,
+		batchSize:    int(conf.RITA.BatchSize),
 		query:        query,
 		limiter:      limiter,
 		withProgress: withProgress,

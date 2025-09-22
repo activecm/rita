@@ -18,11 +18,11 @@ var ErrInputSliceEmpty = errors.New("input slice must not be empty")
 
 type Beacon struct {
 	BeaconType     string  `ch:"beacon_type"` // (sni, ip)
-	Score          float32 `ch:"beacon_score"`
-	TimestampScore float32 `ch:"ts_score"`
-	DataSizeScore  float32 `ch:"ds_score"`
-	HistogramScore float32 `ch:"hist_score"`
-	DurationScore  float32 `ch:"dur_score"`
+	Score          float64 `ch:"beacon_score"`
+	TimestampScore float64 `ch:"ts_score"`
+	DataSizeScore  float64 `ch:"ds_score"`
+	HistogramScore float64 `ch:"hist_score"`
+	DurationScore  float64 `ch:"dur_score"`
 
 	TSIntervals      []int64 `ch:"ts_intervals"`
 	TSIntervalCounts []int64 `ch:"ts_interval_counts"`
@@ -56,8 +56,8 @@ func (analyzer *Analyzer) analyzeBeacon(entry *AnalysisResult) (Beacon, error) {
 
 	// calculate histogram score (note: we currently look at a 24 hour period)
 	_, _, totalBars, longestRun, histScore, err := getHistogramScore(
-		analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), entry.TSList, analyzer.Config.Scoring.Beacon.HistModeSensitivity,
-		analyzer.Config.Scoring.Beacon.HistBimodalOutlierRemoval, analyzer.Config.Scoring.Beacon.HistBimodalMinHours, 24,
+		analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), entry.TSList, analyzer.Config.Scoring.Beacon.HistogramModeSensitivity,
+		analyzer.Config.Scoring.Beacon.HistogramBimodalOutlierRemoval, analyzer.Config.Scoring.Beacon.HistogramBimodalMinHoursSeen, 24,
 	)
 	if err != nil {
 		logger.Err(err).Caller().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("fqdn", entry.FQDN).Send()
@@ -67,7 +67,7 @@ func (analyzer *Analyzer) analyzeBeacon(entry *AnalysisResult) (Beacon, error) {
 	// calculate duration score
 	_, _, durScore, err := getDurationScore(
 		analyzer.minTSBeacon.Unix(), analyzer.maxTSBeacon.Unix(), int64(entry.TSList[0]), int64(entry.TSList[len(entry.TSList)-1]),
-		totalBars, longestRun, analyzer.Config.Scoring.Beacon.DurMinHours, analyzer.Config.Scoring.Beacon.DurIdealNumberOfConsistentHours,
+		totalBars, longestRun, analyzer.Config.Scoring.Beacon.DurationMinHoursSeen, analyzer.Config.Scoring.Beacon.DurationConsistencyIdealHoursSeen,
 	)
 	if err != nil {
 		logger.Err(err).Caller().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("fqdn", entry.FQDN).Send()
@@ -75,27 +75,24 @@ func (analyzer *Analyzer) analyzeBeacon(entry *AnalysisResult) (Beacon, error) {
 	}
 
 	// calculate overall beacon score
-	score, err := getBeaconScore(tsScore, analyzer.Config.Scoring.Beacon.TsWeight,
-		dsScore, analyzer.Config.Scoring.Beacon.DsWeight,
-		durScore, analyzer.Config.Scoring.Beacon.DurWeight,
-		histScore, analyzer.Config.Scoring.Beacon.HistWeight)
+	score, err := getBeaconScore(tsScore, analyzer.Config.Scoring.Beacon.TimestampScoreWeight,
+		dsScore, analyzer.Config.Scoring.Beacon.DatasizeScoreWeight,
+		durScore, analyzer.Config.Scoring.Beacon.DurationScoreWeight,
+		histScore, analyzer.Config.Scoring.Beacon.HistogramScoreWeight)
 	if err != nil {
 		logger.Err(err).Caller().Str("src", entry.Src.String()).Str("dst", entry.Dst.String()).Str("fqdn", entry.FQDN).Send()
 		return beacon, err
 	}
 
 	// create beacon
-	// float64 values are cast to float32 for more efficient storage in the database, as the values
-	// are not expected to exceed the range of a float32. The cast is done here at the end of analysis
-	// since most of the go math functions require or return float64
 	beacon = Beacon{
 		// score fields
 		BeaconType:     entry.BeaconType,
-		Score:          float32(score),
-		TimestampScore: float32(tsScore),
-		DataSizeScore:  float32(dsScore),
-		HistogramScore: float32(histScore),
-		DurationScore:  float32(durScore),
+		Score:          score,
+		TimestampScore: tsScore,
+		DataSizeScore:  dsScore,
+		HistogramScore: histScore,
+		DurationScore:  durScore,
 
 		// graphing fields
 		TSIntervals:      intervals,
@@ -249,7 +246,7 @@ func calculateStatisticalScore(values []float64, defaultMadScore float64) (float
 }
 
 // getHistogramScore calculates a score based on the histogram of timestamps of a host pair over a specified period of time
-func getHistogramScore(datasetMin int64, datasetMax int64, tsList []uint32, modeSensitivity float64, bimodalOutlierRemoval int, bimodalMinHoursSeen int, beaconTimeSpan int) ([]int, map[int32]int32, int, int, float64, error) {
+func getHistogramScore(datasetMin int64, datasetMax int64, tsList []uint32, modeSensitivity float64, bimodalOutlierRemoval int32, bimodalMinHoursSeen int32, beaconTimeSpan int32) ([]int, map[int32]int32, int32, int32, float64, error) {
 	// ensure that the input slice is not empty
 	if len(tsList) == 0 {
 		return nil, nil, 0, 0, 0, ErrInputSliceEmpty
@@ -299,7 +296,7 @@ func getHistogramScore(datasetMin int64, datasetMax int64, tsList []uint32, mode
 // getDurationScore calculates a duration score based on the provided input parameters, provided that
 // a sufficient amount of hours (default threshold: 6 hours) are represented in the connection frequency histogram.
 // The duration score is derived from two potential subscores: dataset timespan coverage and consistency of connection hours
-func getDurationScore(datasetMin int64, datasetMax int64, histMin int64, histMax int64, totalBars int, longestConsecutiveRun int, minHoursThreshold int, idealNumberConsistentHours int) (float64, float64, float64, error) {
+func getDurationScore(datasetMin int64, datasetMax int64, histMin int64, histMax int64, totalBars int32, longestConsecutiveRun int32, minHoursThreshold int32, idealNumberConsistentHours int32) (float64, float64, float64, error) {
 
 	// ensure that the input values are valid
 	if minHoursThreshold < 1 || idealNumberConsistentHours < 1 || datasetMax <= datasetMin || histMax <= histMin {
@@ -482,7 +479,7 @@ func calculateDistinctCounts(input []float64) ([]int64, []int64, int64, int64, e
 
 // computeHistogramBins creates evenly spaced bins for the histogram based on the given timestamp range
 // and the desired number of bins
-func computeHistogramBins(startTime int64, endTime int64, numBins int) ([]float64, error) {
+func computeHistogramBins(startTime int64, endTime int64, numBins int32) ([]float64, error) {
 	// ensure that the number of bins is positive
 	if numBins <= 0 {
 		return nil, errors.New("number of desired histogram bins must be greater than 0")
@@ -507,7 +504,7 @@ func computeHistogramBins(startTime int64, endTime int64, numBins int) ([]float6
 	binEdges[0] = float64(startTime)
 
 	// create evenly spaced bin edges between startTime and endTime
-	for i := 1; i < edgeCount-1; i++ {
+	for i := int32(1); i < edgeCount-1; i++ {
 		binEdges[i] = float64(startTime) + (float64(i) * step)
 	}
 
@@ -519,7 +516,7 @@ func computeHistogramBins(startTime int64, endTime int64, numBins int) ([]float6
 
 // createHistogram calculates the distribution of timestamps across given bin edges
 // func createHistogram(binEdges []uint32, timestamps []uint32, modeSensitivity float64) ([]int, map[int32]int32, int, int, error) {
-func createHistogram(binEdges []float64, timestamps []uint32, modeSensitivity float64) ([]int, map[int32]int32, int, int, error) {
+func createHistogram(binEdges []float64, timestamps []uint32, modeSensitivity float64) ([]int, map[int32]int32, int32, int32, error) {
 	// validate input
 	if len(binEdges) < 2 {
 		return nil, nil, 0, 0, errors.New("bin edges must contain at least 2 elements")
@@ -594,14 +591,14 @@ func createHistogram(binEdges []float64, timestamps []uint32, modeSensitivity fl
 // calculateFrequencyCounts analyzes the histogram to calculate the frequency of each count,
 // the total number of non-empty bins, and the longest consecutive sequence of non-empty bins seen in the histogram,
 // including wrap around from start to end of dataset
-func getFrequencyCounts(connectionHistogram []int, modeSensitivity float64) (map[int32]int32, int, int, error) {
+func getFrequencyCounts(connectionHistogram []int, modeSensitivity float64) (map[int32]int32, int32, int32, error) {
 	// ensure that the input is not empty
 	if len(connectionHistogram) == 0 {
 		return nil, 0, 0, ErrInputSliceEmpty
 	}
 
 	// count total non-zero histogram entries (total bars) and find the largest histogram entry
-	totalBars := 0
+	var totalBars int32 = 0
 	largestConnCount := 0
 	for _, entry := range connectionHistogram {
 		if entry > 0 {
@@ -628,8 +625,8 @@ func getFrequencyCounts(connectionHistogram []int, modeSensitivity float64) (map
 
 	// make variables to track the longest consecutive run of hours seen in the connection
 	// frequency histogram, including wrap around from start to end of dataset
-	longestRun := 0
-	currentRun := 0
+	longestRun := int32(0)
+	currentRun := int32(0)
 
 	// make frequency count map
 	for i := 0; i < len(connectionHistogram)*2; i++ {
@@ -677,8 +674,8 @@ func getFrequencyCounts(connectionHistogram []int, modeSensitivity float64) (map
 
 	// since we could end up with 2*freqListLen for the longest run if
 	// every hour has a connection, we will fix it up here.
-	if longestRun > len(connectionHistogram) {
-		longestRun = len(connectionHistogram)
+	if longestRun > int32(len(connectionHistogram)) {
+		longestRun = int32(len(connectionHistogram))
 	}
 
 	return freqCount, totalBars, longestRun, nil
@@ -749,7 +746,7 @@ func calculateCoefficientOfVariationScore(freqList []int) (float64, error) {
 // connection counts per hour. The score is computed only if the number of total bars on the histogram is at least the
 // specified minimum (default: 11). The final score is normalized between 0 and 1, where 1 indicates a perfect fit for
 // bimodal patterns, and 0 indicates a poor fit.
-func calculateBimodalFitScore(freqCount map[int32]int32, totalBars int, modalOutlierRemoval int, minHoursForBimodalAnalysis int) (float64, error) {
+func calculateBimodalFitScore(freqCount map[int32]int32, totalBars int32, modalOutlierRemoval int32, minHoursForBimodalAnalysis int32) (float64, error) {
 	// ensure that the input is valid
 	if len(freqCount) == 0 {
 		return 0, errors.New("frequency count map must not be empty")

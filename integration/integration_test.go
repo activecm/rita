@@ -93,7 +93,7 @@ func VerifyNonRollingFiles(t *testing.T, logDir string) cmd.HourlyZeekLogs {
 	fs := afero.NewOsFs()
 	// get hourly map of all log files in directory
 	// hourlyLogMap, _, err := cmd.GetHourlyLogMap(fs, logDir)
-	hourlyLogMap, _, err := cmd.WalkFiles(fs, logDir)
+	hourlyLogMap, _, err := cmd.WalkFiles(fs, logDir, false)
 	require.NoError(t, err)
 
 	// ensure that only the first hour contains logs

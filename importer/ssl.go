@@ -32,17 +32,17 @@ type SSLEntry struct {
 	Dst              net.IP           `ch:"dst"`
 	SrcNUID          uuid.UUID        `ch:"src_nuid"`
 	DstNUID          uuid.UUID        `ch:"dst_nuid"`
-	SrcPort          uint16           `ch:"src_port"`
-	DstPort          uint16           `ch:"dst_port"`
+	SrcPort          uint32           `ch:"src_port"`
+	DstPort          uint32           `ch:"dst_port"`
 	Duration         float64          `ch:"duration"`
 	SrcLocal         bool             `ch:"src_local"`
 	DstLocal         bool             `ch:"dst_local"`
-	SrcBytes         int64            `ch:"src_bytes"`
-	DstBytes         int64            `ch:"dst_bytes"`
-	SrcIPBytes       int64            `ch:"src_ip_bytes"`
-	DstIPBytes       int64            `ch:"dst_ip_bytes"`
-	SrcPackets       int64            `ch:"src_packets"`
-	DstPackets       int64            `ch:"dst_packets"`
+	SrcBytes         uint64           `ch:"src_bytes"`
+	DstBytes         uint64           `ch:"dst_bytes"`
+	SrcIPBytes       uint64           `ch:"src_ip_bytes"`
+	DstIPBytes       uint64           `ch:"dst_ip_bytes"`
+	SrcPackets       uint64           `ch:"src_packets"`
+	DstPackets       uint64           `ch:"dst_packets"`
 	Proto            string           `ch:"proto"`
 	Service          string           `ch:"service"`
 	ConnState        string           `ch:"conn_state"`
@@ -119,7 +119,7 @@ func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime tim
 		return nil, fmt.Errorf("could not parse SSL connection %s -> %s: %w", src, dst, errServerNameEmpty)
 	}
 
-	ignore := cfg.Filter.FilterDomain(sni) || cfg.Filter.FilterConnPair(srcIP, dstIP) || cfg.Filter.FilterSNIPair(srcIP)
+	ignore := cfg.Filtering.FilterDomain(sni) || cfg.Filtering.FilterConnPair(srcIP, dstIP) || cfg.Filtering.FilterSNIPair(srcIP)
 	if ignore {
 		return nil, nil
 	}
@@ -146,10 +146,10 @@ func formatSSLRecord(cfg *config.Config, parseSSL *zeektypes.SSL, importTime tim
 		Dst:              dstIP,
 		SrcNUID:          srcNUID,
 		DstNUID:          dstNUID,
-		SrcPort:          uint16(parseSSL.SourcePort),
-		DstPort:          uint16(parseSSL.DestinationPort),
-		SrcLocal:         cfg.Filter.CheckIfInternal(srcIP),
-		DstLocal:         cfg.Filter.CheckIfInternal(dstIP),
+		SrcPort:          parseSSL.SourcePort,
+		DstPort:          parseSSL.DestinationPort,
+		SrcLocal:         cfg.Filtering.CheckIfInternal(srcIP),
+		DstLocal:         cfg.Filtering.CheckIfInternal(dstIP),
 		Version:          parseSSL.Version,
 		Cipher:           parseSSL.Cipher,
 		Curve:            parseSSL.Curve,

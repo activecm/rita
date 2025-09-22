@@ -2,80 +2,52 @@
 # ansible install playbook that does the prep work for rita V2.
 # Version: 202408061413
 # sample runs:
-# 	Optional: Add the following block, without #'s  to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
-# The hosts must each be on their own line.  These can be full or short hostnames or a name following "Host" in ~/.ssh/config .
+#   Optional: Add the following block, without #'s to /etc/ansible/hosts (or /opt/local/etc/ansible/hosts if using ansible on mac with mac ports).
+# The hosts must each be on their own line. These can be full or short hostnames or a name following "Host" in ~/.ssh/config.
 #
 # [allritas]
 # ro810
 # ub2404
 #
-# 	Then run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
+#   Then run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
 #
-# 	ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '	#-C (no changes) means do a dry run
-# 	ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '
+#   ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '  #-C (no changes) means do a dry run
+#   ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/rita-install.yml | grep -v '^skipping: '
 
 # Many thanks to but-i-am-dominator for his help with this playbook.
 
-
 - name: "RITA Pre: System prep and checks."
-  hosts: "{{  install_hosts  }}"
+  hosts: "{{ install_hosts }}"
   become: true
 
   vars:
-    ansible_python_interpreter: /bin/python3							# Centos 7 defaults to using python2, so we force python 3.  This change does not break any other distros
+    ansible_python_interpreter: /bin/python3 # Centos 7 defaults to using python2, so we force python 3. This change does not break any other distros
 
-#Early tasks needed to support the rest of the install
+  #Early tasks needed to support the rest of the install
   pre_tasks:
-#Known distribution?
+    #Known distribution?
     - name: "RITA Pre: Checking Linux distribution."
       ansible.builtin.fail:
-        msg: "Distribution name: {{  ansible_distribution  }} does not appear to be recognized - please contact ACM"
-      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' )
-      # and ansible_distribution != 'RedHat'
+        msg: "Distribution name: {{ ansible_distribution }} does not appear to be recognized - please contact ACM"
+      when: ( ansible_distribution != 'AlmaLinux' and ansible_distribution != 'CentOS' and ansible_distribution != 'Fedora' and ansible_distribution != 'OracleLinux' and ansible_distribution != 'Pop!_OS' and ansible_distribution != 'Rocky' and ansible_distribution != 'Debian' and ansible_distribution != 'Ubuntu' and ansible_distribution != 'Kali' and ansible_distribution != 'Zorin OS' and ansible_distribution != 'RedHat' )
       tags:
         - linux
 
     - name: "RITA Pre: Checking Linux distribution version."
       ansible.builtin.fail:
-        msg: "Warning: Linux distribution {{  ansible_distribution  }} {{  ansible_distribution_major_version  }} may not have been tested - please contact ACM and report whether the install worked or not"
-      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') )  or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) )
-      #or ( ansible_distribution != 'RedHat' and (ansible_distribution_major_version == '9') )
-      ignore_errors: True		#We print a warning but do not abort if this is an unknown combination of distribution and major version.
+        msg: "Warning: Linux distribution {{ ansible_distribution }} {{ ansible_distribution_major_version }} may not have been tested - please contact ACM and report whether the install worked or not"
+      when: ( ( ansible_distribution == 'AlmaLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'CentOS' and (ansible_distribution_major_version != '7' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Fedora' and (ansible_distribution_major_version != '40') ) or ( ansible_distribution == 'OracleLinux' and (ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Pop!_OS' and (ansible_distribution_major_version != '22') ) or ( ansible_distribution == 'Rocky' and (ansible_distribution_major_version != '8' and ansible_distribution_major_version != '9') ) or ( ansible_distribution == 'Debian' and (ansible_distribution_major_version != '12') ) or ( ansible_distribution == 'Kali' and (ansible_distribution_major_version != '2024') ) or ( ansible_distribution == 'Ubuntu' and (ansible_distribution_major_version != '20' and ansible_distribution_major_version != '22' and ansible_distribution_major_version != '24') ) or ( ansible_distribution == 'Zorin OS' and (ansible_distribution_major_version != '16') ) or ( ansible_distribution == 'RedHat' and (ansible_distribution_major_version != '9') ) )
+      ignore_errors: True #We print a warning but do not abort if this is an unknown combination of distribution and major version.
       tags:
         - linux
 
-#CPU Architecture
+    #CPU Architecture
     - name: "RITA Pre: Check system architecture."
       ansible.builtin.fail:
-        msg: "Unsupported CPU architecture: {{  ansible_architecture  }}"
-      when: ( ansible_architecture != "x86_64" ) 	#and ansible_architecture != "aarch64" ) # "aarch64" for pi.  #pi0w is armv6l.  i386.  amd64?
+        msg: "Unsupported CPU architecture: {{ ansible_architecture }}"
+      when: ( ansible_architecture != "x86_64" ) #and ansible_architecture != "aarch64" ) # "aarch64" for pi. #pi0w is armv6l. i386. amd64?
 
-#Selinux checks
-    - name: "RITA Pre: /sys/fs/selinux/enforce  exists."
-      stat:
-        path: "/sys/fs/selinux/enforce"
-      check_mode: true
-      changed_when: false
-      register: selinuxenforce_check
-      tags:
-        - linux
-
-    - name: "RITA Pre: sys filesystem check for selinux."
-      lineinfile:
-        path: /sys/fs/selinux/enforce
-        regexp: '^1'
-        line: 0
-        create: false
-        unsafe_writes: true									#Needed because the original file in the sys filesystem and Ansible's tmp directory are on different filesystems.
-        state: present
-      #check_mode: yes
-      changed_when: false
-      #register: enforce_check
-      when: selinuxenforce_check.stat.exists
-      tags:
-        - linux
-
-#Add tools needed by later stages
+    #Add tools needed by later stages
     # Provides "needs-restarting" for ansible's ability to manage rebooting after patching
     - name: "RITA Pre: Check for yum-utils before proceeding."
       command: rpm -qa | grep yum-utils
@@ -105,19 +77,18 @@
         state: latest
         update_cache: true
         cache_valid_time: 3600
-      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )		#While Kali is based on Debian, it does not include the aptitude package.
+      when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' ) #While Kali is based on Debian, it does not include the aptitude package.
       tags:
         - packages
         - linux
         - linuxdeb
 
-
   tasks:
-# Make sure all rpm packages up to date, add packages
+    # Make sure all rpm packages up to date, add packages
     - name: "RITA Pre: Patch and install packages on rpm-based servers."
       block:
         - name: "RITA Pre: Patch all rpm-based servers."
-          yum:											#We use the "yum" module insteead of dnf to support rpm distros that only have yum
+          yum: #We use the "yum" module insteead of dnf to support rpm distros that only have yum
             name: "*"
             state: latest
             skip_broken: yes
@@ -132,10 +103,10 @@
             name:
               - nano
               - nmap-ncat
-              - dnf-plugins-core								#Provides config-manager binary on Fedora
+              - dnf-plugins-core #Provides config-manager binary on Fedora
               - wget
-              - lshw										#For user troubleshooting
-              - net-tools									#For user troubleshooting
+              - lshw #For user troubleshooting
+              - net-tools #For user troubleshooting
             state: latest
             update_cache: true
           tags:
@@ -155,7 +126,7 @@
         - linux
         - linuxrpm
       when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-      #  or ansible_distribution == 'OracleLinux'		#Note: OracleLinux, and therefore SecurityOnion too, do not include pip3.  Disabled.
+      #  or ansible_distribution == 'OracleLinux'		#Note: OracleLinux, and therefore SecurityOnion too, do not include pip3. Disabled.
 
     - name: "RITA Pre: Patch and install packages on debian-based servers."
       block:
@@ -192,14 +163,13 @@
             - linuxdeb
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
 
-
     - name: "RITA Pre: Install packages on Debian and Ubuntu."
       apt:
         pkg:
-          - ncat				#"ncat" is nmap's netcat on Ubuntu and Debian, listd but not available on Kali
+          - ncat #"ncat" is nmap's netcat on Ubuntu and Debian, listd but not available on Kali
           - software-properties-common
           - virtualenv
-          - lshw				#listed, but somehow not available on Kali
+          - lshw #listed, but somehow not available on Kali
         state: latest
         update_cache: true
         cache_valid_time: 3600
@@ -223,15 +193,19 @@
         - linuxdeb
       when: ( ansible_distribution == 'Kali' )
 
-
-#Add repositories
+    # Add repositories
+    # Note that apt-key is deprecated and that directly downloading the key to trusted.gpg.d WITH A .asc EXTENSION is the correct way now.
     - name: "RITA Pre: Add Docker Ubuntu GPG apt key."
-      # Note that apt-key is deprecated and that directly downloading the key to trusted.gpg.d WITH A .asc EXTENSION is the correct way now.
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
-        mode: '0644'
-        force: true
+      block:
+        - name: "RITA Pre: Download Docker Ubuntu GPG apt key with get_url module."
+          get_url:
+            url: https://download.docker.com/linux/ubuntu/gpg
+            dest: /etc/apt/trusted.gpg.d/docker-ubuntu.asc
+            mode: "0644"
+            force: true
+      rescue:
+        - name: "RITA Pre: Download failed with get_url module. Falling back to curl."
+          shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/trusted.gpg.d/docker-ubuntu.asc
       when: ( ansible_distribution == 'Ubuntu' )
       tags:
         - packages
@@ -239,11 +213,16 @@
         - linuxdeb
 
     - name: "RITA Pre: Add Docker Debian GPG apt key."
-      get_url:
-        url: https://download.docker.com/linux/debian/gpg
-        dest: /etc/apt/trusted.gpg.d/docker-debian.asc
-        mode: '0644'
-        force: true
+      block:
+        - name: "RITA Pre: Download Docker Ubuntu GPG apt key with get_url module."
+          get_url:
+            url: https://download.docker.com/linux/debian/gpg
+            dest: /etc/apt/trusted.gpg.d/docker-debian.asc
+            mode: "0644"
+            force: true
+      rescue:
+        - name: "RITA Pre: Download failed with get_url module. Falling back to curl."
+          shell: curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/trusted.gpg.d/docker-debian.asc
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Zorin OS' )
       tags:
         - packages
@@ -252,7 +231,7 @@
 
     - name: "RITA Pre: Add Docker Repository to Ubuntu or Debian."
       apt_repository:
-        repo: deb https://download.docker.com/linux/{{  ansible_distribution|lower  }} {{  ansible_distribution_release  }} stable
+        repo: deb https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable
         state: present
       when: ( ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian' )
       tags:
@@ -301,7 +280,7 @@
         baseurl: https://download.docker.com/linux/fedora/$releasever/$basearch/stable/
         state: present
         enabled: true
-      when: ( ansible_distribution == 'Fedora' )	# and ansible_distribution_major_version == '40' )
+      when: ( ansible_distribution == 'Fedora' ) # and ansible_distribution_major_version == '40' )
       tags:
         - packages
         - linux
@@ -336,8 +315,7 @@
         - linux
         - linuxrpm
 
-
-#Install docker
+    #Install docker
     - name: "RITA Pre: Install docker on debian-based distributions."
       block:
         - name: "RITA Pre: Uninstall unofficial docker packages on debian-based distributions."
@@ -382,13 +360,12 @@
           apt:
             name:
               - python3-docker
-              - python3-requests								#We'll have to see if debian/ubuntu can work with the stock (2.28.1 in debian 12.05 / 2.31.0 in ubuntu 24.04)
+              - python3-requests #We'll have to see if debian/ubuntu can work with the stock (2.28.1 in debian 12.05 / 2.31.0 in ubuntu 24.04)
           tags:
             - docker
             - linux
             - linuxdeb
       when: ( ansible_distribution == 'Debian' or ansible_distribution == 'Kali' or ansible_distribution == 'Pop!_OS' or ansible_distribution == 'Ubuntu' or ansible_distribution == 'Zorin OS' )
-
 
     - name: "RITA Pre: Install docker on rpm-based distributions."
       block:
@@ -401,12 +378,10 @@
               - docker-compose
               - docker-compose-v2
               - docker-doc
-              - docker-engine-selinux
               - docker-engine
               - docker-latest
               - docker-latest-logrotate
               - docker-logrotate
-              - docker-selinux
               - docker.io
               - docker
               - podman-docker
@@ -434,34 +409,6 @@
             - linux
             - linuxrpm
       when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'OracleLinux' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-      #Reminder that RedHat/RHEL 9 is broken as of 20240618
-
-
-    - name: "RITA Pre: replace python3-requests with a new version installed by pip."
-      block:
-        - name: "RITA Pre: Uninstall unofficial docker packages on rpm-based distributions."
-          yum:
-            name:
-              - python3-requests								#As of 20240618, issue with requests code: "Error connecting: Error while fetching server API version: Not supported URL scheme http+docker".  Installing requests with pip appears to install a newer version that handles the issue.
-            state: absent
-            update_cache: true
-          tags:
-            - docker
-            - linux
-            - linuxrpm
-
-        - name: "RITA Pre: Install docker modules for Python on rpm-based distributions."
-          pip:
-            name:
-              - docker
-              - requests
-          tags:
-            - docker
-            - linux
-            - linuxrpm
-      when: ( ansible_distribution == 'AlmaLinux' or ansible_distribution == 'CentOS' or ansible_distribution == 'Fedora' or ansible_distribution == 'RedHat' or ansible_distribution == 'Rocky' )
-      #OracleLinux and SecurityOnion don't include pip so we can't do these steps there.
-
 
     - name: "RITA Pre: Start and enable docker in systemd."
       systemd:
@@ -497,3 +444,22 @@
         - linux
         - linuxdeb
         - linuxrpm
+
+    # TODO: Fix and add this back in after RITA#65 is done
+    # #This keypair will be used for all transfers between all zeek sensors and all achunter systems.
+    # #Note that if there's an existing key it will not be overwritten. Keypair will be placed in the playbook directory.
+    # #Note: formerly used {{ playbook_dir }}
+    # - name: "RITA Pre: Generate ssh keypair for log transfers"
+    #   local_action:
+    #     module: "user"
+    #     name: "{{ lookup('env','USER') }}"
+    #     generate_ssh_key: true
+    #     ssh_key_type: "rsa"
+    #     ssh_key_bits: 4096
+    #     ssh_key_file: "{{ lookup('env', 'PWD') }}/id_rsa_dataimport"
+    #   # when: ansible_connection != "local"
+    #   tags:
+    #     - docker
+    #     - linux
+    #     - linuxdeb
+    #     - linuxrpm

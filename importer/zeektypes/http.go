@@ -13,13 +13,13 @@ type HTTP struct {
 	// Source is the source address for this connection
 	Source string `zeek:"id.orig_h" zeektype:"addr" json:"id.orig_h"`
 	// SourcePort is the source port of this connection
-	SourcePort int `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
+	SourcePort uint32 `zeek:"id.orig_p" zeektype:"port" json:"id.orig_p"`
 	// Destination is the destination of the connection
 	Destination string `zeek:"id.resp_h" zeektype:"addr" json:"id.resp_h"`
 	// DestinationPort is the port at the destination host
-	DestinationPort int `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
+	DestinationPort uint32 `zeek:"id.resp_p" zeektype:"port" json:"id.resp_p"`
 	// Transdepth is the ordinal value of requests into a pipeline transaction
-	TransDepth int64 `zeek:"trans_depth" zeektype:"count" json:"trans_depth"`
+	TransDepth uint64 `zeek:"trans_depth" zeektype:"count" json:"trans_depth"`
 	// Method is the request method used
 	Method string `zeek:"method" zeektype:"string" json:"method"`
 	// Host is the value of the HOST header
@@ -35,15 +35,15 @@ type HTTP struct {
 	// Origin gives the value of the origin header from the client
 	Origin string `zeek:"origin" zeektype:"string" json:"origin"`
 	// ReqLen holds the length of the request body uncompressed
-	ReqLen int64 `zeek:"request_body_len" zeektype:"count" json:"request_body_len"`
+	ReqLen uint64 `zeek:"request_body_len" zeektype:"count" json:"request_body_len"`
 	// RespLen hodls the length of the response body uncompressed
-	RespLen int64 `zeek:"response_body_len" zeektype:"count" json:"response_body_len"`
+	RespLen uint64 `zeek:"response_body_len" zeektype:"count" json:"response_body_len"`
 	// StatusCode holds the status result
-	StatusCode int64 `zeek:"status_code" zeektype:"count" json:"status_code"`
+	StatusCode uint64 `zeek:"status_code" zeektype:"count" json:"status_code"`
 	// StatusMsg contains a string status message returned by the server
 	StatusMsg string `zeek:"status_msg" zeektype:"string" json:"status_msg"`
 	// InfoCode holds the last seen 1xx informational reply code
-	InfoCode int64 `zeek:"info_code" zeektype:"count" json:"info_code"`
+	InfoCode uint64 `zeek:"info_code" zeektype:"count" json:"info_code"`
 	// InfoMsg holds the last seen 1xx message string
 	InfoMsg string `zeek:"info_msg" zeektype:"string" json:"info_msg"`
 	// Tags contains a set of indicators of various attributes related to a particular req and

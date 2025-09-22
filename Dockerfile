@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.22-alpine as rita-builder
+FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS rita-builder
 
 ARG TARGETOS
 ARG TARGETARCH

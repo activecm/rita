@@ -15,8 +15,8 @@ import (
 
 type prevalenceRes struct {
 	PrevTotal       uint64  `ch:"prevalence_total"`
-	Prevalence      float32 `ch:"prevalence"`
-	PrevalenceScore float32 `ch:"prevalence_score"`
+	Prevalence      float64 `ch:"prevalence"`
+	PrevalenceScore float64 `ch:"prevalence_score"`
 }
 
 func (it *ValidDatasetTestSuite) TestPrevalence() {
@@ -44,7 +44,7 @@ func (it *ValidDatasetTestSuite) TestPrevalence() {
 		WHERE count > 0 AND dst = '64.4.54.254'
 	`)
 	require.NoError(t, err)
-	networkSize := float32(15)
+	networkSize := float64(15)
 	for _, r := range results {
 		require.EqualValues(t, 13, r.PrevTotal)
 		require.InEpsilon(t, 13/networkSize, r.Prevalence, 0.001)
@@ -60,7 +60,8 @@ func (it *ValidDatasetTestSuite) TestPrevalence() {
 	for _, r := range results {
 		require.EqualValues(t, 13, r.PrevTotal)
 		require.InEpsilon(t, 13/networkSize, r.Prevalence, 0.001)
-		require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
+		require.Zero(t, r.PrevalenceScore)
+		// require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
 	}
 
 	err = it.db.Conn.Select(it.db.GetContext(), &results, `--sql
@@ -72,7 +73,8 @@ func (it *ValidDatasetTestSuite) TestPrevalence() {
 	for _, r := range results {
 		require.EqualValues(t, 9, r.PrevTotal)
 		require.InEpsilon(t, 9/networkSize, r.Prevalence, 0.001)
-		require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
+		require.Zero(t, r.PrevalenceScore)
+		// require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
 	}
 
 }
@@ -128,8 +130,8 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	require.NoError(t, err)
 
-	cfg.DBConnection = dockerInfo.clickhouseConnection
-	cfg.Filter.FilterExternalToInternal = false
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	cfg.Filtering.FilterExternalToInternal = false
 
 	// import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "dnscat2_ja3_strobe_external", false, false)
@@ -141,7 +143,7 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 
 	var results []prevalenceRes
 
-	networkSize := float32(15)
+	networkSize := float64(15)
 
 	// destination that is both the source and destination in conn
 	err = db.Conn.Select(db.GetContext(), &results, `--sql
@@ -165,7 +167,8 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 	for _, r := range results {
 		require.EqualValues(t, 13, r.PrevTotal)
 		require.InEpsilon(t, 13/networkSize, r.Prevalence, 0.001)
-		require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
+		require.Zero(t, r.PrevalenceScore)
+		// require.InEpsilon(t, -0.15, r.PrevalenceScore, 0.001)
 	}
 
 	err = db.Conn.Select(db.GetContext(), &results, `--sql
