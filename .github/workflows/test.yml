@@ -3,7 +3,9 @@ name: Tests
 on: 
   pull_request:
   push:
-    branches: 'main'
+    branches: 
+      - 'main'
+      - 'develop'
 
 # Temporarily splitting out tests into separate jobs for improving workflow execution time 
 jobs:
