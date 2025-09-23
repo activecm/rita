@@ -12,8 +12,6 @@
     "threat_intel": {
         "online_feeds": [
             "https://feodotracker.abuse.ch/downloads/ipblocklist.txt"
-        ],
-        "custom_feeds_directory": "./deployment/threat_intel_feeds"
-    },
-    "http_extensions_file_path": "./deployment/http_extensions_list.csv"
+        ]
+    }
 }
