@@ -47,12 +47,13 @@ type ZoneTransferConnectivityErrors struct {
 }
 
 type ZoneTransfer struct {
-	domainName  string
-	nameServer  string
-	latestSOA   dns.SOA
-	db          *database.ServerConn
-	cfg         *config.Config
-	performedAt time.Time
+	domainName    string
+	nameServer    string
+	latestSOA     dns.SOA
+	db            *database.ServerConn
+	cfg           *config.Config
+	performedAt   time.Time
+	performedIXFR bool
 }
 
 // NewZoneTransfer creates the struct needed for handling zone transfers
@@ -82,10 +83,18 @@ func (zt *ZoneTransfer) DoZT(axfr bool) error {
 	if axfr {
 		// Set up an AXFR if requested
 		m.SetAxfr(zt.domainName)
+
 	} else {
 		// Otherwise, set up an IXFR, using the domain name and latest SOA Serial and Mbox values
+		// NOTE: the domainName is used again for the "ns" parameter, this is intentional
+		//       the ns parameter must be fully qualified or else the transfer will fail
 		m.SetIxfr(zt.domainName, zt.latestSOA.Serial, zt.domainName, zt.latestSOA.Mbox)
 	}
+
+	zt.performedIXFR = !axfr
+
+	zlog := logger.GetLogger()
+	zlog.Info().Str("domain", zt.domainName).Str("name_server", zt.nameServer).Bool("ixfr", !axfr).Uint32("soa", zt.latestSOA.Serial).Str("mbox", zt.latestSOA.Mbox).Msg("Initiating zone transfer")
 
 	// create a channel for the dns "envelope"
 	ch, err := t.In(m, zt.nameServer)
@@ -118,6 +127,14 @@ func (zt *ZoneTransfer) DoZT(axfr bool) error {
 			case *dns.SOA:
 				// contains the serial and mbox info to store
 				zt.latestSOA = *rec
+
+				// empty MBox values for IXFR transfers will cause the transfer to fail
+				// it should be set to '.' if no mailbox is provided
+				// NOTE: it is likely that Microsoft DNS servers will automatically handle this issue,
+				//       but BIND and other Linux based DNS servers will not
+				if len(zt.latestSOA.Mbox) == 0 {
+					zt.latestSOA.Mbox = "."
+				}
 			case *dns.A:
 				record.Hostname = strings.TrimSuffix(rec.Header().Name, ".")
 				record.IP = rec.A
@@ -152,10 +169,11 @@ func (zt *ZoneTransfer) RecordZoneTransferPerformed() error {
 		"name_server":  zt.nameServer,
 		"serial_soa":   strconv.FormatUint(uint64(zt.latestSOA.Serial), 10),
 		"mbox":         zt.latestSOA.Mbox,
+		"is_ixfr":      strconv.FormatBool(zt.performedIXFR),
 	})
 	if err := zt.db.Conn.Exec(chCtx, `
-		INSERT INTO metadatabase.performed_zone_transfers (performed_at, domain_name, name_server, serial_soa, mbox) 
-		VALUES ( fromUnixTimestamp({performed_at:Int64}), {domain_name:String}, {name_server:String}, {serial_soa:UInt32}, {mbox:String} )
+		INSERT INTO metadatabase.performed_zone_transfers (performed_at, domain_name, name_server, serial_soa, mbox, is_ixfr) 
+		VALUES ( fromUnixTimestamp({performed_at:Int64}), {domain_name:String}, {name_server:String}, {serial_soa:UInt32}, {mbox:String}, {is_ixfr:Bool} )
 	`); err != nil {
 		return err
 	}
@@ -219,6 +237,8 @@ func (zt *ZoneTransfer) PerformZoneTransfer() error {
 	// There was a match in performed_zone_transfers, do an IXFR transfer
 	if lastZoneTransfer != nil {
 		// Do an IXFR
+		zt.SetTransferInfo(*lastZoneTransfer)
+
 		transferType = "IXFR"
 		if err := zt.DoZT(false); err != nil {
 			return fmt.Errorf("unable to perform IXFR zone transfer on domain '%s' via name server '%s': %w", zt.domainName, zt.nameServer, err)
@@ -229,7 +249,7 @@ func (zt *ZoneTransfer) PerformZoneTransfer() error {
 			return fmt.Errorf("unable to perform AXFR zone transfer on domain '%s' via name server '%s': %w", zt.domainName, zt.nameServer, err)
 		}
 	}
-	zlog.Info().Str("domain", zt.domainName).Str("name_server", zt.nameServer).Uint32("lastest_soa", zt.latestSOA.Serial).Msg(fmt.Sprintf("Successfully performed %s zone transfer", transferType))
+	zlog.Info().Str("domain", zt.domainName).Str("name_server", zt.nameServer).Uint32("latest_soa", zt.latestSOA.Serial).Msg(fmt.Sprintf("Successfully performed %s zone transfer", transferType))
 
 	return nil
 }
