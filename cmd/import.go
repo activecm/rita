@@ -425,8 +425,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		}
 
 		// check if the file is readable
-		_, err := afs.Open(path)
-		if err != nil || !(info.Mode().Perm()&0444 == 0444) {
+		if _, err := afs.Open(path); err != nil {
 			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInsufficientReadPermissions})
 			return nil //nolint:nilerr // log the issue and continue walking
 		}
