@@ -50,7 +50,7 @@ func (s *ViewerTestSuite) SetupSuite() {
 
 	s.SetupClickHouse(t)
 
-	cfg.DBConnection = s.clickhouseConnection
+	cfg.Env.DBConnection = s.clickhouseConnection
 
 	// // import data
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "dnscat2_ja3_strobe", false, true)

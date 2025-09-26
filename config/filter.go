@@ -24,55 +24,76 @@ type Filter struct {
 	FilterExternalToInternal bool `json:"filter_external_to_internal"`
 }
 
-func GetMandatoryNeverIncludeSubnets() []string {
+// func GetMandatoryNeverIncludeSubnets() []string {
+// 	// s2 := make([]string, len(mandatoryNeverIncludeSubnets))
+
+// 	// _ = copy(s2, mandatoryNeverIncludeSubnets) // s2 is now an independent copy of s
+// 	// return s2
+// 	return []string{
+// 		"0.0.0.0/32",         // current host
+// 		"127.0.0.0/8",        // loopback
+// 		"169.254.0.0/16",     // link local
+// 		"224.0.0.0/4",        // multicast
+// 		"255.255.255.255/32", // limited broadcast
+// 		"::1/128",            // loopback
+// 		"::",                 // unspecified IPv6
+// 		"fe80::/10",          // link local
+// 		"ff00::/8",           // multicast
+// 		"ff02::2",            // local multicast
+// 	}
+// }
+
+func GetMandatoryNeverIncludeSubnets() []util.Subnet {
 	// s2 := make([]string, len(mandatoryNeverIncludeSubnets))
 
 	// _ = copy(s2, mandatoryNeverIncludeSubnets) // s2 is now an independent copy of s
 	// return s2
-	return []string{
-		"0.0.0.0/32",         // current host
-		"127.0.0.0/8",        // loopback
-		"169.254.0.0/16",     // link local
-		"224.0.0.0/4",        // multicast
-		"255.255.255.255/32", // limited broadcast
-		"::1/128",            // loopback
-		"::",                 // unspecified IPv6
-		"fe80::/10",          // link local
-		"ff00::/8",           // multicast
-		"ff02::2",            // local multicast
+	return []util.Subnet{
+		{IPNet: &net.IPNet{IP: net.IP{0, 0, 0, 0}.To16(), Mask: net.CIDRMask(128, 128)}},         //  0.0.0.0/32 current host
+		{IPNet: &net.IPNet{IP: net.IP{127, 0, 0, 0}.To16(), Mask: net.CIDRMask(104, 128)}},       // "127.0.0.0/8"       loopback
+		{IPNet: &net.IPNet{IP: net.IP{169, 254, 0, 0}.To16(), Mask: net.CIDRMask(112, 128)}},     // "169.254.0.0/16",     link local
+		{IPNet: &net.IPNet{IP: net.IP{224, 0, 0, 0}.To16(), Mask: net.CIDRMask(100, 128)}},       // "224.0.0.0/4",         multicast
+		{IPNet: &net.IPNet{IP: net.IP{255, 255, 255, 255}.To16(), Mask: net.CIDRMask(128, 128)}}, // "255.255.255.255/32", limited broadcast
+		{IPNet: &net.IPNet{IP: net.ParseIP("::1"), Mask: net.CIDRMask(128, 128)}},                //"::1/128",             loopback
+		{IPNet: &net.IPNet{IP: net.ParseIP("::"), Mask: net.CIDRMask(128, 128)}},                 // "::",                 unspecified IPv6
+		{IPNet: &net.IPNet{IP: net.ParseIP("fe80::"), Mask: net.CIDRMask(10, 128)}},              // fe80::/10",          link local
+		{IPNet: &net.IPNet{IP: net.ParseIP("ff00::"), Mask: net.CIDRMask(8, 128)}},               // "ff00::/8",           multicast
+		{IPNet: &net.IPNet{IP: net.ParseIP("ff02::2"), Mask: net.CIDRMask(128, 128)}},            // "ff02::2",             local multicast
 	}
 }
 
-func (cfg *Config) parseFilter() error {
-	// parse internal subnets
-	internalSubnetList, err := util.ParseSubnets(cfg.Filter.InternalSubnetsJSON)
-	if err != nil {
-		return err
-	}
-	cfg.Filter.InternalSubnets = internalSubnetList
+// func ()
 
-	// parse always included subnets
-	alwaysIncludedSubnetList, err := util.ParseSubnets(cfg.Filter.AlwaysIncludedSubnetsJSON)
-	if err != nil {
-		return err
-	}
-	cfg.Filter.AlwaysIncludedSubnets = alwaysIncludedSubnetList
+// func (cfg *Config) parseFilter() error {
+// 	// parse internal subnets
+// 	internalSubnetList, err := util.ParseSubnets(cfg.Filtering.InternalSubnetsJSON)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	cfg.Filtering.InternalSubnets = internalSubnetList
 
-	// validate that all mandatory never include subnets are present
-	cfg.Filter.NeverIncludedSubnetsJSON = util.EnsureSliceContainsAll(cfg.Filter.NeverIncludedSubnetsJSON, GetMandatoryNeverIncludeSubnets())
+// 	// parse always included subnets
+// 	alwaysIncludedSubnetList, err := util.ParseSubnets(cfg.Filtering.AlwaysIncludedSubnetsJSON)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	cfg.Filtering.AlwaysIncludedSubnets = alwaysIncludedSubnetList
 
-	// parse never included subnets
-	neverIncludedSubnetList, err := util.ParseSubnets(cfg.Filter.NeverIncludedSubnetsJSON)
-	if err != nil {
-		return err
-	}
-	cfg.Filter.NeverIncludedSubnets = neverIncludedSubnetList
+// 	// validate that all mandatory never include subnets are present
+// 	cfg.Filtering.NeverIncludedSubnetsJSON = util.EnsureSliceContainsAll(cfg.Filtering.NeverIncludedSubnetsJSON, GetMandatoryNeverIncludeSubnets())
 
-	return nil
-}
+// 	// parse never included subnets
+// 	neverIncludedSubnetList, err := util.ParseSubnets(cfg.Filtering.NeverIncludedSubnetsJSON)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	cfg.Filtering.NeverIncludedSubnets = neverIncludedSubnetList
+
+// 	return nil
+// }
 
 // FilterSNIPair returns true if a SNI connection pair is filtered/excluded.
-func (fs *Filter) FilterSNIPair(srcIP net.IP) bool {
+func (fs *Filtering) FilterSNIPair(srcIP net.IP) bool {
 	// check if src is internal
 	isSrcInternal := util.ContainsIP(fs.InternalSubnets, srcIP)
 
@@ -82,7 +103,7 @@ func (fs *Filter) FilterSNIPair(srcIP net.IP) bool {
 
 // FilterConnPairForHTTP returns true if a connection pair is filtered
 // based on criteria that should apply regardless of whether or not there is a proxy connection for it
-func (fs *Filter) FilterConnPairForHTTP(srcIP net.IP, dstIP net.IP) bool {
+func (fs *Filtering) FilterConnPairForHTTP(srcIP net.IP, dstIP net.IP) bool {
 
 	// check if on always included list
 	isSrcIncluded := util.ContainsIP(fs.AlwaysIncludedSubnets, srcIP)
@@ -122,7 +143,7 @@ func (fs *Filter) FilterConnPairForHTTP(srcIP net.IP, dstIP net.IP) bool {
 //  4. Filtered if both IPs are internal or both are external
 //  5. Filtered if the source IP is external and the destination IP is internal and FilterExternalToInternal has been set in the configuration file
 //  6. Not filtered in all other cases
-func (fs *Filter) FilterConnPair(srcIP net.IP, dstIP net.IP) bool {
+func (fs *Filtering) FilterConnPair(srcIP net.IP, dstIP net.IP) bool {
 
 	// check if on always included list
 	isSrcIncluded := util.ContainsIP(fs.AlwaysIncludedSubnets, srcIP)
@@ -182,7 +203,7 @@ func (fs *Filter) FilterConnPair(srcIP net.IP, dstIP net.IP) bool {
 //  4. Filtered if both IPs are external (this is different from filterConnPair which filters internal to internal connections)
 //  5. Filtered if the source IP is external and the destination IP is internal and FilterExternalToInternal has been set in the configuration file
 //  6. Not filtered in all other cases
-func (fs *Filter) FilterDNSPair(srcIP net.IP, dstIP net.IP) bool {
+func (fs *Filtering) FilterDNSPair(srcIP net.IP, dstIP net.IP) bool {
 	// check if on always included list
 	isSrcIncluded := util.ContainsIP(fs.AlwaysIncludedSubnets, srcIP)
 	isDstIncluded := util.ContainsIP(fs.AlwaysIncludedSubnets, dstIP)
@@ -230,15 +251,15 @@ func (fs *Filter) FilterDNSPair(srcIP net.IP, dstIP net.IP) bool {
 //  1. Not filtered IP is on the AlwaysInclude list
 //  2. Filtered IP is on the NeverInclude list
 //  3. Not filtered in all other cases
-func (fs *Filter) FilterSingleIP(ip net.IP) bool {
+func (fs *Filtering) FilterSingleIP(ip net.IP) bool {
 
 	// check if on always included list
-	if util.ContainsIP(fs.AlwaysIncludedSubnets, ip) {
+	if util.ContainsIP(fs.AlwaysIncludedSubnets, ip.To16()) {
 		return false
 	}
 
 	// check if on never included list
-	if util.ContainsIP(fs.NeverIncludedSubnets, ip) {
+	if util.ContainsIP(fs.NeverIncludedSubnets, ip.To16()) {
 		return true
 	}
 
@@ -251,7 +272,7 @@ func (fs *Filter) FilterSingleIP(ip net.IP) bool {
 //  1. Not filtered if domain is on the AlwaysInclude list
 //  2. Filtered if domain is on the NeverInclude list
 //  3. Not filtered in all other cases
-func (fs *Filter) FilterDomain(domain string) bool {
+func (fs *Filtering) FilterDomain(domain string) bool {
 	// check if on always included list
 	isDomainIncluded := util.ContainsDomain(fs.AlwaysIncludedDomains, domain)
 
@@ -272,6 +293,6 @@ func (fs *Filter) FilterDomain(domain string) bool {
 	return false
 }
 
-func (fs *Filter) CheckIfInternal(host net.IP) bool {
+func (fs *Filtering) CheckIfInternal(host net.IP) bool {
 	return util.ContainsIP(fs.InternalSubnets, host)
 }

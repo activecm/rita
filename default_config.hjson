@@ -1,14 +1,14 @@
 {
-    update_check_enabled: true,
-    threat_intel: {
+    "update_check_enabled": true,
+    "threat_intel": {
         // Configuration for custom threat intel feeds
         // Allowed format for the contents of both online feeds and custom file feeds is one IP or domain per line
         // Online feeds must be valid URLs
-        online_feeds: ["https://feodotracker.abuse.ch/downloads/ipblocklist.txt"],
-        // MODIFY THE MOUNT DIRECTORY IN DOCKER COMPOSE, this should rarely need to be changed
-        custom_feeds_directory: "/etc/rita/threat_intel_feeds"
+        "online_feeds": [
+            "https://feodotracker.abuse.ch/downloads/ipblocklist.txt"
+        ]
     },
-    filtering: {
+    "filtering": {
         # These are filters that affect the import of connection logs. They
         # currently do not apply to dns logs.
         # A good reference for networks you may wish to consider is RFC 5735.
@@ -18,43 +18,48 @@
         // in any internal to internal and external to external connections being
         // filtered out at import time. Reasonable defaults are provided below,
         // but need to be manually verified before enabling. 
-        internal_subnets: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"], # Private-Use Networks  RFC 1918 and ULA prefix
+        "internal_subnets": [
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "fd00::/8"
+        ], # Private-Use Networks  RFC 1918 and ULA prefix
        
         // always_included_subnets overrides the never_included_* and internal_subnets section,
         // making sure that any connection records containing addresses from these arrays are kept and not filtered
         // Note: the IP address of a proxy must be included here if the proxy is internal
-        always_included_subnets: [], // array of CIDRs
-        always_included_domains: [], // array of FQDNs
+        "always_included_subnets": [], // array of CIDRs
+        "always_included_domains": [], // array of FQDNs
 
         // connections involving ranges entered into never_included_subnets are filtered out at import time
-        never_included_subnets: [], // array of CIDRs
-        never_included_domains: [], // array of FQDNs
-        filter_external_to_internal: true // ignores any entries where communication is occurring from an external host to an internal host
+        "never_included_subnets": [], // array of CIDRs
+        "never_included_domains": [], // array of FQDNs
+        "filter_external_to_internal": true // ignores any entries where communication is occurring from an external host to an internal host
     },
-    scoring: {
-        beacon: {
+    "scoring": {
+        "beacon": {
             // The default minimum number of unique connections used for beacons analysis.
             // Any two hosts connecting fewer than this number will not be analyzed. You can 
             // safely increase this value to improve performance if you are not concerned
             //  about slow beacons.
-            unique_connection_threshold: 4, // min number of unique connections to qualify as beacon
+            "unique_connection_threshold": 4, // min number of unique connections to qualify as beacon
             
             // The score is currently comprised of a weighted average of 4 subscores.
             // While we recommend the default setting of 0.25 for each weight, 
             // these weights can be altered here according to your needs. 
             // The sum of all the floating point weights must be equal to 1.
-            timestamp_score_weight: 0.25,
-            datasize_score_weight: 0.25,
-            duration_score_weight: 0.25,
-            histogram_score_weight: 0.25,
+            "timestamp_score_weight": 0.25,
+            "datasize_score_weight": 0.25,
+            "duration_score_weight": 0.25,
+            "histogram_score_weight": 0.25,
             // The number of hours seen in a connection graph representation of a beacon must
             // be greater than this threshold for an overall duration score to be calculated.
             // Default value: 6
-            duration_min_hours_seen: 6,
+            "duration_min_hours_seen": 6,
             // This is the minimum number of hours seen in a connection graph representation
             // of a beacon for the consistency subscore of duration to score at 100%
             // Default value: 12 (half the day)
-            duration_consistency_ideal_hours_seen: 12,
+            "duration_consistency_ideal_hours_seen": 12,
             // The histogram score has a subscore that attempts to detect multiple 
             // flat sections in a connection graph representation of a beacon. The 
             // variable below controls the bucket size for grouping connections.
@@ -63,63 +68,62 @@
             // the bucket size will be 20 (400*0.05=20). As you make this variable 
             // larger, the algorithm becomes more forgiving to variation. 
             // Default value 0.05
-            histogram_mode_sensitivity: 0.05,
+            "histogram_mode_sensitivity": 0.05,
             // This is the number of buckets that can be considered outliers and dropped
             // from the calculation.
             // Default value: 1
-            histogram_bimodal_outlier_removal: 1,
+            "histogram_bimodal_outlier_removal": 1,
             // This is the minimum number of hours seen in a connection graph representation
             // of a beacon before the bimodal subscore score is used.
             // Default value: 11 (sets the minimum coverage to just below half of the day)
-            histogram_bimodal_min_hours_seen: 11,
-            score_thresholds: {
+            "histogram_bimodal_min_hours_seen": 11,
+            "score_thresholds": {
                 // beacon score
-                base: 50,
-                low: 70,
-                medium: 90,
-                high: 100
+                "base": 50,
+                "low": 70,
+                "medium": 90,
+                "high": 100
             }
         },
-        long_connection_score_thresholds: {
+        "long_connection_score_thresholds": {
             // duration, in seconds
-            base: 3600, // 1 hour
-            low: 14400, // 4 hours
-            medium: 28800, // 8 hours
-            high: 43200 // 12 hours
+            "base": 3600, // 1 hour
+            "low": 14400, // 4 hours
+            "medium": 28800, // 8 hours
+            "high": 43200 // 12 hours
         },
-        c2_score_thresholds: {
+        "c2_score_thresholds": {
             // number of subdomains
-            base: 100,
-            low: 500,
-            medium: 800,
-            high: 1000
+            "base": 100,
+            "low": 500,
+            "medium": 800,
+            "high": 1000
         },
-        strobe_impact: {
-            category: "high" // any strobes will be placed in the high category
+        "strobe_impact": {
+            "category": "high" // any strobes will be placed in the high category
         },
-        threat_intel_impact: {
-            category: "high" // any threat intel hits will be placed in the high category
+        "threat_intel_impact": {
+            "category": "high" // any threat intel hits will be placed in the high category
         }
     },
-    modifiers: {
-        threat_intel_score_increase: 0.15, // score +15% if data size >= 25 MB
-        threat_intel_datasize_threshold: 25000000, // 25MB (as bytes)
-        prevalence_score_increase: 0.15, // score +15% if prevalence <= 2%
-        prevalence_increase_threshold: 0.02,
-        prevalence_score_decrease: 0.15, // score -15% if prevalence >= 50%
-        prevalence_decrease_threshold: 0.5, // must be greater than the increase threshold
+    "modifiers": {
+        "threat_intel_score_increase": 0.15, // score +15% if data size >= 25 MB
+        "threat_intel_datasize_threshold": 25000000, // 25MB (as bytes)
+        "prevalence_score_increase": 0.15, // score +15% if prevalence <= 2%
+        "prevalence_increase_threshold": 0.02,
+        "prevalence_score_decrease": 0.15, // score -15% if prevalence >= 50%
+        "prevalence_decrease_threshold": 0.5, // must be greater than the increase threshold
         // first seen scoring only applies to rolling datasets
         // ** a dataset should be imported as rolling only if the logs are current (within the past 24 hours) i.e: coming from a live zeek sensor **
-        first_seen_score_increase: 0.15, // score +15% if first seen <= 7 days ago
-        first_seen_increase_threshold: 7,
-        first_seen_score_decrease: 0.15, // score -15% if first seen >= 30 days ago
-        first_seen_decrease_threshold: 30, // must be greater than the increase threshold
-        missing_host_count_score_increase: 0.1, // +10% score for missing host header
-        rare_signature_score_increase: 0.15, // +15% score for connections with a rare signature
-        c2_over_dns_direct_conn_score_increase: 0.15, // +15% score for domains that were queried but had no direct connections
-        mime_type_mismatch_score_increase: 0.15 // +15% score for connections with mismatched MIME type/URI
+        "first_seen_score_increase": 0.15, // score +15% if first seen <= 7 days ago
+        "first_seen_increase_threshold": 7,
+        "first_seen_score_decrease": 0.15, // score -15% if first seen >= 30 days ago
+        "first_seen_decrease_threshold": 30, // must be greater than the increase threshold
+        "missing_host_count_score_increase": 0.1, // +10% score for missing host header
+        "rare_signature_score_increase": 0.15, // +15% score for connections with a rare signature
+        "c2_over_dns_direct_conn_score_increase": 0.15, // +15% score for domains that were queried but had no direct connections
+        "mime_type_mismatch_score_increase": 0.15 // +15% score for connections with mismatched MIME type/URI
     },
-    http_extensions_file_path: "/http_extensions_list.csv", # path is relative to where it is in the container if run via docker
-    months_to_keep_historical_first_seen: 3,
-    batch_size: 100000
+    "months_to_keep_historical_first_seen": 3,
+    "batch_size": 100000
 }

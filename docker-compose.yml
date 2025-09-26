@@ -4,7 +4,6 @@ networks:
   rita-network: {}
 services:
   rita:
-    # image:
     build: .
     depends_on:
       clickhouse:
@@ -12,8 +11,8 @@ services:
     volumes:
       - ${CONFIG_FILE:-/etc/rita/config.hjson}:/config.hjson
       - ${CONFIG_DIR:-/etc/rita}/http_extensions_list.csv:/deployment/http_extensions_list.csv
+      - ${CONFIG_DIR:-/etc/rita}/threat_intel_feeds:/deployment/threat_intel_feeds
       - .env:/.env
-      # - ${LOGS:?"You must provide a directory for logs to be read from"}:/logs:ro
     links:
       - "clickhouse:db"
       - "syslog-ng:syslogng"

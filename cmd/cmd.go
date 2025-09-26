@@ -26,6 +26,7 @@ func Commands() []*cli.Command {
 		DeleteCommand,
 		ListCommand,
 		ValidateConfigCommand,
+		ZoneTransferCommand,
 	}
 }
 
@@ -52,7 +53,7 @@ func CheckForUpdate(cfg *config.Config) error {
 	currentVersion := config.Version
 
 	// check for update if version is set
-	if cfg.UpdateCheckEnabled && currentVersion != "" && currentVersion != "dev" {
+	if cfg.RITA.UpdateCheckEnabled && currentVersion != "" && currentVersion != "dev" {
 		newer, latestVersion, err := util.CheckForNewerVersion(github.NewClient(nil), currentVersion)
 		if err != nil {
 			return fmt.Errorf("%w: %w", ErrCheckingForUpdate, err)

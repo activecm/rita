@@ -16,7 +16,7 @@ on:
 
   workflow_run:
     workflows: ["Build Docker Images"]
-    branches: [main]
+    branches: [main, develop]
     types: 
         - completed
 

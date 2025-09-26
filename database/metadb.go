@@ -2,10 +2,13 @@ package database
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
 	"github.com/activecm/rita/v5/config"
+	c "github.com/activecm/rita/v5/constants"
+	zlog "github.com/activecm/rita/v5/logger"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -36,40 +39,45 @@ type MetaDBImportRecord struct {
 
 // createMetaDatabase creates the metadatabase and its tables if any part of it doesn't exist
 func (server *ServerConn) createMetaDatabase() error {
-	err := server.Conn.Exec(server.ctx, `
+	if err := server.Conn.Exec(server.ctx, `
 		CREATE DATABASE IF NOT EXISTS metadatabase
-	`)
-	if err != nil {
+	`); err != nil {
 		return err
 	}
 
-	err = server.createMetaDatabaseImportsTable()
-	if err != nil {
+	if err := server.createMetaDatabaseImportsTable(); err != nil {
 		return err
 	}
 
-	err = server.createMetaDatabaseFilesTable()
-	if err != nil {
+	if err := server.createMetaDatabaseFilesTable(); err != nil {
 		return err
 	}
 
-	err = server.createMetaDatabaseMinMaxTable()
-	if err != nil {
+	if err := server.createMetaDatabaseMinMaxTable(); err != nil {
 		return err
 	}
 
-	err = server.createThreatIntelTables()
-	if err != nil {
+	if err := server.createMetaDatabaseSampleDBsTable(); err != nil {
 		return err
 	}
 
-	err = server.createValidMIMETypeTable()
-	if err != nil {
+	if err := server.createMetaDatabasePerformedZoneTransfersTable(); err != nil {
 		return err
 	}
 
-	err = server.createHistoricalFirstSeenTable()
-	if err != nil {
+	if err := server.createMetaDatabaseZoneTransferTable(); err != nil {
+		return err
+	}
+
+	if err := server.createThreatIntelTables(); err != nil {
+		return err
+	}
+
+	if err := server.createValidMIMETypeTable(); err != nil {
+		return err
+	}
+
+	if err := server.createHistoricalFirstSeenTable(); err != nil {
 		return err
 	}
 
@@ -166,6 +174,54 @@ func (server *ServerConn) createMetaDatabaseMinMaxTable() error {
 	return nil
 }
 
+func (server *ServerConn) createMetaDatabasePerformedZoneTransfersTable() error {
+	err := server.Conn.Exec(server.ctx, `
+		CREATE TABLE IF NOT EXISTS metadatabase.performed_zone_transfers (
+			domain_name String,
+			name_server String,
+			serial_soa UInt32,
+			mbox String,
+			is_ixfr Bool, -- for debugging
+			performed_at DateTime()
+		)
+		ENGINE = ReplacingMergeTree(performed_at)
+		PRIMARY KEY (domain_name, name_server)
+	`)
+
+	return err
+}
+
+func (server *ServerConn) createMetaDatabaseZoneTransferTable() error {
+	err := server.Conn.Exec(server.ctx, `
+		CREATE TABLE IF NOT EXISTS metadatabase.zone_transfer (
+		performed_at DateTime(),
+		domain_name String,
+		name_server String,
+		hostname String,
+		ip IPv6,
+		ttl Int32, -- RFC2181 defines TTLs as int32
+	) ENGINE = MergeTree()
+	PRIMARY KEY (domain_name, name_server, hostname, ip) 
+	ORDER BY (domain_name, name_server, hostname, ip, performed_at)
+	`)
+
+	return err
+}
+
+// createMetaDatabaseFilesTable creates the metadatabase.files table
+func (server *ServerConn) createMetaDatabaseSampleDBsTable() error {
+	err := server.Conn.Exec(server.ctx, `
+		CREATE TABLE IF NOT EXISTS metadatabase.sample_dbs (
+			name String,
+		)
+		ENGINE = ReplacingMergeTree()
+		PRIMARY KEY (name)
+		ORDER BY (name)
+	`)
+
+	return err
+}
+
 // MarkFileImportedInMetaDB adds the given path to the metadatabase.files table to mark it as being used
 func (db *DB) MarkFileImportedInMetaDB(hash util.FixedString, importID util.FixedString, path string) error {
 	ctx := db.QueryParameters(clickhouse.Parameters{
@@ -205,8 +261,8 @@ func (db *DB) AddImportStartRecordToMetaDB(importID util.FixedString) error {
 	})
 
 	err := db.Conn.Exec(ctx, `
-		INSERT INTO metadatabase.imports (import_id, rolling, database, rebuild, started_at)
-		VALUES (unhex({importID:String}), {rolling:Bool}, {database:String}, {rebuild:Bool}, fromUnixTimestamp64Micro({importStartedAt:Int64}))
+		INSERT INTO metadatabase.imports (import_id, rolling, database, rebuild, started_at, import_version)
+		VALUES (unhex({importID:String}), {rolling:Bool}, {database:String}, {rebuild:Bool}, fromUnixTimestamp64Micro({importStartedAt:Int64}), {importVersion:String})
 	`)
 
 	return err
@@ -244,7 +300,7 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 	})
 
 	err = db.Conn.Exec(ctx, `
-		INSERT INTO metadatabase.imports (import_id, rolling, database, started_at, ended_at, min_timestamp, max_timestamp, min_open_timestamp, max_open_timestamp)
+		INSERT INTO metadatabase.imports (import_id, rolling, database, started_at, ended_at, min_timestamp, max_timestamp, min_open_timestamp, max_open_timestamp, import_version)
 		VALUES (
 			unhex({importID:String}), 
 			{rolling:Bool}, 
@@ -254,7 +310,8 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 			fromUnixTimestamp({minTs:Int32}), 
 			fromUnixTimestamp({maxTs:Int32}), 
 			fromUnixTimestamp({minOpenTs:Int32}), 
-			fromUnixTimestamp({maxOpenTs:Int32})
+			fromUnixTimestamp({maxOpenTs:Int32}),
+			{importVersion:String}
 		)
 	`)
 	return err
@@ -273,7 +330,49 @@ func (db *DB) CheckIfFilesWereAlreadyImported(fileMap map[string][]string) (int,
 		totalFileCount += len(results)
 	}
 
-	return totalFileCount, nil
+	// don't bother validating log combinations if there are no new logs
+	if totalFileCount == 0 {
+		return 0, nil
+	}
+
+	// we must validate the log combinations after checking the logs against the metadb
+	// because if this is a rolling import and an import was killed/failed somehow and the remaining
+	// logs to import are an invalid combination, they need to be filtered out/skipped or else
+	// the import can end up hanging
+	totalFiles := ValidateLogCombinations(fileMap)
+
+	return totalFiles, nil
+}
+
+// ValidateLogCombinations filters out invalid log combinations and returns the number of valid logs to import
+// This function is in this package because it needs to be used by both the cmd package and the import or database package
+// and this avoids an import cycle
+func ValidateLogCombinations(hourMap map[string][]string) int {
+	logger := zlog.GetLogger()
+
+	totalHourFilesFound := 0
+	// if there are no conn logs in the hour, we have to skip any SSL and HTTP logs for that hour
+	if len(hourMap[c.ConnPrefix]) == 0 && (len(hourMap[c.SSLPrefix]) > 0 || len(hourMap[c.HTTPPrefix]) > 0) {
+		logger.Warn().Msg("SSL / HTTP logs are present, but no conn logs exist, skipping SSL / HTTP logs...")
+		delete(hourMap, c.SSLPrefix)
+		delete(hourMap, c.HTTPPrefix)
+	}
+
+	// 	// if there are no open conn logs in the hour, we have to skip any open SSL and open HTTP logs for that hour
+	if len(hourMap[c.OpenConnPrefix]) == 0 && (len(hourMap[c.OpenSSLPrefix]) > 0 || len(hourMap[c.OpenHTTPPrefix]) > 0) {
+		logger.Warn().Msg("Open SSL / open HTTP logs are present, but no conn logs exist, skipping open SSL / open HTTP logs...")
+		delete(hourMap, c.OpenSSLPrefix)
+		delete(hourMap, c.OpenHTTPPrefix)
+	}
+
+	// track the total number of files after filtering out invalid file combinations
+	for zeekType := range hourMap {
+		// sort the files for each log type, necessary for tests
+		slices.Sort(hourMap[zeekType])
+		totalHourFilesFound += len(hourMap[zeekType])
+	}
+
+	return totalHourFilesFound
 }
 
 // checkFileHashes filters fileList to only files that haven't already been imported for this dataset
@@ -353,8 +452,16 @@ func (server *ServerConn) clearImportedFilesFromMetaDB(database string) error {
 
 func (server *ServerConn) clearDatabaseFromMetaDB(database string) error {
 	ctx := clickhouse.Context(server.ctx, clickhouse.WithParameters(clickhouse.Parameters{"database": database}))
-	err := server.Conn.Exec(ctx, `
+	if err := server.Conn.Exec(ctx, `
 		DELETE FROM metadatabase.min_max WHERE database = {database:String}
-	`, database)
-	return err
+	`, database); err != nil {
+		return fmt.Errorf("unable to delete database from metadatabase.min_max: %w", err)
+	}
+
+	if err := server.Conn.Exec(ctx, `
+		DELETE FROM metadatabase.sample_dbs WHERE name = {database:String}
+	`, database); err != nil {
+		return fmt.Errorf("unable to delete database from metadatabase.sample_dbs: %w", err)
+	}
+	return nil
 }

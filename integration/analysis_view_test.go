@@ -180,8 +180,8 @@ func (it *ValidDatasetTestSuite) TestPortInfoTable() {
 	type protoInfo struct {
 		PortProtoService string `ch:"port_proto_service"`
 		ConnCount        uint64 `ch:"conn_count"`
-		BytesSent        int64  `ch:"bytes_sent"`
-		BytesReceived    int64  `ch:"bytes_received"`
+		BytesSent        uint64 `ch:"bytes_sent"`
+		BytesReceived    uint64 `ch:"bytes_received"`
 	}
 
 	// make sure table values are getting populated correctly from the multiple materialized views
@@ -785,7 +785,7 @@ func (it *ValidDatasetTestSuite) TestMimeTypesURIsTable() {
 
 	type modifierInfo struct {
 		ModifierName  string  `ch:"modifier_name"`
-		ModifierScore float32 `ch:"modifier_score"`
+		ModifierScore float64 `ch:"modifier_score"`
 		ModifierValue string  `ch:"modifier_value"`
 	}
 
@@ -1088,7 +1088,7 @@ func (it *ValidDatasetTestSuite) TestThreatMixtape() {
 		"max_ts":                    fmt.Sprintf("%d", maxTimestamp.UTC().Unix()),
 		"first_seen_increase_score": fmt.Sprintf("%1.3f", it.cfg.Modifiers.FirstSeenScoreIncrease),
 		"prevalence_decrease_score": fmt.Sprintf("%1.3f", -it.cfg.Modifiers.PrevalenceScoreDecrease),
-		"beacon_none_thresh":        fmt.Sprintf("%1.3f", float32(it.cfg.Scoring.Beacon.ScoreThresholds.Base)/100),
+		"beacon_none_thresh":        fmt.Sprintf("%1.3f", float64(it.cfg.Scoring.Beacon.ScoreThresholds.Base)/100),
 	})
 	err = it.db.Conn.QueryRow(chCtx, `
 		SELECT count() FROM threat_mixtape
@@ -1160,7 +1160,7 @@ func (it *ValidDatasetTestSuite) TestThreatMixtape() {
 
 	err = it.db.Conn.QueryRow(chCtx, `
 		SELECT count() FROM threat_mixtape
-		WHERE beacon_score >= {beacon_none_thresh:Float32} AND beacon_threat_score <= 0
+		WHERE beacon_score >= {beacon_none_thresh:Float64} AND beacon_threat_score <= 0
 	`).Scan(&count)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, count, "all entries with a beacon score should have a beacon threat score")
@@ -1174,14 +1174,14 @@ func (it *ValidDatasetTestSuite) TestThreatMixtape() {
 
 	err = it.db.Conn.QueryRow(chCtx, `
 		SELECT count() FROM threat_mixtape
-		WHERE prevalence_total >= 8 AND (prevalence < 0.53333336 OR prevalence_score > {prevalence_decrease_score:Float32})
+		WHERE prevalence_total >= 8 AND (prevalence < 8/15 OR prevalence_score > {prevalence_decrease_score:Float64})
 	`).Scan(&count)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, count, "all entries with a prevalence total being over 50% (8/15) should have a prevalence of >= 0.53 and prevalence decrease score")
 
 	err = it.db.Conn.QueryRow(chCtx, `
 		SELECT count() FROM threat_mixtape
-		WHERE prevalence_total < 8 AND (prevalence > 0.53333336 OR prevalence_score != 0)
+		WHERE prevalence_total < 8 AND (prevalence > 8/15 OR prevalence_score != 0)
 	`).Scan(&count)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, count, "all entries with a prevalence total being under 50% (8/15) should have a prevalence of < 0.53 and prevalence score of 0")
@@ -1230,7 +1230,7 @@ func (it *ValidDatasetTestSuite) TestBigOlHistogramTable() {
 
 	type histogram struct {
 		Bucket     uint32 `ch:"bucket_ts"`
-		SrcIPBytes int64  `ch:"src_ip_bytes"`
+		SrcIPBytes uint64 `ch:"src_ip_bytes"`
 		Count      uint64 `ch:"count"`
 	}
 

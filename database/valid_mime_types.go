@@ -46,7 +46,7 @@ func (server *ServerConn) importValidMIMETypes(cfg *config.Config) error {
 	writer := NewBulkWriter(server, cfg, 1, "metadatabase", "valid_mime_types", "INSERT INTO metadatabase.valid_mime_types", limiter, false)
 	writer.Start(0)
 
-	extFile, err := util.ParseRelativePath(cfg.HTTPExtensionsFilePath)
+	extFile, err := util.ParseRelativePath(cfg.Env.HTTPExtensionsFilePath)
 	if err != nil {
 		return err
 	}
