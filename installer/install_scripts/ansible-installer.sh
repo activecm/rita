@@ -219,6 +219,17 @@ install_tool() {
 	fi
 }
 
+install_ansible() {
+	# install pipx package locally
+	python3 -m pip install pipx --user
+
+	# prepend ~/.local/bin to path if not present
+	[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="$HOME/.local/bin:${PATH}"
+
+	# install ansible and ansible-core via pipx
+	pipx install ansible ansible-core
+}
+
 echo "ansible_installer version $ansible_installer_version" >&2
 
 #FIXME We no longer need these choices, remove the following block
@@ -281,7 +292,8 @@ else
 	install_tool wget "wget"
 	install_tool curl "curl"
 	install_tool sha256sum "coreutils"
-	install_tool ansible "ansible ansible-core"
+
+	install_ansible
 fi
 
 
@@ -309,9 +321,7 @@ if ! echo "$PATH" | grep -q '/usr/local/bin' ; then
 	fi
 fi
 
-ansible-galaxy collection install community.docker --force
-
-
-
+# install requisite ansible collections
+ansible-galaxy collection install community.general community.docker --force
 
 popd > /dev/null
