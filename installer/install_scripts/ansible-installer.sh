@@ -220,14 +220,21 @@ install_tool() {
 }
 
 install_ansible() {
-	# install pipx package locally
-	python3 -m pip install pipx --user
+	# install pipx package in a Python virtual environment (PEP 668 mitigation)
+	python3 -m venv .ansenv
+	source .ansenv/bin/activate
 
-	# prepend ~/.local/bin to path if not present
-	[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="$HOME/.local/bin:${PATH}"
+	python3 -m pip install pipx
+
+	pipx ensurepath --prepend
 
 	# install ansible and ansible-core via pipx
 	pipx install ansible ansible-core
+
+	deactivate
+
+	# prepend ~/.local/bin to path if not present
+	[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="$HOME/.local/bin:${PATH}"
 }
 
 echo "ansible_installer version $ansible_installer_version" >&2
@@ -283,6 +290,7 @@ else
 	status "Installing needed tools"		#================
 	install_tool python3 "python3"
 	install_tool pip3 "python3-pip"			#Note, oracle linux does not come with pip at all.  The "python3-pip-wheel" package does not include pip.
+	install_tool venv "python3-venv"
 	python3 -m pip -V ; retcode="$?"
 	if [ "$retcode" != 0 ]; then
 		fail "Unable to run python3's pip, exiting."
