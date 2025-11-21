@@ -229,7 +229,7 @@ install_ansible() {
 	pipx ensurepath --prepend
 
 	# install ansible and ansible-core via pipx
-	pipx install ansible ansible-core
+	pipx install ansible ansible-core==2.15.3
 
 	deactivate
 
