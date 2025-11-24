@@ -219,6 +219,24 @@ install_tool() {
 	fi
 }
 
+install_ansible() {
+	# install pipx package in a Python virtual environment (PEP 668 mitigation)
+	python3 -m venv .ansenv
+	source .ansenv/bin/activate
+
+	python3 -m pip install pipx
+
+	pipx ensurepath --prepend
+
+	# install ansible and ansible-core via pipx
+	pipx install ansible ansible-core==2.15.13 --force
+
+	deactivate
+
+	# prepend ~/.local/bin to path if not present
+	[[ ":$PATH:" != *":$HOME/.local/bin:"* ]] && PATH="$HOME/.local/bin:${PATH}"
+}
+
 echo "ansible_installer version $ansible_installer_version" >&2
 
 #FIXME We no longer need these choices, remove the following block
@@ -272,6 +290,7 @@ else
 	status "Installing needed tools"		#================
 	install_tool python3 "python3"
 	install_tool pip3 "python3-pip"			#Note, oracle linux does not come with pip at all.  The "python3-pip-wheel" package does not include pip.
+	install_tool venv "python3-venv"
 	python3 -m pip -V ; retcode="$?"
 	if [ "$retcode" != 0 ]; then
 		fail "Unable to run python3's pip, exiting."
@@ -281,7 +300,8 @@ else
 	install_tool wget "wget"
 	install_tool curl "curl"
 	install_tool sha256sum "coreutils"
-	install_tool ansible "ansible ansible-core"
+
+	install_ansible
 fi
 
 
@@ -309,9 +329,7 @@ if ! echo "$PATH" | grep -q '/usr/local/bin' ; then
 	fi
 fi
 
-ansible-galaxy collection install community.docker --force
-
-
-
+# install requisite ansible collections
+ansible-galaxy collection install community.general community.docker --force
 
 popd > /dev/null
