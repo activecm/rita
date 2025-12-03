@@ -161,13 +161,17 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 
 	// get list of hourly log maps of all days of log files in directory
 	logMap, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
-	if err != nil {
-		return importResults, err
-	}
 
-	// log any errors that occurred during the walk
+	// log any errors that occurred during the walk, before returning
+	// this is especially useful when all files in the directory are invalid
+	// instead of only logging 'no valid files found'
 	for _, walkErr := range walkErrors {
 		logger.Debug().Str("path", walkErr.Path).Err(walkErr.Error).Msg("file was left out of import due to error or incompatibility")
+	}
+
+	// return if the walk failed completely
+	if err != nil {
+		return importResults, err
 	}
 
 	var elapsedTime int64
@@ -425,8 +429,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		}
 
 		// check if the file is readable
-		_, err := afs.Open(path)
-		if err != nil || !(info.Mode().Perm()&0444 == 0444) {
+		if _, err := afs.Open(path); err != nil {
 			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInsufficientReadPermissions})
 			return nil //nolint:nilerr // log the issue and continue walking
 		}
