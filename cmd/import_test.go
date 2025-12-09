@@ -622,6 +622,7 @@ func createExpectedResults(logs []cmd.HourlyZeekLogs) []cmd.HourlyZeekLogs {
 }
 
 func TestWalkFiles(t *testing.T) {
+	afs := afero.NewMemMapFs()
 
 	tests := []struct {
 		name                 string
@@ -1158,33 +1159,25 @@ func TestWalkFiles(t *testing.T) {
 			},
 			expectedError: cmd.ErrNoValidFilesFound,
 		},
-
-		// Previously, read permissions were checked with !(info.Mode().Perm()&0444 == 0444), but
-		// this requires all read permissions (user, group, others)/0644 to be set which is not ideal.
-		// A better check would be to see if any read permission is set, i.e., (info.Mode().Perm()&0444 != 0).
-		// However, since some ACL systems/SELinux might interfere with this, it's better to let the Open() call
-		// return an error if permission is denied.
-		// Unfortunately, afero.MemMapFs does not support file permissions when using Open, so this test is skipped.
-		// https://github.com/spf13/afero/issues/150
-		// {
-		// 	name:                 "No Read Permissions on Files",
-		// 	directory:            "/logs",
-		// 	directoryPermissions: iofs.FileMode(0o775),
-		// 	filePermissions:      iofs.FileMode(0o000),
-		// 	files: []string{
-		// 		"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log",
-		// 	},
-		// 	expectedWalkErrors: []cmd.WalkError{
-		// 		{Path: "/logs/conn.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 		{Path: "/logs/dns.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 		{Path: "/logs/http.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 		{Path: "/logs/ssl.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 		{Path: "/logs/open_conn.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 		{Path: "/logs/open_http.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 		{Path: "/logs/open_ssl.log", Error: cmd.ErrInsufficientReadPermissions},
-		// 	},
-		// 	expectedError: cmd.ErrNoValidFilesFound,
-		// },
+		{
+			name:                 "No Read Permissions on Files",
+			directory:            "/logs",
+			directoryPermissions: iofs.FileMode(0o775),
+			filePermissions:      iofs.FileMode(0o000),
+			files: []string{
+				"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log",
+			},
+			expectedWalkErrors: []cmd.WalkError{
+				{Path: "/logs/conn.log", Error: cmd.ErrInsufficientReadPermissions},
+				{Path: "/logs/dns.log", Error: cmd.ErrInsufficientReadPermissions},
+				{Path: "/logs/http.log", Error: cmd.ErrInsufficientReadPermissions},
+				{Path: "/logs/ssl.log", Error: cmd.ErrInsufficientReadPermissions},
+				{Path: "/logs/open_conn.log", Error: cmd.ErrInsufficientReadPermissions},
+				{Path: "/logs/open_http.log", Error: cmd.ErrInsufficientReadPermissions},
+				{Path: "/logs/open_ssl.log", Error: cmd.ErrInsufficientReadPermissions},
+			},
+			expectedError: cmd.ErrNoValidFilesFound,
+		},
 		{
 			name:                 "No Files, Only SubDirectories",
 			directory:            "/logs",
@@ -1224,8 +1217,6 @@ func TestWalkFiles(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			// create a new in-memory filesystem for each test
-			afs := afero.NewMemMapFs()
 
 			// Create the directory
 			if test.directory != "" {
@@ -1307,7 +1298,6 @@ func TestWalkFiles(t *testing.T) {
 			if test.expectedError == nil {
 				require.NoError(t, err, "running WalkFiles should not produce an error")
 			} else {
-				require.Error(t, err, "running WalkFiles should produce an error")
 				require.ErrorIs(t, err, test.expectedError, "error should match expected value")
 
 			}
