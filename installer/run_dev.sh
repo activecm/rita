@@ -1,4 +1,6 @@
-set -e
+
+set -euo pipefail
+
 droplet_ip="$1"
 if [ -z "$droplet_ip" ]; then
     echo "droplet ip was not provided"

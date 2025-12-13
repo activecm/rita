@@ -1,15 +1,6 @@
----
-# ansible install playbook for docker-zeek.
-# Version: 202408061413
-# sample runs:
-#   Run this, with a comma separated list of hostnames from the above file with a comma at the end of the list:
-#
-#   ansible-playbook -C -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/install_zeek.yml | grep -v '^skipping: ' #-C (no changes) means do a dry run
-#   ansible-playbook -K -i "ro810,ub2404," -e "install_hosts=ro810,ub2404," ~/.ansible/playbooks/install_zeek.yml | grep -v '^skipping: '
+# ansible install playbook for docker-zeek
 
-# Many thanks to but-i-am-dominator for his help with this playbook.
-
-- name: "Zeek Install: Zeek installer."
+- name: "Zeek Install: Zeek installer"
   hosts: "{{ install_hosts }}"
   become: true
 
@@ -17,14 +8,14 @@
     zeek_version: "REPLACE_ME"
     zeek_container_image: "activecm/zeek:{{ zeek_version }}"
     clickhouse_container_image: clickhouse/clickhouse-server:latest
-    ansible_python_interpreter: /bin/python3 # Centos 7 defaults to using python2, so we force python 3. This change does not break any other distros
+    ansible_python_interpreter: /bin/python3
     local_known_hosts: "{{ lookup('env', 'HOME') }}/.ssh/known_hosts"
 
-  #The install_pre.yml script should already have been run by this point
+  # the install_pre.yml script should already have been run by this point
 
   tasks:
-    #Make directories
-    - name: "Zeek Install: Create zeek directories."
+    # make directories
+    - name: "Zeek Install: Create zeek directories"
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -53,8 +44,8 @@
         - linuxdeb
         - linuxrpm
 
-    #Install Zeek
-    #Following pulls right from dockerhub. We may not be able to do this if the system is airgapped
+    # install Zeek
+    # the following pulls right from dockerhub. We may not be able to do this if the system is airgapped
     - name: "Pull from dockerhub container repo"
       community.docker.docker_image:
         name: "{{ zeek_container_image }}"
@@ -67,7 +58,7 @@
         - linuxdeb
         - linuxrpm
 
-    - name: "Zeek Install: Transfer zeek shell script to target system."
+    - name: "Zeek Install: Transfer zeek shell script to target system"
       copy:
         src: ./opt/zeek
         dest: /usr/local/bin/zeek
@@ -130,13 +121,13 @@
     #     - linuxdeb
     #     - linuxrpm
 
-    - name: "Zeek Install: check whether node.cfg exists to decide if this is the first time running zeek."
+    - name: "Zeek Install: check whether node.cfg exists to decide if this is the first time running zeek"
       stat:
         path: /opt/zeek/etc/node.cfg
       register: node_stat
 
-    # We can't do this the first time. zeek start runs zeekcfg on the first pass, which is an
-    # interactive CLI tool to pick interface(s). The user has to run this by hand.
+    # this cannot be run on the first install, as zeekcfg needs to be run first to let the user select their interface(s).
+    # the user will need to run this by hand after the install completes.
     - name: "Zeek Install: Start Zeek"
       shell: "/usr/local/bin/zeek start"
       when: (node_stat.stat.exists == true)
@@ -147,7 +138,8 @@
         - linuxdeb
         - linuxrpm
 
-    # We also can't run this the first time, as it requires a running zeek.
+    # this cannot be run on the first install, as zeekcfg needs to be run first to let the user select their interface(s).
+    # the user will need to run this by hand after the install completes.
     - name: "Zeek Install: Start Zeek on future reboots"
       shell: "/usr/local/bin/zeek enable"
       when: (node_stat.stat.exists == true)
@@ -222,4 +214,3 @@
     #     - linux
     #     - linuxdeb
     #     - linuxrpm
-#The install_post.yml script should be run next

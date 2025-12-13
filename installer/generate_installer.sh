@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-# Generates the RITA installer by creating a temporary folder in the current directory named 'stage'
+# This script generates the RITA installer by creating a temporary folder in the current directory named 'stage'
 # and copies files that must be in the installer into the stage folder.
-# Once all directories are placed in stage, it is compressed and stage is deleted
+# Once all directories are placed in stage, it is compressed and stage is deleted.
 
 ZEEK_VERSION=6.2.1
 
 # get RITA version from git
 VERSION=$(git describe --always --abbrev=0 --tags)
 echo "Generating installer for RITA $VERSION..."
-
 
 # change working directory to directory of this script
 pushd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" > /dev/null
@@ -35,23 +34,20 @@ INSTALL_ETC="$ANSIBLE_FILES"/etc
 mkdir "$ANSIBLE_FILES"/opt
 mkdir "$ANSIBLE_FILES"/etc
 
-
 # copy files in base dir
 cp ./install_scripts/install_zeek.yml "$BASE_DIR"
 cp ./install_scripts/install_rita.yml "$BASE_DIR"
 cp ./install_scripts/install_pre.yml "$BASE_DIR"
-cp ./install_scripts/install_post.yml "$BASE_DIR"
 
 cp ./install_scripts/install_rita.sh "$BASE_DIR" # entrypoint
 
 # copy files to helper script folder
 cp ./install_scripts/ansible-installer.sh "$SCRIPTS"
 cp ./install_scripts/helper.sh "$SCRIPTS"
-cp ./install_scripts/sshprep "$SCRIPTS"
+cp ./install_scripts/sshprep.sh "$SCRIPTS"
 
 # copy files to the ansible files folder
 cp ./install_scripts/docker-compose "$ANSIBLE_FILES" # docker-compose v1 backwards compatibility script
-
 
 # copy over configuration files to /files/etc
 cp -r ../deployment/* "$INSTALL_ETC"
@@ -67,9 +63,6 @@ cp ../.env.production "$INSTALL_OPT"/.env
 cp ../docker-compose.prod.yml "$INSTALL_OPT"/docker-compose.yml
 cp ../LICENSE "$INSTALL_OPT"/LICENSE
 cp ../README.md "$INSTALL_OPT"/README
-
-
-cp ./install-rita-zeek-here-tmp.sh install-rita-zeek-here.sh
 
 # update version variables for files that need them
 if [ "$(uname)" == "Darwin" ]; then
@@ -91,13 +84,6 @@ else
     sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"
     sed -i  "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
 fi
-
-
-
-
-
-# ./build_image.sh
-
 
 # create tar
 tar -czf "rita-$VERSION.tar.gz" "$BASE_DIR"
