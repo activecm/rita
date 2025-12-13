@@ -1,10 +1,5 @@
 #!/bin/bash
-#Performs all the setup steps needed to connect to one or more hosts listed on the command line
-#Copyright 2022 William Stearns <william.l.stearns@gmail.com>
-#Released under the GPL 3.0
-#Version 0.1.8
-
-
+set -euo pipefail
 
 askYN() {
     # Prints a question mark, reads repeatedly until the user
