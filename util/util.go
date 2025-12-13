@@ -58,6 +58,11 @@ type FixedString struct {
 	Data [16]byte
 }
 
+type WalkError struct {
+	Path  string
+	Error error
+}
+
 func init() {
 	// parse private IPs
 	privateIPs, _ := NewSubnetList(

@@ -631,7 +631,7 @@ func TestWalkFiles(t *testing.T) {
 		subdirectories       []string
 		files                []string
 		expectedFiles        []cmd.HourlyZeekLogs
-		expectedWalkErrors   []cmd.WalkError
+		expectedWalkErrors   []util.WalkError
 		rolling              bool
 		expectedError        error
 	}{
@@ -660,7 +660,7 @@ func TestWalkFiles(t *testing.T) {
 					},
 				},
 			}),
-			expectedWalkErrors: []cmd.WalkError{
+			expectedWalkErrors: []util.WalkError{
 				{Path: "/logs/.DS_STORE", Error: cmd.ErrIncompatibleFileExtension},
 				{Path: "/logs/capture_loss.16:00:00-17:00:00.log.gz", Error: cmd.ErrInvalidLogType},
 				{Path: "/logs/stats.16:00:00-17:00:00.log.gz", Error: cmd.ErrInvalidLogType},
@@ -1061,7 +1061,7 @@ func TestWalkFiles(t *testing.T) {
 					},
 				},
 			}),
-			expectedWalkErrors: []cmd.WalkError{
+			expectedWalkErrors: []util.WalkError{
 				{Path: "/logs_dupe/conn.log", Error: cmd.ErrSkippedDuplicateLog},
 			},
 			expectedError: nil,
@@ -1082,7 +1082,7 @@ func TestWalkFiles(t *testing.T) {
 					},
 				},
 			}),
-			expectedWalkErrors: []cmd.WalkError{
+			expectedWalkErrors: []util.WalkError{
 				{Path: "/logs_dupe/conn.log.gz", Error: cmd.ErrSkippedDuplicateLog},
 			},
 			expectedError: nil,
@@ -1095,7 +1095,7 @@ func TestWalkFiles(t *testing.T) {
 			files: []string{
 				".log.gz", ".log", ".foo",
 			},
-			expectedWalkErrors: []cmd.WalkError{
+			expectedWalkErrors: []util.WalkError{
 				{Path: "/logs/.log", Error: cmd.ErrInvalidLogType},
 				{Path: "/logs/.log.gz", Error: cmd.ErrSkippedDuplicateLog},
 				{Path: "/logs/.foo", Error: cmd.ErrIncompatibleFileExtension},
@@ -1112,7 +1112,7 @@ func TestWalkFiles(t *testing.T) {
 				".conn", ".conn_", ".dns", ".dns_", ".http", ".http_", ".ssl", ".ssl_", ".bing", "._bong",
 				"dns_file",
 			},
-			expectedWalkErrors: []cmd.WalkError{
+			expectedWalkErrors: []util.WalkError{
 				{Path: "/logs/conn", Error: cmd.ErrIncompatibleFileExtension},
 				{Path: "/logs/dns", Error: cmd.ErrIncompatibleFileExtension},
 				{Path: "/logs/http", Error: cmd.ErrIncompatibleFileExtension},
@@ -1144,7 +1144,7 @@ func TestWalkFiles(t *testing.T) {
 				"files.log", "ntp.log", "radius.log", "sip.log", "x509.log.gz", "dhcp.log", "weird.log",
 				"conn_summary.log", "conn-summary.log", "foo.log",
 			},
-			expectedWalkErrors: []cmd.WalkError{
+			expectedWalkErrors: []util.WalkError{
 				{Path: "/logs/files.log", Error: cmd.ErrInvalidLogType},
 				{Path: "/logs/ntp.log", Error: cmd.ErrInvalidLogType},
 				{Path: "/logs/radius.log", Error: cmd.ErrInvalidLogType},
@@ -1174,7 +1174,7 @@ func TestWalkFiles(t *testing.T) {
 		// 	files: []string{
 		// 		"conn.log", "dns.log", "http.log", "ssl.log", "open_conn.log", "open_http.log", "open_ssl.log",
 		// 	},
-		// 	expectedWalkErrors: []cmd.WalkError{
+		// 	expectedWalkErrors: []util.WalkError{
 		// 		{Path: "/logs/conn.log", Error: cmd.ErrInsufficientReadPermissions},
 		// 		{Path: "/logs/dns.log", Error: cmd.ErrInsufficientReadPermissions},
 		// 		{Path: "/logs/http.log", Error: cmd.ErrInsufficientReadPermissions},
@@ -1292,7 +1292,7 @@ func TestWalkFiles(t *testing.T) {
 
 			// walk the directory
 			var logMap []cmd.HourlyZeekLogs
-			var walkErrors []cmd.WalkError
+			var walkErrors []util.WalkError
 			var err error
 
 			// since some of the tests are for files passed in to the import command instead of the root directory, we need to
