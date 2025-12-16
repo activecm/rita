@@ -46,10 +46,6 @@ var ErrIncompatibleFileExtension = errors.New("incompatible file extension")
 var ErrSkippedDuplicateLog = errors.New("encountered file with same name but different extension, skipping file due to older last modified time")
 var ErrMissingLogDirectory = errors.New("log directory flag is required")
 
-type WalkError struct {
-	Path  string
-	Error error
-}
 type HourlyZeekLogs []map[string][]string
 
 var ImportCommand = &cli.Command{
@@ -385,7 +381,7 @@ func ParseFolderDate(folder string) (time.Time, error) {
 // WalkFiles starts a goroutine to walk the directory tree at root and send the
 // path of each regular file on the string channel.  It sends the result of the
 // walk on the error channel.  If done is closed, WalkFiles abandons its work.
-func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []WalkError, error) {
+func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []util.WalkError, error) {
 	// check if root is a valid directory or file
 	err := util.ValidateDirectory(afs, root)
 	if err != nil && !errors.Is(err, util.ErrPathIsNotDir) {
@@ -407,13 +403,13 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 	}
 	fTracker := make(map[string]fileTrack)
 
-	var walkErrors []WalkError
+	var walkErrors []util.WalkError
 
 	err = afero.Walk(afs, root, func(path string, info os.FileInfo, afErr error) error {
 
 		// check if afero failed to access or find a file or directory
 		if afErr != nil {
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: afErr})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: afErr})
 			return nil //nolint:nilerr // log the issue and continue walking
 		}
 
@@ -424,13 +420,13 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 
 		// skip if file is not a compatible log file
 		if !(strings.HasSuffix(path, ".log") || strings.HasSuffix(path, ".gz")) {
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrIncompatibleFileExtension})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrIncompatibleFileExtension})
 			return nil // log the issue and continue walking
 		}
 
 		// check if the file is readable
 		if _, err := afs.Open(path); err != nil {
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInsufficientReadPermissions})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrInsufficientReadPermissions})
 			return nil //nolint:nilerr // log the issue and continue walking
 		}
 
@@ -457,7 +453,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		case exists && fileData.lastModified.UTC().Before(info.ModTime().UTC()):
 
 			// warn the user so that this isn't a silent operation
-			walkErrors = append(walkErrors, WalkError{Path: fTracker[trimmedFileName].path, Error: ErrSkippedDuplicateLog})
+			walkErrors = append(walkErrors, util.WalkError{Path: fTracker[trimmedFileName].path, Error: ErrSkippedDuplicateLog})
 			// logger.Warn().Str("original_path", fTracker[trimmedFileName].path).Str("replacement_path", path).Msg("encountered file with same name but different extension, potential duplicate log, skipping")
 
 			fTracker[trimmedFileName] = fileTrack{
@@ -466,7 +462,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 			}
 		// if the current file is older than the one we have already seen or no other conditions are met, skip it
 		default:
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrSkippedDuplicateLog})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrSkippedDuplicateLog})
 
 		}
 
@@ -500,21 +496,21 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []Wal
 		case strings.HasPrefix(filepath.Base(path), c.OpenSSLPrefix):
 			prefix = c.OpenSSLPrefix
 		default: // skip file if it doesn't match any of the accepted prefixes
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: ErrInvalidLogType})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrInvalidLogType})
 			continue
 		}
 
 		// parse the hour from the filename
 		hour, err := ParseHourFromFilename(file.path)
 		if err != nil {
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: err})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: err})
 			continue
 		}
 
 		parentDir := filepath.Base(filepath.Dir(file.path))
 		folderDate, err := ParseFolderDate(parentDir)
 		if err != nil {
-			walkErrors = append(walkErrors, WalkError{Path: path, Error: err})
+			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: err})
 		}
 
 		// Check if the entry for the day exists, if not, initialize it

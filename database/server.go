@@ -71,26 +71,31 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 		logger.Info().Str("database", dbName).Msg("Successfully rebuilt import database")
 	}
 
+	// check rolling status of database
 	rolling, err := server.checkRolling(dbName, rollingFlag, rebuildFlag)
 	if err != nil {
 		return nil, err
 	}
 
+	// create sensor database
 	db, err := server.createSensorDatabase(cfg, dbName, rolling)
 	if err != nil {
 		return nil, err
 	}
 
+	// reset temporary tables
 	err = db.ResetTemporaryTables()
 	if err != nil {
 		return nil, err
 	}
 
+	// sync threat intel feeds from config
 	err = server.syncThreatIntelFeedsFromConfig(afs, cfg)
 	if err != nil {
 		return nil, err
 	}
 
+	// import valid MIME types
 	err = server.importValidMIMETypes(cfg)
 	if err != nil {
 		return nil, err
@@ -101,7 +106,7 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 	// 	return nil, err
 	// }
 
-	// // set rolling flag
+	// set rolling flag
 	db.Rolling = rollingFlag
 
 	// set rebuild flag

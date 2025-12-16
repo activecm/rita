@@ -3,7 +3,7 @@ package database
 import (
 	"bufio"
 	"context"
-	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/netip"
@@ -83,9 +83,12 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 	logger := zlog.GetLogger()
 
 	// get the list of threat intel feeds from the config
-	feeds, err := getThreatIntelFeeds(afs, cfg)
+	feeds, walkErrs, err := getThreatIntelFeeds(afs, cfg)
 	if err != nil {
-		return err
+		logger.Warn().Err(err).Str("directory", cfg.Env.ThreatIntelCustomFeedsDirectory).Msg("[THREAT INTEL] Failed to load feeds from custom feeds directory, skipping...")
+	}
+	for _, we := range walkErrs {
+		logger.Warn().Err(we.Error).Str("path", we.Path).Msg("[THREAT INTEL] Issue encountered while loading custom feed, skipping...")
 	}
 
 	// get list of all feeds from the metadatabase
@@ -148,19 +151,31 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			// download the feed
 			feed, err = getOnlineFeed(server.GetContext(), entry.Path)
 			if err != nil {
-				return err
+				// log the error as a warning and continue. do not return an error, as this should not stop the import process
+				logger.Warn().Err(err).Str("feed_url", entry.Path).Msg("[THREAT INTEL] Failed to download online feed, could not update feed in database...")
+
+				//NOTE: should we remove the feed from the database if we can't download an updated version?
+
+				//skip to next feed
+				continue
 			}
 
-		// if feed has has an oudated last modified date, update as custom feed
+		// if file feed has has an oudated last modified date, update as custom feed
 		case !entry.LastModifiedOnDisk.Equal(feeds[entry.Path].LastModified):
 			logger.Info().Str("feed_path", entry.Path).Msg("[THREAT INTEL] Updating custom feed because it has been modified...")
 			// open the feed file
-			feed, err = getCustomFeed(entry.Path)
+			feed, err = getCustomFeed(afs, entry.Path)
 			if err != nil {
-				return err
+				// log the error as a warning and continue. do not return an error, as this should not stop the import process
+				logger.Warn().Err(err).Str("feed_path", entry.Path).Msg("[THREAT INTEL] Failed to open custom feed, could not update feed in database...")
+
+				//NOTE: should we remove the feed from the database if we can't download an updated version?
+
+				// skip to next feed
+				continue
 			}
 
-		// feed is up to date, skip ahead to next feed
+		// file feed is current, skip to next feed
 		default:
 			continue
 
@@ -172,29 +187,33 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 		}
 
 	}
+
 	// iterate over each feed in the config that was not in the database
 	for path := range feeds {
 		entry := feeds[path]
 		if !entry.Existing {
 			var feed io.ReadCloser
 			if entry.Online {
+				logger.Info().Str("feed_url", path).Msg("[THREAT INTEL] Adding new online feed...")
 				// download the feed
 				feed, err = getOnlineFeed(server.GetContext(), path)
 				if err != nil {
-					return err
+					// log the error and skip adding the feed, but do not return an error, as this should not stop the import process
+					logger.Warn().Err(err).Str("feed_url", path).Msg("[THREAT INTEL] Failed to download online feed, skipping addition to database...")
+					// skip to next feed
+					continue
 				}
-				logger.Info().Str("feed_url", path).Msg("[THREAT INTEL] Adding new online feed...")
-
 			} else {
-				// open the feed file
-				feed, err = getCustomFeed(path)
-				if err != nil {
-					return err
-				}
 				logger.Info().Str("feed_path", path).Msg("[THREAT INTEL] Adding new custom feed...")
-
+				// open the feed file
+				feed, err = getCustomFeed(afs, path)
+				if err != nil {
+					// log the error and skip adding the feed, but do not return an error, as this should not stop the import process
+					logger.Warn().Err(err).Str("feed_path", path).Msg("[THREAT INTEL] Failed to open custom feed, skipping addition to database...")
+					// skip to next feed
+					continue
+				}
 			}
-
 			// add the new feed to the database
 			if err = server.addNewFeed(path, &entry, feed, writer.WriteChannel); err != nil {
 				return err
@@ -205,61 +224,75 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 	return nil
 }
 
-// fs := afero.NewOsFs()
 // getThreatIntelFeeds parses the threat intel sources from the config file into a feed map
-func getThreatIntelFeeds(afs afero.Fs, cfg *config.Config) (map[string]threatIntelFeed, error) {
+func getThreatIntelFeeds(afs afero.Fs, cfg *config.Config) (map[string]threatIntelFeed, []util.WalkError, error) {
+	// initialize feeds map
 	feeds := make(map[string]threatIntelFeed)
+
 	// add custom feed sources
-	if err := getCustomFeedsList(afs, feeds, cfg.Env.ThreatIntelCustomFeedsDirectory); err != nil {
-		return nil, err
-	}
+	walkErrs, err := getCustomFeedsList(afs, feeds, cfg.Env.ThreatIntelCustomFeedsDirectory)
 
 	// add online feed sources (with last modified time set to zero)
 	getOnlineFeedsList(feeds, cfg.RITA.ThreatIntel.OnlineFeeds)
 
-	return feeds, nil
+	return feeds, walkErrs, err
 }
 
 // getCustomFeedsList populates the feeds map with the custom feed files contained in a specified directory
 // and their last modified times
-func getCustomFeedsList(afs afero.Fs, feeds map[string]threatIntelFeed, dirPath string) error {
-	logger := zlog.GetLogger()
-
+func getCustomFeedsList(afs afero.Fs, feeds map[string]threatIntelFeed, dirPath string) ([]util.WalkError, error) {
 	feedDir, err := util.ParseRelativePath(dirPath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	logger.Debug().Str("directory", feedDir).Msg("custom feed directory for threat intel")
 	// check if directory is valid
-	err = util.ValidateDirectory(afs, feedDir)
-	if err != nil {
-		// return nil if the directory doesn't exist or contains no files
-		if errors.Is(err, util.ErrDirDoesNotExist) || errors.Is(err, util.ErrDirIsEmpty) {
-			return nil
-		}
-		return err
+	if err := util.ValidateDirectory(afs, feedDir); err != nil {
+		return nil, err
 	}
+
+	var walkErrs []util.WalkError
 
 	// walk the directory and add each file to the feeds map
-	err = afero.Walk(afs, feedDir, func(path string, info os.FileInfo, err error) error {
+	if err := afero.Walk(afs, feedDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			walkErrs = append(walkErrs, util.WalkError{
+				Path:  path,
+				Error: err,
+			})
 		}
 		if !info.IsDir() {
 			if filepath.Ext(path) == ".txt" {
 				feeds[path] = threatIntelFeed{
 					LastModified: info.ModTime().UTC().Truncate(time.Second),
 				}
+			} else {
+				// add to walk errors and continue
+				walkErrs = append(walkErrs, util.WalkError{
+					Path:  path,
+					Error: fmt.Errorf("invalid file extension for threat intel feed, must be .txt"),
+				})
 			}
 		}
 		return nil
-	})
-	if err != nil {
-		return err
+	}); err != nil {
+		return walkErrs, err
 	}
 
-	return nil
+	return walkErrs, nil
+}
+
+// getCustomFeed opens the custom feed from the specified path and returns an io.ReadCloser
+func getCustomFeed(afs afero.Fs, path string) (io.ReadCloser, error) {
+	if err := util.ValidateFile(afs, path); err != nil {
+		return nil, err
+	}
+
+	file, err := afs.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
 }
 
 // getOnlineFeedsList populates the feeds map with the passed in online feed sources (with last modified time set to zero)
@@ -273,27 +306,27 @@ func getOnlineFeedsList(feeds map[string]threatIntelFeed, onlineFeedsList []stri
 
 // getOnlineFeed gets the feed at the specified URL and returns an io.ReadCloser
 func getOnlineFeed(ctx context.Context, url string) (io.ReadCloser, error) {
-
+	// build request with context
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
+	// execute request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("request failed: %w", err)
 	}
 
+	// fail if status code is not OK
+	// this is necessary for cases where the domain is valid but the resource is not found (will pass earlier err check)
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("request failed: %d (%s)", resp.StatusCode, resp.Status)
+	}
+
+	// return response body
 	return resp.Body, nil
-}
-
-// getCustomFeed opens the custom feed from the specified path and returns an io.ReadCloser
-func getCustomFeed(path string) (io.ReadCloser, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	return file, nil
 }
 
 func (server *ServerConn) updateFeed(entry *threatIntelFeedRecord, lastModified time.Time, feed io.ReadCloser, writeChan chan Data) error {
@@ -421,6 +454,8 @@ func parseFeedEntries(feedHash util.FixedString, feed io.ReadCloser, writeChan c
 				// send fqdn to writer
 				feedEntry.FQDN = line
 				writeChan <- feedEntry
+			} else {
+				// invalid entry, skip
 			}
 		} else {
 			// send IP as IPv6 to writer
