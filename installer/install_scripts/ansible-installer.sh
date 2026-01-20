@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 pushd "$SCRIPT_DIR" > /dev/null
 
 # load helper functions
-HELPER_FILE="$SCRIPT_DIR/scripts/helper.sh"
+HELPER_FILE="$SCRIPT_DIR/helper.sh"
 [[ -f "$HELPER_FILE" ]] || { echo "Helper functions script not found: $HELPER_FILE" >&2; exit 1; }
 # shellcheck disable=SC1090
 source "$HELPER_FILE"
