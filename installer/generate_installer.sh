@@ -7,91 +7,106 @@ set -euo pipefail
 
 ZEEK_VERSION=6.2.1
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+RITA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# load helper functions
+HELPER_FILE="$SCRIPT_DIR/install_scripts/helper.sh"
+[[ -f "$HELPER_FILE" ]] || { echo "Helper functions script not found: $HELPER_FILE" >&2; exit 1; }
+# shellcheck disable=SC1090
+source "$HELPER_FILE"
+
+
 # get RITA version from git
-VERSION=$(git describe --always --abbrev=0 --tags)
-echo "Generating installer for RITA $VERSION..."
+if VERSION="$(git -C "$RITA_DIR" describe --tags --exact-match 2>/dev/null)"; then
+    :  # release / ci
+elif VERSION="$(git -C "$RITA_DIR" describe --tags --dirty --always 2>/dev/null)"; then
+    :  # dev
+else
+    fail "Unable to determine RITA_VERSION."
+fi
+[[ -n "$VERSION" ]] || { echo "Unable to determine RITA_VERSION." >&2; exit 1; }
+
+status "Generating installer for RITA $VERSION..."
 
 # change working directory to directory of this script
-pushd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" > /dev/null
+# pushd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" > /dev/null
 
-BASE_DIR="./rita-$VERSION-installer" # was ./stage/bin
-
-# create staging folder
-rm -rf "$BASE_DIR"
-# mkdir ./stage
+# create staging directory
+INSTALLER_DIR="${SCRIPT_DIR}/rita-$VERSION-installer"
+OUTPUT_TARBALL="${SCRIPT_DIR}/rita-$VERSION.tar.gz"
+remove_dir "$INSTALLER_DIR"
+remove_file "$OUTPUT_TARBALL"
+create_new_dir "$INSTALLER_DIR"
 
 # create ansible subfolders
-SCRIPTS="$BASE_DIR/scripts"
-ANSIBLE_FILES="$BASE_DIR/files"
-
-mkdir "$BASE_DIR"
-mkdir -p "$ANSIBLE_FILES"
-mkdir -p "$SCRIPTS"
+SCRIPTS="$INSTALLER_DIR/scripts"
+ANSIBLE_FILES="$INSTALLER_DIR/files"
+create_new_dir "$SCRIPTS"
+create_new_dir "$ANSIBLE_FILES"
 
 # create subfolders (for files that installed RITA will contain)
 INSTALL_OPT="$ANSIBLE_FILES"/opt
 INSTALL_ETC="$ANSIBLE_FILES"/etc
-mkdir "$ANSIBLE_FILES"/opt
-mkdir "$ANSIBLE_FILES"/etc
+create_new_dir "$INSTALL_OPT"
+create_new_dir "$INSTALL_ETC"
 
 # copy files in base dir
-cp ./install_scripts/install_zeek.yml "$BASE_DIR"
-cp ./install_scripts/install_rita.yml "$BASE_DIR"
-cp ./install_scripts/install_pre.yml "$BASE_DIR"
+copy_file "${SCRIPT_DIR}/install-rita-zeek-here.sh" "$INSTALLER_DIR"
+copy_file "${SCRIPT_DIR}/install_scripts/install_zeek.yml" "$INSTALLER_DIR"
+copy_file "${SCRIPT_DIR}/install_scripts/install_rita.yml" "$INSTALLER_DIR"
+copy_file "${SCRIPT_DIR}/install_scripts/install_pre.yml" "$INSTALLER_DIR"
 
-cp ./install_scripts/install_rita.sh "$BASE_DIR" # entrypoint
+copy_file "${SCRIPT_DIR}/install_scripts/install_rita.sh" "$INSTALLER_DIR" # entrypoint
 
 # copy files to helper script folder
-cp ./install_scripts/ansible-installer.sh "$SCRIPTS"
-cp ./install_scripts/helper.sh "$SCRIPTS"
-cp ./install_scripts/sshprep.sh "$SCRIPTS"
+copy_file "${SCRIPT_DIR}/install_scripts/ansible-installer.sh" "$SCRIPTS"
+copy_file "${SCRIPT_DIR}/install_scripts/helper.sh" "$SCRIPTS"
+copy_file "${SCRIPT_DIR}/install_scripts/sshprep.sh" "$SCRIPTS"
 
 # copy files to the ansible files folder
-cp ./install_scripts/docker-compose "$ANSIBLE_FILES" # docker-compose v1 backwards compatibility script
+copy_file "${SCRIPT_DIR}/install_scripts/docker-compose" "$ANSIBLE_FILES" # docker-compose v1 backwards compatibility script
 
 # copy over configuration files to /files/etc
-cp -r ../deployment/* "$INSTALL_ETC"
-cp ../default_config.hjson "$INSTALL_ETC"/config.hjson
+copy_dir_contents "${RITA_DIR}/deployment" "$INSTALL_ETC"
+copy_file "${RITA_DIR}/default_config.hjson" "$INSTALL_ETC/config.hjson"
 
 # copy over installed files to /opt
-cp ../rita.sh "$INSTALL_OPT"/rita.sh
-curl --fail --silent --show-error -o "$INSTALL_OPT"/zeek https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
-chmod +x "$INSTALL_OPT"/zeek
-curl --fail --silent --show-error -o "$INSTALL_OPT"/zeek_log_transport.sh https://raw.githubusercontent.com/activecm/zeek-log-transport/refs/heads/master/zeek_log_transport.sh
-chmod +x "$INSTALL_OPT"/zeek_log_transport.sh
-cp ../.env.production "$INSTALL_OPT"/.env
-cp ../docker-compose.prod.yml "$INSTALL_OPT"/docker-compose.yml
-cp ../LICENSE "$INSTALL_OPT"/LICENSE
-cp ../README.md "$INSTALL_OPT"/README
+copy_file "${RITA_DIR}/rita.sh" "$INSTALL_OPT"
+curl --fail --silent --show-error -o "${INSTALL_OPT}/zeek" https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
+chmod +x "${INSTALL_OPT}/zeek"
+curl --fail --silent --show-error -o "${INSTALL_OPT}/zeek_log_transport.sh" https://raw.githubusercontent.com/activecm/zeek-log-transport/refs/heads/master/zeek_log_transport.sh
+chmod +x "${INSTALL_OPT}/zeek_log_transport.sh"
+copy_file "${RITA_DIR}/.env.production" "${INSTALL_OPT}/.env"
+copy_file "${RITA_DIR}/docker-compose.prod.yml" "${INSTALL_OPT}/docker-compose.yml"
+copy_file "${RITA_DIR}/LICENSE" "${INSTALL_OPT}/LICENSE"
+copy_file "${RITA_DIR}/README.md" "${INSTALL_OPT}/README"
 
 # update version variables for files that need them
-if [ "$(uname)" == "Darwin" ]; then
-    sed -i'.bak' "s/RITA_REPLACE_ME/${VERSION}/g" "install-rita-zeek-here.sh" 
-    sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.yml" 
-    sed -i'.bak' "s/REPLACE_ME/${ZEEK_VERSION}/g" "$BASE_DIR/install_zeek.yml" 
-    sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"
-    sed -i'.bak' "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
+if [[ "$(uname)" == "Darwin" ]]; then
+    sed -i'.bak' "s/RITA_REPLACE_ME/${VERSION}/g" "${INSTALLER_DIR}/install-rita-zeek-here.sh"
+    sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "${INSTALLER_DIR}/install_rita.yml" 
+    sed -i'.bak' "s/REPLACE_ME/${ZEEK_VERSION}/g" "${INSTALLER_DIR}/install_zeek.yml" 
+    sed -i'.bak' "s/REPLACE_ME/${VERSION}/g" "${INSTALLER_DIR}/install_rita.sh"
+    sed -i'.bak' "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "${INSTALL_OPT}/docker-compose.yml"
     
-    rm "install-rita-zeek-here.sh.bak"
-    rm "$BASE_DIR/install_rita.yml.bak"
-    rm "$BASE_DIR/install_zeek.yml.bak"
-    rm "$BASE_DIR/install_rita.sh.bak"
-    rm "$INSTALL_OPT/docker-compose.yml.bak"
+    remove_file "${INSTALLER_DIR}/install-rita-zeek-here.sh.bak"
+    remove_file "${INSTALLER_DIR}/install_rita.yml.bak"
+    remove_file "${INSTALLER_DIR}/install_zeek.yml.bak"
+    remove_file "${INSTALLER_DIR}/install_rita.sh.bak"
+    remove_file "${INSTALL_OPT}/docker-compose.yml.bak"
 else 
-    sed -i  "s/RITA_REPLACE_ME/${VERSION}/g" ./install-rita-zeek-here.sh
-    sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.yml" 
-    sed -i  "s/REPLACE_ME/${ZEEK_VERSION}/g" "$BASE_DIR/install_zeek.yml" 
-    sed -i  "s/REPLACE_ME/${VERSION}/g" "$BASE_DIR/install_rita.sh"
-    sed -i  "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "$INSTALL_OPT/docker-compose.yml"
+    sed -i  "s/RITA_REPLACE_ME/${VERSION}/g" "${INSTALLER_DIR}/install-rita-zeek-here.sh"
+    sed -i  "s/REPLACE_ME/${VERSION}/g" "${INSTALLER_DIR}/install_rita.yml" 
+    sed -i  "s/REPLACE_ME/${ZEEK_VERSION}/g" "${INSTALLER_DIR}/install_zeek.yml" 
+    sed -i  "s/REPLACE_ME/${VERSION}/g" "${INSTALLER_DIR}/install_rita.sh"
+    sed -i  "s#ghcr.io/activecm/rita:latest#ghcr.io/activecm/rita:${VERSION}#g" "${INSTALL_OPT}/docker-compose.yml"
 fi
 
-# create tar
-tar -czf "rita-$VERSION.tar.gz" "$BASE_DIR"
+# create tarball from staging folder
+tar -czf "$OUTPUT_TARBALL" -C "$SCRIPT_DIR" "$(basename "$INSTALLER_DIR")"
 
 # delete staging folder
-rm -rf "$BASE_DIR"
+remove_dir "$INSTALLER_DIR"
 
-# switch back to original working directory
-popd > /dev/null
-
-echo "Finished generating installer."
+status "Finished generating installer."

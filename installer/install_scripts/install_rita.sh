@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # RITA Install Script
@@ -15,18 +15,18 @@ show_help() {
 }
 
 # No arguments provided
-if [ $# -eq 0 ]; then
+if [[ $# -eq 0 ]]; then
     show_help
 fi
 
 # Parse optional flag
-if [ "${1:-}" = "--disable-zeek" ]; then
+if [[ "${1:-}" = "--disable-zeek" ]]; then
     _INSTALL_ZEEK=false
     shift
 fi
 
 # Hostname/IP must now be present
-if [ $# -eq 0 ]; then
+if [[ $# -eq 0 ]]; then
     show_help
 fi
 
@@ -34,7 +34,7 @@ install_target="$1"
 shift
 
 # If someone puts --disable-zeek after the host, still support it:
-if [ "${1:-}" = "--disable-zeek" ]; then
+if [[ "${1:-}" = "--disable-zeek" ]]; then
     _INSTALL_ZEEK=false
     shift
 fi
@@ -50,14 +50,14 @@ source ./scripts/helper.sh
 
 # Install rita
 status "Installing rita via ansible on $install_target"
-if [ "$install_target" = "localhost" -o "$install_target" = "127.0.0.1" -o "$install_target" = "::1" ]; then
-        if [ "$(uname)" = "Darwin" ]; then
+if [[ "$install_target" = "localhost" || "$install_target" = "127.0.0.1" || "$install_target" = "::1" ]]; then
+        if [[ "$(uname)" = "Darwin" ]]; then
             # TODO support macOS install target
             echo "${YELLOW}Installing RITA via Ansible on the local system is not yet supported on MacOS.${NORMAL}"
             exit 1
         fi
 	status "When prompted for a BECOME password, enter your sudo password. If your user does not need one for sudo, just press Enter."
-	if [ "$_INSTALL_ZEEK" = 'true' ]; then
+	if [[ "$_INSTALL_ZEEK" = 'true' ]]; then
 		ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_pre.yml install_rita.yml install_zeek.yml
 	else
 		ansible-playbook --connection=local -K -i "127.0.0.1," -e "install_hosts=127.0.0.1," install_pre.yml install_rita.yml
@@ -66,7 +66,7 @@ else
 	status "Setting up future ssh connections to $install_target .  You may be asked to provide your ssh password to $install_target ."
 	./scripts/sshprep.sh "$install_target"
 	status "When prompted for a BECOME password, enter your sudo password for $install_target. If your user does not need one for sudo, just press Enter."
-	if [ "$_INSTALL_ZEEK" = 'true' ]; then
+	if [[ "$_INSTALL_ZEEK" = 'true' ]]; then
 		# TODO: fix and re-implement cron setup after RITA#65 is resolved
 		# status "Creating Zeek log transport Cron file"
 		# rm -f zeek_log_transport.cron ; touch zeek_log_transport.cron
@@ -91,7 +91,7 @@ Brought to you by Active CounterMeasures©
 echo "Installation complete!"
 echo ""
 
-if [ "$_INSTALL_ZEEK" = 'true' ]; then
+if [[ "$_INSTALL_ZEEK" = 'true' ]]; then
 	echo "Please run the following commands on any new zeek sensors" >&2
 	echo "	zeek start ; zeek enable" >&2
 	echo "" >&2

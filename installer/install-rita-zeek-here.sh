@@ -1,14 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # This script downloads and installs rita, zeek, and all dependencies on the current system
 
-export RITA_VERSION="v5.1.0"
+export RITA_VERSION="RITA_REPLACE_ME"
 export zeek_release='latest'
 export PATH="$PATH:/usr/local/bin/"
 echo 'export PATH=$PATH:/usr/local/bin/' | sudo tee -a /etc/profile.d/localpath.sh
 
-if [ "$EUID" -ne 0 ]; then
+if [[ "$EUID" -ne 0 ]]; then
 	SUDO="/usr/bin/sudo "
 fi
 

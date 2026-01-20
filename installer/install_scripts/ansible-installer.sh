@@ -1,36 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Ansible Install Script
 # This script installs Ansible on the current system using pipx.
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
 # cd to the directory where this script is located
-pushd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" > /dev/null
+pushd "$SCRIPT_DIR" > /dev/null
 
 # load helper functions
-source ./helper.sh
+HELPER_FILE="$SCRIPT_DIR/scripts/helper.sh"
+[[ -f "$HELPER_FILE" ]] || { echo "Helper functions script not found: $HELPER_FILE" >&2; exit 1; }
+# shellcheck disable=SC1090
+source "$HELPER_FILE"
 
 # verify that user has sudo privileges
-require_sudo() {
-	status "Verifying sudo privileges..."
-	if [ "$EUID" -eq 0 ]; then # if user is root
-		SUDO=""
-		SUDO_E=""
-		return 0
-	elif sudo -v; then # if user can run sudo
-		SUDO="sudo"
-		SUDO_E="sudo -E"
-		return 0
-	else  # if user cannot run sudo commands
-		fail "User must have sudo privileges to run this installer"
-	fi
-}
+require_sudo
 
 # enable any needed repositories
 enable_repositories() {
 	status "Enabling necessary package repositories..."
 
-	if [ ! -s /etc/os-release ]; then
+	if [[ ! -s /etc/os-release ]]; then
 		fail "Unable to read /etc/os-release"
 	else
 		. /etc/os-release
@@ -182,7 +174,7 @@ install_ansible() {
 require_sudo
 
 # check if macOS, and install ansible via brew if so
-if [ "$(uname)" == "Darwin" ]; then
+if [[ "$(uname)" == "Darwin" ]]; then
 	# check if ansible is installed
 	which -s ansible
 	if [[ $? != 0 ]] ; then
@@ -232,7 +224,6 @@ else # assume linux
 	# install other dependencies
 	install_tool wget "wget"
 	install_tool curl "curl"
-	install_tool sha256sum "coreutils"
 
 	# install ansible
 	install_ansible
