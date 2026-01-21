@@ -7,12 +7,11 @@ rita-<version>.tar.gz
 │   install_rita.sh
 |   install_zeek.yml
 |   install_pre.yml
-|   install_post.yml
 │
 └───/scripts
 │    │   ansible-installer.sh
 │    │   helper.sh
-│    │   sshprep
+│    │   sshprep.sh
 │    
 └───/files
 │   │   

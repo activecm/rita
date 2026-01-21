@@ -6,15 +6,18 @@
     ],
     "extensions": {
         "recommendations": [
+            "golang.go",
             "qufiwefefwoyn.inline-sql-syntax",
             "wayou.vscode-todo-highlight",
-            "golang.go",
-            "hjson.hjson",
-            "Tanh.hjson-formatter",
+            "github.vscode-github-actions",
             "redhat.vscode-yaml",
+            "shd101wyy.markdown-preview-enhanced",
+            "laktak.hjson",
+            "Tanh.hjson-formatter",
         ]
     },
     "settings": {
+        // === Go  ===
         "go.languageServerExperimentalFeatures": {
             "diagnostics": false
         },
@@ -31,6 +34,8 @@
             "editor.defaultFormatter": "golang.go",
             "editor.formatOnSave": true
         },
+
+        // === JSON ===
         "[json]": {
             "editor.defaultFormatter": "vscode.json-language-features",
             "editor.formatOnSave": true
@@ -39,22 +44,39 @@
             "editor.defaultFormatter": "vscode.json-language-features",
             "editor.formatOnSave": true
         },
+
         "[hjson]": {
             "editor.defaultFormatter": "Tanh.hjson-formatter",
             "editor.formatOnSave": true
         },
+        // settings for Tanh.hjson-formatter extension
         "hjson-formatter.options": {
+            "condense": 0,
             "separator": true,
-            "condense": 100,
             "bracesSameLine": true,
-            "emitRootBraces": true,
-            "quotes": "strings",
+            "emitRootBraces": false,
+            "multiline": "no-tabs",
             "space": 4,
-            "eol": "auto",
+            "eol": "auto"
         },
+
+        // === YAML ===
         "[yaml]": {
             "editor.defaultFormatter": "redhat.vscode-yaml",
             "editor.formatOnSave": true,
+            "editor.tabSize": 2
+        },
+
+        "[github-actions-workflow]": {
+            "editor.defaultFormatter": "redhat.vscode-yaml",
+            "editor.formatOnSave": true,
+            "editor.tabSize": 2,
+        },
+
+        "[dockercompose]": {
+            "editor.defaultFormatter": "redhat.vscode-yaml",
+            "editor.formatOnSave": true,
+            "editor.tabSize": 2,
         }
     }
 }

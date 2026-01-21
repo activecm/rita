@@ -19,7 +19,6 @@
 /installer/stage
 /installer/rita-*.tar.gz
 /installer/rita-*
-/installer/install-rita-zeek-here.sh
 !/installer/*.md
 
 # only commit .env, .env.production, and test.env files
