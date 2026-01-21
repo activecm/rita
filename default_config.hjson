@@ -28,12 +28,16 @@
         // always_included_subnets overrides the never_included_* and internal_subnets section,
         // making sure that any connection records containing addresses from these arrays are kept and not filtered
         // Note: the IP address of a proxy must be included here if the proxy is internal
-        "always_included_subnets": [], // array of CIDRs
-        "always_included_domains": [], // array of FQDNs
+        "always_included_subnets": [
+        ], // array of CIDRs
+        "always_included_domains": [
+        ], // array of FQDNs
 
         // connections involving ranges entered into never_included_subnets are filtered out at import time
-        "never_included_subnets": [], // array of CIDRs
-        "never_included_domains": [], // array of FQDNs
+        "never_included_subnets": [
+        ], // array of CIDRs
+        "never_included_domains": [
+        ], // array of FQDNs
         "filter_external_to_internal": true // ignores any entries where communication is occurring from an external host to an internal host
     },
     "scoring": {
