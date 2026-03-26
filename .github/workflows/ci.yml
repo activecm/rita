@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+    tags-ignore:
+      - "v*"
+  workflow_call:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Build
+        run: make build
+
+  unit-tests:
+    name: Unit Tests
+    runs-on:
+      labels: ubuntu-latest-m
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
+
+      - name: Run unit tests
+        run: go test --cover $(go list ./... | grep -v /integration | grep -v /database | grep -v /cmd | grep -v /viewer) -json 2>&1 | tee unit.out && tparse -all --file=unit.out
+
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: unit-test-output
+          path: unit.out
+
+  integration-tests:
+    name: Integration Tests
+    runs-on:
+      labels: ubuntu-latest-m
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
+
+      - name: Run integration tests
+        shell: 'script -q -e -c "bash {0}"'
+        run: go test ./integration/... -json -timeout 1800s 2>&1 | tee integration.out && tparse -all --file=integration.out
+
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: integration-test-output
+          path: integration.out
+
+  database-tests:
+    name: Database Tests
+    runs-on:
+      labels: ubuntu-latest-m
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
+
+      - name: Run database tests
+        shell: 'script -q -e -c "bash {0}"'
+        run: go test ./database/... -json -timeout 1800s 2>&1 | tee database.out && tparse -all --file=database.out
+
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: database-test-output
+          path: database.out
+
+  cmd-tests:
+    name: Cmd Tests
+    runs-on:
+      labels: ubuntu-latest-m
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
+
+      - name: Run cmd tests
+        shell: 'script -q -e -c "bash {0}"'
+        run: go test ./cmd/... -json -timeout 1800s 2>&1 | tee cmd.out && tparse -all --file=cmd.out
+
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cmd-test-output
+          path: cmd.out
+
+  viewer-tests:
+    name: Viewer Tests
+    runs-on:
+      labels: ubuntu-latest-m
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Install tparse
+        run: go install github.com/mfridman/tparse@latest
+
+      - name: Run viewer tests
+        shell: 'script -q -e -c "bash {0}"'
+        run: go test ./viewer/... -json -timeout 1800s 2>&1 | tee viewer.out && tparse -all --file=viewer.out
+
+      - name: Upload test output on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: viewer-test-output
+          path: viewer.out

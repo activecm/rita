@@ -19,7 +19,7 @@ The framework ingests [Zeek Logs](https://www.zeek.org/) in TSV or JSON format, 
  - **Threat Intel Feed Checking**: Query threat intel feeds to search for suspicious domains and hosts
 
  ## Quick Start
- Please see our recommended [System Requirements](docs/System%20Requirements.md).
+ Please see our recommended [System Requirements](docs/System%20Requirements.md). RITA requires [Docker Engine](https://docs.docker.com/engine/install/) with the Compose plugin.
 
 1. Download the [RITA Installer](https://github.com/activecm/rita/releases) for the desired version.
 
@@ -27,15 +27,9 @@ The framework ingests [Zeek Logs](https://www.zeek.org/) in TSV or JSON format, 
    ```
    tar -xf rita-<version>-installer.tar.gz
    ```
-3. Run the install script. 
+3. Run the install script.
    ```
-   ./rita-<version>-installer/install_rita.sh <hosts to install on>
-   ```
-   To install RITA on the local system, pass `localhost` to the installer.
-   To install RITA on one or more remote systems, pass a comma separated list of IPs or `user@ip` or FQDNs to the installer.
-   For example:
-   ```
-   ./rita-<version>-installer/install_rita.sh "root@4.4.4.4,8.8.8.8,mydomain.com"
+   ./rita-<version>-installer/install_rita.sh
    ```
 
 
@@ -51,15 +45,7 @@ The following operating systems/versions and CPU architectures are supported:
 | Ubuntu          | `22.04`, `24.04` | `amd64`  |
 
 ## Installing Zeek
-If you do not already have Zeek installed, it can be installed from [docker-zeek](https://github.com/activecm/docker-zeek).
-
-```
-sudo wget -O /usr/local/bin/zeek https://raw.githubusercontent.com/activecm/docker-zeek/master/zeek
-
-sudo chmod +x /usr/local/bin/zeek
-
-zeek start
-```
+RITA requires [Zeek](https://www.zeek.org/) to generate network logs. If you do not already have Zeek installed, install [docker-zeek](https://github.com/activecm/docker-zeek/releases) and run `zeek start`.
 
 ## Importing
 Import data into RITA using the `import` command:

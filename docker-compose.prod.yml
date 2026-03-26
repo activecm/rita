@@ -4,7 +4,7 @@ networks:
   rita-network: {}
 services:
   rita:
-    image: ghcr.io/activecm/rita:latest
+    image: ghcr.io/activecm/rita:${RITA_VERSION:-latest}
     build: .
     depends_on:
       clickhouse:
