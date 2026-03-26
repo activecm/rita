@@ -43,9 +43,8 @@
 !/test_data/missing_host/*/*[.log.gz]
 !/test_data/open_sni/*[.log.gz]
 
-
-
-
+deployment/threat_intel_feeds/*
+!deployment/threat_intel_feeds/.gitkeep
 
 
 
