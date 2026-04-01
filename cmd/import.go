@@ -318,12 +318,10 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 // Get the amount of logical cores available without the program interrupting other system processes.
 // At the time of writing the recommended minimal cpu count is 3 so for systems with less let all be available.
 func GetAvailableCores(coresNum int) int {
-	if coresNum > 2 {
-		if coresNum == 3 {
-			coresNum -= 1
-		} else {
-			coresNum -= 2
-		}
+	if coresNum == 3 {
+		coresNum--
+	} else if coresNum > 3 {
+		coresNum -= 2
 	}
 
 	return coresNum
