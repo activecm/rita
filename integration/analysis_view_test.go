@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/modifier"
 	"github.com/activecm/rita/v5/util"
 
@@ -1212,6 +1213,37 @@ func (it *ValidDatasetTestSuite) TestThreatMixtape() {
 	`).Scan(&count)
 	require.NoError(t, err)
 	require.EqualValues(t, 0, count, "all dns entries should have a hash that contains only the fqdn")
+
+	// uconns with no connections that weren't part of a SNI connection
+	verifyHashInMixtape(t, it.db, "0006AF9EDD0596EE5C87E7AAD63DC2FF", false)
+	verifyHashInMixtape(t, it.db, "000DB22CFD645023D2FE454685A067E5", false)
+	verifyHashInMixtape(t, it.db, "00281FB4049C4613CA0F4307F7B96932", false)
+
+	// uconns with connections that weren't part of a SNI connection
+	verifyHashInMixtape(t, it.db, "001569CF7AA5791DE4C5DF3498816D34", true)
+	verifyHashInMixtape(t, it.db, "005BE49BF3FC40ECF0366A79408074B1", true)
+
+}
+
+func verifyHashInMixtape(t *testing.T, db *database.DB, hash string, shouldExist bool) {
+	t.Helper()
+
+	ctx := db.QueryParameters(clickhouse.Parameters{
+		"hash": hash,
+	})
+
+	var count uint64
+	err := db.Conn.QueryRow(ctx, `
+		SELECT count() FROM threat_mixtape
+		WHERE hash = unhex({hash:String})
+	`).Scan(&count)
+	require.NoError(t, err, "querying threat mixtape should not produce an error")
+
+	if shouldExist {
+		require.Positive(t, count, "hash %s should exist in threat mixtape", hash)
+	} else {
+		require.EqualValues(t, 0, count, "hash %s should not exist in threat mixtape", hash)
+	}
 }
 
 func (it *ValidDatasetTestSuite) TestBigOlHistogramTable() {
