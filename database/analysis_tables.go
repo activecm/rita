@@ -240,7 +240,7 @@ func (db *DB) createMIMETypeURIsTable(ctx context.Context) error {
 		-- for each uri, get the extension and join it with the valid mime types, 
 		-- keeping only the rows where the extension does not match one of the valid extensions
 	    ARRAY JOIN dst_mime_types
-		LEFT JOIN valid_mime_types_aggregated v ON dst_mime_types = v.mime_type
+		INNER JOIN valid_mime_types_aggregated v ON dst_mime_types = v.mime_type
 		WHERE uri != '/' AND has(v.extensions, extension) = 0
 		GROUP BY import_hour, hour, hash, uri, path, extension, mime_type
 	`)
