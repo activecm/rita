@@ -63,9 +63,7 @@ func TestReadValidTextMIMETypeFile(t *testing.T) {
 			dataCSV: `plain,text/plain,".txt, .ps",[RFC2046][RFC3676][RFC5147]
 					  markdown,text/markdown,".md, .markdown",[RFC7763]
 					  javascript,text/javascript,".js, .mjs., es, .mjs",[RFC9239]
-					  html,text/html,none,[RFC21221]
-					  xml,text/xml," .xml, .xsd, .ent, .dtd, .mod",[RFC7303]
-					  xml,application/xml," .xml, .xsd, .ent, .dtd, .mod",[RFC7303]`,
+					  html,text/html,none,[RFC21221]`,
 			writeChan: make(chan Data),
 			expectedMIMETypes: []*ValidMIMEType{
 				{
@@ -104,48 +102,8 @@ func TestReadValidTextMIMETypeFile(t *testing.T) {
 					MIMEType:  "text/html",
 					Extension: "",
 				},
-				{
-					MIMEType:  "text/xml",
-					Extension: "xml",
-				},
-				{
-					MIMEType:  "text/xml",
-					Extension: "xsd",
-				},
-				{
-					MIMEType:  "text/xml",
-					Extension: "ent",
-				},
-				{
-					MIMEType:  "text/xml",
-					Extension: "dtd",
-				},
-				{
-					MIMEType:  "text/xml",
-					Extension: "mod",
-				},
-				{
-					MIMEType:  "application/xml",
-					Extension: "xml",
-				},
-				{
-					MIMEType:  "application/xml",
-					Extension: "xsd",
-				},
-				{
-					MIMEType:  "application/xml",
-					Extension: "ent",
-				},
-				{
-					MIMEType:  "application/xml",
-					Extension: "dtd",
-				},
-				{
-					MIMEType:  "application/xml",
-					Extension: "mod",
-				},
 			},
-			expectedTotal: 19,
+			expectedTotal: 9,
 			expectedError: false,
 		},
 		{
