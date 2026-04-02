@@ -27,12 +27,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var (
-	numParsers   = 8 // largest impact
-	numDigesters = 8
-	numWriters   = 12 // 2nd largest impact
-)
-
 // for rolling datasets, limit the logs that are imported to the past 14 (to match the snapshot tables) + 1 (for good luck) days
 const RollingLogDaysToKeep = 15
 
@@ -129,10 +123,13 @@ type ImportResults struct {
 }
 
 func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir string, dbName string, rolling bool, rebuild bool) (ImportResults, error) {
-	// set the number of workers based on the number of CPUs
-	numParsers = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
-	numDigesters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
-	numWriters = int(math.Floor(math.Max(4, float64(runtime.NumCPU())/2)))
+	availableCores := GetAvailableCores(runtime.NumCPU())
+	if availableCores > 2 {
+		runtime.GOMAXPROCS(availableCores)
+	}
+
+	// set the number of workers based on the number of available CPUs
+	numParsers, numDigesters, numWriters := SetWorkerCount(availableCores)
 
 	var importResults ImportResults
 	logger := zlog.GetLogger()
@@ -316,6 +313,26 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 	logger.Info().Str("elapsed_time", fmt.Sprintf("%1.1fs", time.Since(startTime).Seconds())).Msg("🎊✨ Finished Import! ✨🎊")
 
 	return importResults, nil
+}
+
+// Get the amount of logical cores available without the program interrupting other system processes.
+// At the time of writing the recommended minimal cpu count is 3 so for systems with less let all be available.
+func GetAvailableCores(coresNum int) int {
+	if coresNum == 3 {
+		coresNum--
+	} else if coresNum > 3 {
+		coresNum -= 2
+	}
+
+	return coresNum
+}
+
+func SetWorkerCount(availableCores int) (int, int, int) {
+	numParsers := int(math.Floor(math.Max(1, float64(availableCores)/3)))
+	numDigesters := int(math.Floor(math.Max(1, float64(availableCores)/3)))
+	numWriters := int(math.Floor(math.Max(1, float64(availableCores)/3)))
+
+	return numParsers, numDigesters, numWriters
 }
 
 func ValidateLogDirectory(afs afero.Fs, logDir string) error {

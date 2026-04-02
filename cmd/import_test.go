@@ -51,6 +51,65 @@ NON-ROLLING LOGS
   - 2024-05-02
 */
 
+func (c *CmdTestSuite) TestWorkerCount() {
+	type TestCase struct {
+		name                   string
+		cpuCores               int
+		expectedAvailableCores int
+	}
+
+	testCases := []TestCase{
+		{
+			name:                   "System with 64 cpu cores",
+			cpuCores:               64,
+			expectedAvailableCores: 62,
+		},
+		{
+			name:                   "System with 30 cpu cores",
+			cpuCores:               30,
+			expectedAvailableCores: 28,
+		},
+		{
+			name:                   "System with 15 cpu cores",
+			cpuCores:               15,
+			expectedAvailableCores: 13,
+		},
+		{
+			name:                   "System with 3 cpu cores",
+			cpuCores:               3,
+			expectedAvailableCores: 2,
+		},
+		{
+			name:                   "System with 2 cpu cores",
+			cpuCores:               2,
+			expectedAvailableCores: 2,
+		},
+		{
+			name:                   "System with 1 cpu core",
+			cpuCores:               1,
+			expectedAvailableCores: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		c.Run(tc.name, func() {
+			t := c.T()
+
+			availableCores := cmd.GetAvailableCores(tc.cpuCores)
+			numParsers, numDigesters, numWriters := cmd.SetWorkerCount(availableCores)
+			workersSum := numParsers + numDigesters + numWriters
+
+			if tc.cpuCores > 3 {
+				require.LessOrEqual(t, workersSum, availableCores, "number of workers should not be larger than the number of available cores")
+			} else {
+				require.Equal(t, 3, workersSum, "number of workers should be equal to: 3")
+			}
+
+			require.Equal(t, tc.expectedAvailableCores, availableCores, "number of available cores should be equal to: %d", tc.expectedAvailableCores)
+		})
+	}
+}
+
 func (c *CmdTestSuite) TestRunImportCmd() {
 	type importDB struct {
 		name           string
