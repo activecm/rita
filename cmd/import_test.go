@@ -1357,9 +1357,9 @@ func TestWalkFiles(t *testing.T) {
 			// since some of the tests are for files passed in to the import command instead of the root directory, we need to
 			// simulate that accordingly
 			if test.directory != "" {
-				logMap, walkErrors, err = cmd.WalkFiles(afs, test.directory, test.rolling) // TODO: add rolling tests
+				logMap, _, walkErrors, err = cmd.WalkFiles(afs, test.directory, test.rolling) // TODO: add rolling tests
 			} else {
-				logMap, walkErrors, err = cmd.WalkFiles(afs, strings.Join(test.files, " "), test.rolling)
+				logMap, _, walkErrors, err = cmd.WalkFiles(afs, strings.Join(test.files, " "), test.rolling)
 			}
 
 			// check if the error is expected

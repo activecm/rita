@@ -59,8 +59,9 @@ type Importer struct {
 	NumWriters               int
 	ResultCounts             ResultCounts
 	wg                       WaitGroups
+	MTimesMap                map[string]time.Time
 	importStartedCallback    func(util.FixedString) error
-	validateLogFilesCallback func(map[string][]string) (int, error)
+	validateLogFilesCallback func(map[string][]string, map[string]time.Time) (int, error)
 	startWritersCallback     func(int)
 	closeWritersCallback     func()
 	markFileImportedCallback func(util.FixedString, util.FixedString, string) error
@@ -210,14 +211,16 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 	}, nil
 }
 
-func (importer *Importer) Import(afs afero.Fs, files map[string][]string) error {
+func (importer *Importer) Import(afs afero.Fs, files map[string][]string, mtimes map[string]time.Time) error {
 	logger := zlog.GetLogger()
 
 	// record the hourlyImportStart time of this import chunk
 	hourlyImportStart := time.Now()
 
+	importer.MTimesMap = mtimes
+
 	// check if files have already been imported make a map of the remaining files
-	totalFileCount, err := importer.validateLogFilesCallback(files)
+	totalFileCount, err := importer.validateLogFilesCallback(files, mtimes)
 	if err != nil {
 		return err
 	}
@@ -391,7 +394,7 @@ func (importer *Importer) startDigesters(afs afero.Fs) {
 	importer.wg.Digester.Add(importer.NumDigesters)
 	for i := 0; i < importer.NumDigesters; i++ {
 		go func(_ int) {
-			digester(afs, importer.DoneChannels, importer.Paths, importer.ErrChannel, importer.EntryChannels, importer.MetaDBChannel, importer.Database.GetSelectedDB(), importer.ImportID, importer.ProgressLogger)
+			digester(afs, importer.DoneChannels, importer.Paths, importer.ErrChannel, importer.EntryChannels, importer.MetaDBChannel, importer.Database.GetSelectedDB(), importer.ImportID, importer.ProgressLogger, importer.MTimesMap)
 			importer.wg.Digester.Done()
 		}(i)
 	}
@@ -467,7 +470,7 @@ func (importer *Importer) feedAndListenForFileCompletion() {
 }
 
 // digester loops over the paths, checks the file prefix, and sends each path to the parser with its corresponding entryChannel until either paths or done is closed.
-func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error, entryChannels EntryChans, metaDBChan chan<- MetaDBFile, dbName string, importID util.FixedString, progressLogger *log.Logger) {
+func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error, entryChannels EntryChans, metaDBChan chan<- MetaDBFile, dbName string, importID util.FixedString, progressLogger *log.Logger, mtimes map[string]time.Time) {
 	// errc := make(chan error)
 
 	// read entries from err channel, handle specific errors if necessary
@@ -481,27 +484,28 @@ func digester(afs afero.Fs, done DoneChans, paths <-chan string, errc chan error
 	// loop over paths and send to parseFiles with the correct corresponding entryChannels, sending a done signal for each completed file
 	for path := range paths {
 		progressLogger.Println("[-] Parsing: ", path)
+		mtime := mtimes[path]
 		switch {
 		case strings.HasPrefix(filepath.Base(path), c.ConnPrefix):
-			parseFile(afs, path, entryChannels.Conn, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.Conn, errc, metaDBChan, dbName, importID)
 			done.conn <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), c.OpenConnPrefix):
-			parseFile(afs, path, entryChannels.OpenConn, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.OpenConn, errc, metaDBChan, dbName, importID)
 			done.openconn <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), c.DNSPrefix):
-			parseFile(afs, path, entryChannels.DNS, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.DNS, errc, metaDBChan, dbName, importID)
 			done.dns <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), c.HTTPPrefix):
-			parseFile(afs, path, entryChannels.HTTP, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.HTTP, errc, metaDBChan, dbName, importID)
 			done.http <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), c.OpenHTTPPrefix):
-			parseFile(afs, path, entryChannels.OpenHTTP, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.OpenHTTP, errc, metaDBChan, dbName, importID)
 			done.openhttp <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), c.SSLPrefix):
-			parseFile(afs, path, entryChannels.SSL, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.SSL, errc, metaDBChan, dbName, importID)
 			done.ssl <- struct{}{}
 		case strings.HasPrefix(filepath.Base(path), c.OpenSSLPrefix):
-			parseFile(afs, path, entryChannels.OpenSSL, errc, metaDBChan, dbName, importID)
+			parseFile(afs, path, mtime, entryChannels.OpenSSL, errc, metaDBChan, dbName, importID)
 			done.openssl <- struct{}{}
 		}
 		done.filesDone <- struct{}{}

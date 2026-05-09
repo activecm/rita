@@ -80,7 +80,7 @@ func CheckImportFileTracking(t *testing.T, importer *i.Importer) { // uses valid
 	}
 
 	// importing again should fail because all files are imported
-	err = importer.Import(afero.NewOsFs(), importer.FileMap)
+	err = importer.Import(afero.NewOsFs(), importer.FileMap, importer.MTimesMap)
 	require.Error(t, err)
 
 }

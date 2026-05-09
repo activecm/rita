@@ -31,7 +31,7 @@ func TestTruncatedTSV(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		parseFile(afero.NewOsFs(), path, entries, errc, metaDBChan, "test", importID)
+		parseFile(afero.NewOsFs(), path, time.Time{}, entries, errc, metaDBChan, "test", importID)
 		close(errc)
 		close(entries)
 		close(metaDBChan)
@@ -80,7 +80,7 @@ func TestTruncatedHeader(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		parseFile(afero.NewOsFs(), path, entries, errc, metaDBChan, "test", importID)
+		parseFile(afero.NewOsFs(), path, time.Time{}, entries, errc, metaDBChan, "test", importID)
 		close(errc)
 		close(entries)
 		close(metaDBChan)
@@ -127,7 +127,7 @@ func TestTruncatedJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		parseFile(afero.NewOsFs(), path, entries, errc, metaDBChan, "test", importID)
+		parseFile(afero.NewOsFs(), path, time.Time{}, entries, errc, metaDBChan, "test", importID)
 		close(errc)
 		close(entries)
 		close(metaDBChan)
@@ -177,7 +177,7 @@ func TestHasUnknownFieldTSV(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		parseFile(afero.NewOsFs(), path, entries, errc, metaDBChan, "test", importID)
+		parseFile(afero.NewOsFs(), path, time.Time{}, entries, errc, metaDBChan, "test", importID)
 		close(errc)
 		close(entries)
 		close(metaDBChan)
@@ -231,7 +231,7 @@ func TestPlainTextFile(t *testing.T) {
 	require.NoError(t, err)
 
 	go func() {
-		parseFile(afero.NewOsFs(), path, entries, errc, metaDBChan, "test", importID)
+		parseFile(afero.NewOsFs(), path, time.Time{}, entries, errc, metaDBChan, "test", importID)
 		close(errc)
 		close(entries)
 		close(metaDBChan)
