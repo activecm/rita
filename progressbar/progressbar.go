@@ -3,6 +3,7 @@ package progressbar
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/term"
 )
 
 const (
@@ -68,11 +70,16 @@ func NewSpinner(name string, id int) Spinner {
 }
 
 func New(ctx context.Context, bars []*ProgressBar, spinners []Spinner) *tea.Program {
+	opts := []tea.ProgramOption{tea.WithInput(nil)}
+	if !term.IsTerminal(os.Stderr.Fd()) {
+		fmt.Fprintln(os.Stderr, "No terminal detected: progress display disabled, processing continues in the background.")
+		opts = append(opts, tea.WithoutRenderer())
+	}
 	return tea.NewProgram(&ProgressModel{
 		ProgressBars: bars,
 		Spinners:     spinners,
 		ctx:          ctx,
-	}, tea.WithInput(nil))
+	}, opts...)
 }
 
 type tickMsg string
