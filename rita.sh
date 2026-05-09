@@ -66,13 +66,11 @@ parse_flag() {
         # -l ./logs or --logs ./logs
         -l|--logs)
             LOGS="$2"
-            RITA_ARGS+=("--logs=/tmp/zeek_logs");
             shift
             ;;
         # -l=./logs or --logs=./logs
         -l=*|--logs=*)
             LOGS="${1#*=}" # Extract the value after '='
-            RITA_ARGS+=("--logs=/tmp/zeek_logs");
             ;;
         # any -flag= or --flag=
         -*=*|--*=*)
@@ -166,9 +164,10 @@ if [[ "$IS_IMPORT_COMMAND" = true && "$IS_HELP" == false ]]; then
 
     # Volume mount if the directory exists.
     if [ -d "$ABS_PATH" ]; then
-        # Map to the same path inside the container for nicer status/error messages.
-        DOCKER_ARGS+=("--volume" "$ABS_PATH:/tmp/zeek_logs")
-        
+        # Mount the directory at the same path inside the container so that RITA's
+        # file-path-based deduplication works correctly across repeated imports.
+        DOCKER_ARGS+=("--volume" "$ABS_PATH:$ABS_PATH")
+        RITA_ARGS+=("--logs=$ABS_PATH")
 
     # If the argument is a file then mount in its parent directory. This wouldn't be
     # necessary but Zeek logs often have colons in their filenames (e.g. conn.00:00:00-01:00:00.log.gz)
@@ -179,9 +178,10 @@ if [[ "$IS_IMPORT_COMMAND" = true && "$IS_HELP" == false ]]; then
     elif [ -f "$ABS_PATH" ]; then
         # Get the parent directory
         PARENT_PATH=$(dirname "$ABS_PATH")
-        # Map to the same path inside the container for nicer status/error messages.
+        # Mount the parent directory at its real path so deduplication works correctly.
         # Duplicate entries are fine here.
-        DOCKER_ARGS+=("--volume" "$PARENT_PATH:/tmp/zeek_logs")
+        DOCKER_ARGS+=("--volume" "$PARENT_PATH:$PARENT_PATH")
+        RITA_ARGS+=("--logs=$PARENT_PATH")
 
     # If the file didn't exist then exit
     else
