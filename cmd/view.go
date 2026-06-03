@@ -91,9 +91,11 @@ var ViewCommand = &cli.Command{
 			return err
 		}
 
-		// check for updates after running the command
-		if err := CheckForUpdate(cfg); err != nil {
-			return err
+		// check for updates after running the command, skip if using output flag
+		if !cCtx.Bool("stdout") {
+			if err := CheckForUpdate(cfg); err != nil {
+				return err
+			}
 		}
 
 		return nil
