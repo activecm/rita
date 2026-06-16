@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
@@ -103,8 +104,6 @@ var ViewCommand = &cli.Command{
 }
 
 func runViewCmd(cfg *config.Config, dbName string, stdout bool, search string, limit int) error {
-	fmt.Printf("Viewing database: %s\n", dbName)
-
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), dbName, cfg, nil)
 	if err != nil {
@@ -122,6 +121,14 @@ func runViewCmd(cfg *config.Config, dbName string, stdout bool, search string, l
 
 	// if stdout was requested, get CSV output
 	if stdout {
+		outInfo, err := os.Stdout.Stat()
+		if err != nil {
+			return err
+		}
+		// display the message only when printing stdout to the terminal
+		if (outInfo.Mode() & os.ModeCharDevice) == os.ModeCharDevice {
+			fmt.Printf("Viewing database: %s\n", dbName)
+		}
 
 		// get CSV output
 		csvData, err := viewer.GetCSVOutput(db, minTimestamp, util.GetRelativeFirstSeenTimestamp(useCurrentTime, maxTimestamp), search, limit)
