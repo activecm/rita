@@ -56,7 +56,7 @@ const lineErrorLimit = 25
 // parseFile is a generic function that determines if a passed in path belongs to a tsv or json file, parses the file header and scans through each subsequent line,
 // parsing/unmarshaling it into its associated zeektype and sending it on the passed in generic channel. The generic type is based on the path's prefix in the calling
 // function.
-func parseFile[Z zeekRecord](afs afero.Fs, path string, entryChan chan<- Z, errc chan<- error, metaDBChan chan<- MetaDBFile, database string, importID util.FixedString) {
+func parseFile[Z zeekRecord](afs afero.Fs, path string, mtime time.Time, entryChan chan<- Z, errc chan<- error, metaDBChan chan<- MetaDBFile, database string, importID util.FixedString) {
 	logger := zlog.GetLogger()
 
 	// open file for reading
@@ -79,7 +79,7 @@ func parseFile[Z zeekRecord](afs afero.Fs, path string, entryChan chan<- Z, errc
 	}
 	defer file.Close()
 
-	fileHash, err := util.NewFixedStringHash(path)
+	fileHash, err := util.NewFixedStringHash(path, strconv.FormatInt(mtime.Unix(), 10))
 	if err != nil {
 		logger.Err(err).Str("path", path).Msg("could not hash file path")
 		return

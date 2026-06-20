@@ -153,7 +153,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 	}
 
 	// get list of hourly log maps of all days of log files in directory
-	logMap, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
+	logMap, mtimes, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
 
 	// log any errors that occurred during the walk, before returning
 	// this is especially useful when all files in the directory are invalid
@@ -214,7 +214,7 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 			}
 
 			// import the data
-			err = importer.Import(afs, files)
+			err = importer.Import(afs, files, mtimes)
 			if err != nil && !errors.Is(err, i.ErrAllFilesPreviouslyImported) {
 				return importResults, err
 			}
@@ -398,19 +398,20 @@ func ParseFolderDate(folder string) (time.Time, error) {
 // WalkFiles starts a goroutine to walk the directory tree at root and send the
 // path of each regular file on the string channel.  It sends the result of the
 // walk on the error channel.  If done is closed, WalkFiles abandons its work.
-func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []util.WalkError, error) {
+func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, map[string]time.Time, []util.WalkError, error) {
 	// check if root is a valid directory or file
 	err := util.ValidateDirectory(afs, root)
 	if err != nil && !errors.Is(err, util.ErrPathIsNotDir) {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	if err != nil && errors.Is(err, util.ErrPathIsNotDir) {
 		if err := util.ValidateFile(afs, root); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
 	logMap := make(map[time.Time]HourlyZeekLogs)
+	mtimes := make(map[string]time.Time)
 
 	totalFilesFound, hour0FilesFound := 0, 0
 
@@ -458,25 +459,28 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []uti
 		// check if the file entry exists and get the existing entry if it does
 		fileData, exists := fTracker[trimmedFileName]
 
+		mtime := info.ModTime().UTC()
 		switch {
 		// add file if it hasn't been seen before
 		case !exists:
 			fTracker[trimmedFileName] = fileTrack{
-				lastModified: info.ModTime().UTC(),
+				lastModified: mtime,
 				path:         path,
 			}
+			mtimes[path] = mtime
 		// if trimmed version of the file exists in the map and the currently marked file for import
 		// was last modified more recently than this current file, replace it with this file
-		case exists && fileData.lastModified.UTC().Before(info.ModTime().UTC()):
+		case exists && fileData.lastModified.UTC().Before(mtime):
 
 			// warn the user so that this isn't a silent operation
 			walkErrors = append(walkErrors, util.WalkError{Path: fTracker[trimmedFileName].path, Error: ErrSkippedDuplicateLog})
-			// logger.Warn().Str("original_path", fTracker[trimmedFileName].path).Str("replacement_path", path).Msg("encountered file with same name but different extension, potential duplicate log, skipping")
+			delete(mtimes, fTracker[trimmedFileName].path)
 
 			fTracker[trimmedFileName] = fileTrack{
-				lastModified: info.ModTime().UTC(),
+				lastModified: mtime,
 				path:         path,
 			}
+			mtimes[path] = mtime
 		// if the current file is older than the one we have already seen or no other conditions are met, skip it
 		default:
 			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrSkippedDuplicateLog})
@@ -488,7 +492,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []uti
 
 	// return an error if the file walk failed completely
 	if err != nil {
-		return nil, nil, fmt.Errorf("file walk failed: %w", err)
+		return nil, nil, nil, fmt.Errorf("file walk failed: %w", err)
 	}
 
 	// group files into arrays by their log type
@@ -587,7 +591,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []uti
 
 	// return an error if no files were found
 	if totalFilesFound == 0 {
-		return nil, walkErrors, ErrNoValidFilesFound
+		return nil, nil, walkErrors, ErrNoValidFilesFound
 	}
 
 	var days []time.Time
@@ -598,7 +602,7 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []uti
 	// for rolling logs, limit the logs that are included to RollingLogDaysToKeep as long as there was at least one log folder in the past N days
 	importLogs := GatherDailyLogs(logMap, days, rolling)
 
-	return importLogs, walkErrors, err
+	return importLogs, mtimes, walkErrors, err
 }
 
 func GatherDailyLogs(logMap map[time.Time]HourlyZeekLogs, days []time.Time, rolling bool) []HourlyZeekLogs {

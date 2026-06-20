@@ -1357,9 +1357,9 @@ func TestWalkFiles(t *testing.T) {
 			// since some of the tests are for files passed in to the import command instead of the root directory, we need to
 			// simulate that accordingly
 			if test.directory != "" {
-				logMap, walkErrors, err = cmd.WalkFiles(afs, test.directory, test.rolling) // TODO: add rolling tests
+				logMap, _, walkErrors, err = cmd.WalkFiles(afs, test.directory, test.rolling) // TODO: add rolling tests
 			} else {
-				logMap, walkErrors, err = cmd.WalkFiles(afs, strings.Join(test.files, " "), test.rolling)
+				logMap, _, walkErrors, err = cmd.WalkFiles(afs, strings.Join(test.files, " "), test.rolling)
 			}
 
 			// check if the error is expected
@@ -1400,6 +1400,88 @@ func basicRollingHourLogs(fullPath string) cmd.HourlyZeekLogs {
 			constants.OpenSSLPrefix:  []string{fullPath + "open_ssl.log"},
 		},
 	}
+}
+
+// TestWalkFilesMtimes verifies the mtimes map returned by WalkFiles:
+//  1. Contains exactly the paths that were selected for import (not rejected duplicates).
+//  2. Produces different hashes when a file's mtime changes — the property that enables
+//     rolling-log re-import (issue #34).
+//  3. Produces identical hashes across two walks when nothing changes — idempotency.
+func TestWalkFilesMtimes(t *testing.T) {
+	afs := afero.NewMemMapFs()
+	require.NoError(t, afs.MkdirAll("/logs", 0o775))
+
+	connPath := "/logs/conn.log"
+	content := []byte("dummy zeek content")
+	require.NoError(t, afero.WriteFile(afs, connPath, content, 0o664))
+
+	t0 := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, afs.Chtimes(connPath, t0, t0))
+
+	_, mtimes1, _, err := cmd.WalkFiles(afs, "/logs", false)
+	require.NoError(t, err)
+
+	// the selected file must appear in the map
+	mtime1, ok := mtimes1[connPath]
+	require.True(t, ok, "expected conn.log in mtimes map after first walk")
+	require.Equal(t, t0.Unix(), mtime1.Unix(), "mtime should match what was set via Chtimes")
+
+	// compute the dedup hash the same way checkFileHashes / parseFile will
+	hash1, err := util.NewFixedStringHash(connPath, fmt.Sprintf("%d", mtime1.Unix()))
+	require.NoError(t, err)
+
+	// simulate Zeek appending to conn.log — advance the mtime by one second
+	t1 := t0.Add(time.Second)
+	require.NoError(t, afs.Chtimes(connPath, t1, t1))
+
+	_, mtimes2, _, err := cmd.WalkFiles(afs, "/logs", false)
+	require.NoError(t, err)
+
+	mtime2, ok := mtimes2[connPath]
+	require.True(t, ok, "expected conn.log in mtimes map after second walk")
+	require.NotEqual(t, mtime1.Unix(), mtime2.Unix(), "mtime should have changed")
+
+	hash2, err := util.NewFixedStringHash(connPath, fmt.Sprintf("%d", mtime2.Unix()))
+	require.NoError(t, err)
+
+	require.NotEqual(t, hash1.Hex(), hash2.Hex(),
+		"changed mtime must produce a different dedup hash so the file is re-imported")
+
+	// idempotency: a second walk with the same mtime must produce the same hash
+	_, mtimes3, _, err := cmd.WalkFiles(afs, "/logs", false)
+	require.NoError(t, err)
+	hash3, err := util.NewFixedStringHash(connPath, fmt.Sprintf("%d", mtimes3[connPath].Unix()))
+	require.NoError(t, err)
+	require.Equal(t, hash2.Hex(), hash3.Hex(),
+		"unchanged mtime must produce the same hash across repeated walks")
+}
+
+// TestWalkFilesMtimes_DuplicateRejection verifies that when two files share the same
+// logical name (e.g. conn.log and conn.log.gz) only the selected (newer) file's path
+// appears in the mtimes map — the rejected file must not be present.
+func TestWalkFilesMtimes_DuplicateRejection(t *testing.T) {
+	afs := afero.NewMemMapFs()
+	require.NoError(t, afs.MkdirAll("/logs", 0o775))
+
+	olderPath := "/logs/conn.log"
+	newerPath := "/logs/conn.log.gz"
+
+	require.NoError(t, afero.WriteFile(afs, olderPath, []byte("old"), 0o664))
+	tOld := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	require.NoError(t, afs.Chtimes(olderPath, tOld, tOld))
+
+	require.NoError(t, afero.WriteFile(afs, newerPath, []byte("new"), 0o664))
+	tNew := tOld.Add(time.Minute)
+	require.NoError(t, afs.Chtimes(newerPath, tNew, tNew))
+
+	_, mtimes, _, err := cmd.WalkFiles(afs, "/logs", false)
+	require.NoError(t, err)
+
+	_, olderInMap := mtimes[olderPath]
+	require.False(t, olderInMap, "rejected (older) file must not appear in the mtimes map")
+
+	_, newerInMap := mtimes[newerPath]
+	require.True(t, newerInMap, "selected (newer) file must appear in the mtimes map")
 }
 
 func TestParseHourFromFilename(t *testing.T) {

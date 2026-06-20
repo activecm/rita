@@ -318,11 +318,11 @@ func (db *DB) AddImportFinishedRecordToMetaDB(importID util.FixedString, minTS, 
 }
 
 // CheckIfFilesWereAlreadyImported calls checkFileHashes for each log type
-func (db *DB) CheckIfFilesWereAlreadyImported(fileMap map[string][]string) (int, error) {
+func (db *DB) CheckIfFilesWereAlreadyImported(fileMap map[string][]string, mtimes map[string]time.Time) (int, error) {
 	totalFileCount := 0
 	// loop over each log type in the hour's filemap
 	for logType, logList := range fileMap {
-		results, err := db.checkFileHashes(logList)
+		results, err := db.checkFileHashes(logList, mtimes)
 		if err != nil {
 			return totalFileCount, err
 		}
@@ -375,48 +375,62 @@ func ValidateLogCombinations(hourMap map[string][]string) int {
 	return totalHourFilesFound
 }
 
-// checkFileHashes filters fileList to only files that haven't already been imported for this dataset
-func (db *DB) checkFileHashes(fileList []string) ([]string, error) {
-	// format array for clickhouse parameters
-	files := "["
-	for _, file := range fileList {
-		files += fmt.Sprintf("'%s',", file)
+// checkFileHashes filters fileList to only files that haven't already been imported for this dataset.
+// The dedup key is hash(path + mtime_unix), so a file at the same path but with a newer mtime is
+// treated as a new file (handles rolling/appended logs like Zeek's conn.log).
+func (db *DB) checkFileHashes(fileList []string, mtimes map[string]time.Time) ([]string, error) {
+	// compute hex-encoded hash for each file using path + mtime
+	type fileEntry struct {
+		path    string
+		hashHex string
 	}
-	files += "]"
+	entries := make([]fileEntry, 0, len(fileList))
+	for _, file := range fileList {
+		mtime := mtimes[file]
+		h, err := util.NewFixedStringHash(file, strconv.FormatInt(mtime.Unix(), 10))
+		if err != nil {
+			return nil, fmt.Errorf("could not hash file path %q: %w", file, err)
+		}
+		entries = append(entries, fileEntry{path: file, hashHex: h.Hex()})
+	}
+
+	// build the hash array parameter for clickhouse
+	hashes := "["
+	for _, e := range entries {
+		hashes += fmt.Sprintf("'%s',", e.hashHex)
+	}
+	hashes += "]"
 
 	ctx := db.QueryParameters(clickhouse.Parameters{
 		"database": db.selected,
-		"files":    files,
+		"hashes":   hashes,
 	})
 
-	var importedFiles []struct {
-		Path string `ch:"path"`
+	var importedHashes []struct {
+		Hash string `ch:"hash_hex"`
 	}
 
-	// query for files in this fileList that have already been imported
-	err := db.Conn.Select(ctx, &importedFiles, `
-		SELECT path FROM metadatabase.files WHERE database = {database:String} AND path IN {files:Array(String)}
+	// query for hashes that have already been imported
+	err := db.Conn.Select(ctx, &importedHashes, `
+		SELECT hex(hash) AS hash_hex FROM metadatabase.files WHERE database = {database:String} AND hex(hash) IN {hashes:Array(String)}
 	`)
 	if err != nil {
 		return nil, err
 	}
 
-	// convert imported files array into a map
-	importedFilesMap := make(map[string]bool)
-	for _, file := range importedFiles {
-		importedFilesMap[file.Path] = true
+	importedSet := make(map[string]bool, len(importedHashes))
+	for _, row := range importedHashes {
+		importedSet[row.Hash] = true
 	}
 
 	var nonImportedFiles []string
-
-	// build a list of files that haven't been imported
-	for _, file := range fileList {
-		if !importedFilesMap[file] {
-			nonImportedFiles = append(nonImportedFiles, file)
+	for _, e := range entries {
+		if !importedSet[e.hashHex] {
+			nonImportedFiles = append(nonImportedFiles, e.path)
 		}
 	}
 
-	return nonImportedFiles, err
+	return nonImportedFiles, nil
 }
 
 // ClearMetaDBEntriesForDatabase deletes all file and import record entries in the metadatabase for the specified database

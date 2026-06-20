@@ -215,7 +215,8 @@ func TestCheckForUpdate(t *testing.T) {
 			config.Version = test.currentVersion
 
 			// capture stdout
-			output := captureOutput(t, func() {
+			// capture stderr
+			output := captureStderr(t, func() {
 				err := cmd.CheckForUpdate(test.cfg)
 				// check error
 				if test.expectedErr != nil {
@@ -249,6 +250,29 @@ func captureOutput(t *testing.T, f func()) string {
 	// close and restore stdout
 	w.Close()
 	os.Stdout = old
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(r)
+	require.NoError(t, err)
+	return buf.String()
+}
+
+
+// captureStderr captures stderr from a function
+func captureStderr(t *testing.T, f func()) string {
+	t.Helper()
+
+	// capture stderr
+	old := os.Stderr
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stderr = w
+
+	// run the function
+	f()
+
+	// close and restore stderr
+	w.Close()
+	os.Stderr = old
 	var buf bytes.Buffer
 	_, err = buf.ReadFrom(r)
 	require.NoError(t, err)
