@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/util"
@@ -59,7 +60,8 @@ func CheckForUpdate(cfg *config.Config) error {
 			return fmt.Errorf("%w: %w", ErrCheckingForUpdate, err)
 		}
 		if newer {
-			fmt.Printf("\n\t✨ A newer version (%s) of RITA is available! https://github.com/activecm/rita/releases ✨\n\n", latestVersion)
+			// Envía el mensaje a stderr para no contaminar la salida de stdout (e.g., CSV)
+			fmt.Fprintf(os.Stderr, "\n\t✨ A newer version (%s) of RITA is available! https://github.com/activecm/rita/releases ✨\n\n", latestVersion)
 		}
 	}
 	return nil
