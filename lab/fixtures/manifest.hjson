@@ -1,0 +1,29 @@
+{
+  schema_version: "v1"
+  fixture_id: "rita-existing-zeek-fixtures"
+  version: "1"
+  description: "Offline, repository-owned Zeek log fixtures used for RITA-Lab reproducibility. This manifest intentionally does not assert detection-rate or performance values before execution."
+  log_sets: [
+    {
+      path: "test_data/dnscat2-ja3-strobe-agent"
+      purpose: "Existing RITA integration scenario with DNS C2, JA3, and strobe-related evidence."
+    }
+    {
+      path: "test_data/valid_tsv"
+      purpose: "Valid conn, DNS, HTTP, and SSL import coverage."
+    }
+    {
+      path: "test_data/dns_only"
+      purpose: "DNS-specific import and feature-query coverage."
+    }
+  ]
+  metrics: {
+    parse_success_rate: "not_measured"
+    query_latency: "not_measured"
+    aggregation_reduction: "not_measured"
+    false_positive_rate: "not_measured"
+    detection_coverage: "not_measured"
+    alert_latency: "not_measured"
+    allowlist_effect: "not_measured"
+  }
+}

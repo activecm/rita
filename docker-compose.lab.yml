@@ -1,0 +1,68 @@
+# Offline, reproducible RITA-Lab replay. It imports repository-owned Zeek logs;
+# it does not capture a host interface, scan, or send traffic to the Internet.
+name: rita-lab
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:${CLICKHOUSE_VERSION:-24.1.6}
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - lab-clickhouse:/var/lib/clickhouse
+      - ./deployment/config.xml:/etc/clickhouse-server/users.d/custom_config.xml:ro
+      - ./deployment/timezone.xml:/etc/clickhouse-server/config.d/timezone.xml:ro
+    networks: [lab]
+
+  rita-lab:
+    build: .
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    environment:
+      DB_ADDRESS: clickhouse:9000
+      CLICKHOUSE_USERNAME: default
+      CLICKHOUSE_PASSWORD: ""
+      CONFIG_DIR: /deployment
+      LOG_LEVEL: "1"
+      APP_ENV: production
+    volumes:
+      - ./.env:/.env:ro
+      - ./deployment:/deployment:ro
+      - ./lab/fixtures/config/rita-lab.hjson:/rita-lab/rita-lab.hjson:ro
+      - ./lab/fixtures/config/lab-profile.hjson:/rita-lab/lab-profile.hjson:ro
+      - ./test_data/dnscat2-ja3-strobe-agent:/fixtures:ro
+      - lab-reports:/reports
+    command:
+      - sh
+      - -ec
+      - |
+        /rita import --config /rita-lab/rita-lab.hjson --database lab_traffic --logs /fixtures --rebuild
+        /rita lab report --config /rita-lab/rita-lab.hjson --lab-config /rita-lab/lab-profile.hjson --window 30m --formats markdown,csv,html --output-dir /reports --overwrite lab_traffic
+    networks: [lab]
+
+  # Optional profile for a user-supplied, offline PCAP-to-Zeek preprocessing
+  # stage. It deliberately has no host-network attachment or published ports.
+  zeek:
+    image: zeek/zeek:7.0
+    profiles: [pcap]
+    volumes:
+      - ${LAB_PCAP_DIR:?Set LAB_PCAP_DIR to an offline PCAP directory}:/pcap:ro
+      - zeek-logs:/logs
+    command: ["sh", "-ec", "zeek -r /pcap/input.pcap Log::default_logdir=/logs"]
+    networks: [lab]
+
+networks:
+  lab:
+    internal: true
+
+volumes:
+  lab-clickhouse:
+  lab-reports:
+  zeek-logs:
