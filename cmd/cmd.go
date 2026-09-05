@@ -23,6 +23,7 @@ func Commands() []*cli.Command {
 	return []*cli.Command{
 		ImportCommand,
 		ViewCommand,
+		LabCommand,
 		DeleteCommand,
 		ListCommand,
 		ValidateConfigCommand,

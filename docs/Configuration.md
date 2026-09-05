@@ -85,6 +85,12 @@ Inversely, the prevalence modifier also has a score decrease and a decrease thre
 
 The Missing Host Header modifier increases the threat score by `missing_host_count_score_increase` if the connection had no host header set.
 
+### RITA-Lab asset and allowlist configuration
+
+[RITA-Lab](RITALab.md) intentionally reads a separate laboratory HJSON profile for asset tags and report-period allowlist rules. Keep RITA's `filtering.internal_subnets` aligned with the sensor or laboratory source networks: this controls import direction and which records are available to native analysis.
+
+Do not confuse RITA's `filtering.never_included_domains` with a RITA-Lab allowlist. `never_included_domains` drops matching data during import. RITA-Lab allowlist entries retain the alert and evidence, then record a rule, reason, and visible priority reduction in its generated report. Use import-time exclusion only when retaining evidence is not required.
+
 ### Applying Configuration Changes
 After making changes to the configuration file, save the file and re-run RITA to apply the changes:
 

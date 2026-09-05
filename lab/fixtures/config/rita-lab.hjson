@@ -1,0 +1,12 @@
+{
+  // RITA import configuration for repository-owned, offline Zeek log fixtures.
+  update_check_enabled: false
+  filtering: {
+    filter_external_to_internal: false
+    internal_subnets: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fd00::/8"]
+  }
+  threat_intel: {
+    // Keep the lab reproducible and offline. Add a local feed only when needed.
+    online_feeds: []
+  }
+}
