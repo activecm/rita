@@ -3,7 +3,9 @@ package integration_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +13,7 @@ import (
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/internal/testutils"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -134,6 +137,82 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	require.NoError(t, err)
 
 	checkThreatIntel(t, db)
+}
+
+func (d *ThreatIntelSuite) TestThreatIntelFeedFilesClosing() {
+	t := d.T()
+
+	// connect to clickhouse server
+	server, err := database.ConnectToServer(context.Background(), d.cfg)
+	t.Cleanup(func() {
+		require.NoError(t, server.Close())
+	})
+	require.NoError(t, err, "connecting to server should not produce an error")
+
+	require.NoError(t, server.CreateServerDBTables(), "creating the metadatabase should not error")
+
+	const numFeeds = 64
+
+	feedDir := t.TempDir()
+	// make the time for the first round unique from the second round
+	firstRound := time.Now().Add(-2 * time.Hour)
+	makeFakeThreatIntelFeeds(t, feedDir, numFeeds, "192.0.2", firstRound)
+
+	// temporarily override the threat intel config
+	originalDir := d.cfg.Env.ThreatIntelCustomFeedsDirectory
+	originalFeeds := d.cfg.RITA.ThreatIntel.OnlineFeeds
+	d.cfg.Env.ThreatIntelCustomFeedsDirectory = feedDir
+	d.cfg.RITA.ThreatIntel.OnlineFeeds = nil
+	t.Cleanup(func() {
+		d.cfg.Env.ThreatIntelCustomFeedsDirectory = originalDir
+		d.cfg.RITA.ThreatIntel.OnlineFeeds = originalFeeds
+	})
+
+	afs := testutils.NewCountingFS(afero.NewOsFs())
+
+	require.NoError(t, server.SyncThreatIntelFeedsFromConfig(afs, d.cfg), "adding new feeds should not error")
+
+	opened, closed := afs.GetCounts()
+	require.GreaterOrEqual(t, opened, numFeeds, "the sync should have opened every fake feed")
+	require.Equal(t, opened, closed, "adding feeds left %d of %d files still open", opened-closed, opened)
+	require.EqualValues(t, numFeeds, d.threatIntelEntryCount(t, server, "192.0.2.0", "192.0.2.255"),
+		"every new feed's entries should be in the database after the first sync")
+
+	makeFakeThreatIntelFeeds(t, feedDir, numFeeds, "203.0.113", firstRound.Add(time.Hour))
+
+	openedBefore := opened
+	require.NoError(t, server.SyncThreatIntelFeedsFromConfig(afs, d.cfg), "updating modified feeds should not error")
+
+	opened, closed = afs.GetCounts()
+	require.GreaterOrEqual(t, opened-openedBefore, numFeeds, "running the sync again should have reopened every modified feed")
+	require.Equal(t, opened, closed, "updating feeds left %d of %d files still open", opened-closed, opened)
+
+	// if a feed closed before the parser reads it, it doesn't make it into the db
+	// make sure the entries from the second sync are in the metadatabase
+	require.EqualValues(t, numFeeds, d.threatIntelEntryCount(t, server, "203.0.113.0", "203.0.113.255"),
+		"modified feed's entries should be in the database after the second sync")
+}
+
+func (d *ThreatIntelSuite) threatIntelEntryCount(t *testing.T, server *database.ServerConn, from, to string) uint64 {
+	t.Helper()
+
+	var count uint64
+	err := server.Conn.QueryRow(server.GetContext(), `
+		SELECT count() FROM metadatabase.threat_intel
+		WHERE ip BETWEEN toIPv6($1) AND toIPv6($2)
+	`, from, to).Scan(&count)
+	require.NoError(t, err, "counting threat intel entries should not error")
+	return count
+}
+
+func makeFakeThreatIntelFeeds(t *testing.T, dir string, count int, prefix string, modTime time.Time) {
+	t.Helper()
+	for i := 1; i <= count; i++ {
+		path := filepath.Join(dir, fmt.Sprintf("feed_%02d.txt", i))
+		body := fmt.Sprintf("# staged threat intel feed %d\n%s.%d\n", i, prefix, i)
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+		require.NoError(t, os.Chtimes(path, modTime, modTime))
+	}
 }
 
 func checkThreatIntel(t *testing.T, db *database.DB) {

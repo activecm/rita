@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/activecm/rita/v5/util"
 	"github.com/spf13/afero"
@@ -21,6 +22,7 @@ import (
 
 func TestParseOnlineFeeds(t *testing.T) {
 	// TEST IP ONLINE FEED
+	timeout := 3 * time.Second
 	t.Run("IP Online Feed", func(t *testing.T) {
 		// should be able to parse Feodo tracker
 		c := make(chan Data)
@@ -38,7 +40,7 @@ func TestParseOnlineFeeds(t *testing.T) {
 		}()
 
 		// get expected total from last line of feed
-		feed, err := getOnlineFeed(context.Background(), "https://feodotracker.abuse.ch/downloads/ipblocklist.txt")
+		feed, err := getOnlineFeed(context.Background(), "https://feodotracker.abuse.ch/downloads/ipblocklist.txt", timeout)
 		require.NoError(t, err, "getting online feed should not error")
 		reader := bufio.NewReader(feed)
 		for {
@@ -66,7 +68,7 @@ func TestParseOnlineFeeds(t *testing.T) {
 
 		// read feed again
 		url := "https://feodotracker.abuse.ch/downloads/ipblocklist.txt"
-		feed, err = getOnlineFeed(context.Background(), url)
+		feed, err = getOnlineFeed(context.Background(), url, timeout)
 		require.NoError(t, err, "getting online feed should not produce an error")
 
 		// get hash
@@ -105,7 +107,7 @@ func TestParseOnlineFeeds(t *testing.T) {
 
 		// get feed
 		url := "https://publicsuffix.org/list/public_suffix_list.dat"
-		feed, err := getOnlineFeed(context.Background(), url)
+		feed, err := getOnlineFeed(context.Background(), url, timeout)
 		require.NoError(t, err, "getting online feed should not error")
 
 		// get hash
@@ -143,13 +145,13 @@ func TestParseOnlineFeeds(t *testing.T) {
 
 		// attempt to get feed from non existent domain
 		url := "http://nonexistent.domain.abc12345/"
-		feed, err := getOnlineFeed(context.Background(), url)
+		feed, err := getOnlineFeed(context.Background(), url, timeout)
 		require.Error(t, err, "getting online feed should produce an error")
 		require.Nil(t, feed, "feed should be nil")
 
 		// attempt to get feed from existing domain but non existent resource
 		url = "http://example.com/nonexistentresource.txt"
-		feed, err = getOnlineFeed(context.Background(), url)
+		feed, err = getOnlineFeed(context.Background(), url, timeout)
 		require.Error(t, err, "getting online feed should produce an error")
 		require.Nil(t, feed, "feed should be nil")
 
@@ -164,6 +166,7 @@ func TestParseOnlineFeeds(t *testing.T) {
 
 func TestGetOnlineFeed(t *testing.T) {
 	ctx := context.Background()
+	timeout := 200 * time.Millisecond
 
 	type testCase struct {
 		name      string
@@ -214,7 +217,7 @@ func TestGetOnlineFeed(t *testing.T) {
 			}
 
 			// get online feed
-			body, err := getOnlineFeed(ctx, url)
+			body, err := getOnlineFeed(ctx, url, timeout)
 
 			// validate error case
 			if len(tc.expectErr) > 0 {
@@ -235,6 +238,65 @@ func TestGetOnlineFeed(t *testing.T) {
 			require.NotEmpty(t, data, "successful response should contain data")
 
 			body.Close()
+		})
+	}
+}
+
+func TestOnlineFeedTimeout(t *testing.T) {
+	// short timeout so the test runs quickly
+	timeout := 200 * time.Millisecond
+
+	// if getOnlineFeed ignores its timeout, this deadline stops the
+	// request so the test fails instead of hanging forever
+	const callerDeadline = 10 * time.Second
+
+	tests := []struct {
+		name    string
+		handler http.HandlerFunc
+		// true if the server sends headers before it hangs, so the timeout happens while reading the body
+		stallsInBody bool
+	}{
+		{
+			name: "Server Never Responds",
+			// hang without sending anything
+			handler: func(_ http.ResponseWriter, r *http.Request) {
+				<-r.Context().Done()
+			},
+		},
+		{
+			name: "Server Stops Partway Through The Feed",
+			// send the headers and one entry, then hang
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				_, _ = fmt.Fprintln(w, "192.0.2.1")
+				if flusher, ok := w.(http.Flusher); ok {
+					flusher.Flush()
+				}
+				<-r.Context().Done()
+			},
+			stallsInBody: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			srv := httptest.NewServer(tc.handler)
+			t.Cleanup(srv.Close)
+
+			ctx, cancel := context.WithTimeout(context.Background(), callerDeadline)
+			defer cancel()
+			start := time.Now()
+
+			body, err := getOnlineFeed(ctx, srv.URL, timeout)
+			if tc.stallsInBody {
+				require.NoError(t, err, "the headers should arrive before the server stops")
+				defer body.Close()
+				_, err = io.ReadAll(body)
+			}
+
+			require.Error(t, err, "the download should fail once the server stops sending")
+			// timing out well before the safety net shows the timeout did its job
+			require.Less(t, time.Since(start), callerDeadline/2, "getOnlineFeed should time out on its own before the context deadline")
 		})
 	}
 }
