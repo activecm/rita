@@ -8,6 +8,7 @@ import (
 	"github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer"
+	"github.com/activecm/rita/v5/internal/testutils"
 	"github.com/activecm/rita/v5/util"
 
 	iofs "io/fs"
@@ -1633,4 +1634,26 @@ func TestParseFolderDate(t *testing.T) {
 			require.Equal(t, test.expectedTime, result, "the result should match the expected value")
 		})
 	}
+}
+
+func TestWalkFilesClosing(t *testing.T) {
+	const numLogFiles = 64
+
+	// make dummy log files
+	logDir := filepath.Join(t.TempDir(), "2024-05-01")
+	require.NoError(t, os.MkdirAll(logDir, 0o750))
+	for i := range numLogFiles {
+		name := fmt.Sprintf("conn.%02d:00:00-%02d:00:00.%d.log", i%24, (i%24)+1, i)
+		require.NoError(t, os.WriteFile(filepath.Join(logDir, name), []byte("#separator \\x09\n"), 0o600))
+	}
+
+	// create a counting fs that wraps the afero fs so we can count open/close calls
+	afs := testutils.NewCountingFS(afero.NewOsFs())
+
+	_, _, err := cmd.WalkFiles(afs, filepath.Dir(logDir), false)
+	require.NoError(t, err)
+
+	opened, closed := afs.GetCounts()
+	require.GreaterOrEqual(t, opened, numLogFiles, "the walk should have opened every log file")
+	require.Equal(t, opened, closed, "WalkFiles left %d of %d opened files unclosed", opened-closed, opened)
 }
