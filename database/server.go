@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/activecm/rita/v5/config"
@@ -16,10 +17,12 @@ import (
 )
 
 type ServerConn struct {
-	Conn   driver.Conn
-	addr   string
-	ctx    context.Context
-	cancel context.CancelFunc
+	Conn      driver.Conn
+	addr      string
+	ctx       context.Context
+	cancel    context.CancelFunc
+	closeOnce sync.Once
+	closeErr  error
 }
 
 var ErrNoMetaDBImportRecordForDatabase = errors.New("no import record found for database")
@@ -31,7 +34,7 @@ var errRollingStatusFailure = errors.New("failed to detect rolling status of giv
 var errRollingFlagMissing = errors.New("cannot import non-rolling data to a rolling database")
 
 // SetUpNewImport creates the database requested for this import and returns a new DB struct for connection to said database
-func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag bool, rebuildFlag bool) (*DB, error) {
+func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag bool, rebuildFlag bool) (_ *DB, err error) {
 	logger := zlog.GetLogger()
 
 	// validate parameters
@@ -50,6 +53,13 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 	if err != nil {
 		return nil, err
 	}
+	// the server connection is only used to set up the import (the returned DB is separate),
+	// so close the server pool before returning
+	defer func() {
+		if err := server.Close(); err != nil {
+			logger.Error().Err(err).Msg("failed to close server connection after pre-import setup")
+		}
+	}()
 
 	// set up metadatabase if it does not exist yet
 	err = server.CreateServerDBTables()
@@ -82,6 +92,15 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 	if err != nil {
 		return nil, err
 	}
+
+	// if any errors occur after opening the database, close it before returning
+	defer func() {
+		if err != nil {
+			if closeErr := db.Close(); closeErr != nil {
+				logger.Error().Err(closeErr).Str("database", dbName).Msg("failed to close sensor database pool after setup error")
+			}
+		}
+	}()
 
 	// reset temporary tables
 	err = db.ResetTemporaryTables()
@@ -145,7 +164,7 @@ func (server *ServerConn) createHistoricalFirstSeenTable() error {
 }
 
 // createSensorDatabase creates a database for the specified sensor and returns a connection to it
-func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string, rolling bool) (*DB, error) {
+func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string, rolling bool) (_ *DB, err error) {
 	logger := zlog.GetLogger()
 
 	// create a database named after the specified sensor
@@ -153,7 +172,7 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 		"database": dbName,
 	}))
 
-	err := server.Conn.Exec(ctx, "CREATE DATABASE IF NOT EXISTS {database:Identifier}")
+	err = server.Conn.Exec(ctx, "CREATE DATABASE IF NOT EXISTS {database:Identifier}")
 	if err != nil {
 		logger.Err(err).Str("database", dbName).
 			Str("database connection", cfg.Env.DBConnection).
@@ -169,6 +188,15 @@ func (server *ServerConn) createSensorDatabase(cfg *config.Config, dbName string
 			Msg("failed to connect to sensor database")
 		return nil, err
 	}
+
+	// if any errors occur after opening the database, close it before returning
+	defer func() {
+		if err != nil {
+			if closeErr := db.Close(); closeErr != nil {
+				logger.Error().Err(closeErr).Str("database", dbName).Msg("failed to close sensor database pool after setup error")
+			}
+		}
+	}()
 
 	// set rolling flag
 	db.Rolling = rolling
@@ -489,4 +517,22 @@ func ConnectToServer(ctx context.Context, cfg *config.Config) (*ServerConn, erro
 		addr: cfg.Env.DBConnection,
 		ctx:  ctx,
 	}, nil
+}
+
+// Close closes the server's ClickHouse connection pool and cancels the context.
+// Safe to call more than once
+func (server *ServerConn) Close() error {
+	if server == nil {
+		return nil
+	}
+	// only call cancel and close once
+	server.closeOnce.Do(func() {
+		if server.cancel != nil {
+			server.cancel()
+		}
+		if server.Conn != nil {
+			server.closeErr = server.Conn.Close()
+		}
+	})
+	return server.closeErr
 }

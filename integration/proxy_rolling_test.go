@@ -51,6 +51,12 @@ func TestProxyRolling(t *testing.T) {
 	suite.Run(t, proxyRollingSuite)
 }
 
+func (it *ProxyRollingTestSuite) TeardownSuite() {
+	it.T().Cleanup(func() {
+		require.NoError(it.T(), it.db.Close())
+	})
+}
+
 func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	t := it.T()
 

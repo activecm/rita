@@ -172,6 +172,9 @@ func (d *TTLTestSuite) TestHistoricalFirstSeen() {
 	require.NoError(t, err)
 
 	db, err := database.ConnectToDB(context.Background(), "metadatabase", d.cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	optimizeMetaDBTables(t, db, d.changeTime, 90*24*time.Hour, "historical_first_seen")

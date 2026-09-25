@@ -84,6 +84,12 @@ func TestMissingHost(t *testing.T) {
 	suite.Run(t, missingHostSuite)
 }
 
+func (it *MissingHostSuite) TeardownSuite() {
+	it.T().Cleanup(func() {
+		require.NoError(it.T(), it.db.Close())
+	})
+}
+
 // TestThreat verifies the results of the important connection pair in this dataset
 func (it *MissingHostSuite) TestThreat() {
 	t := it.T()
