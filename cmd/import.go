@@ -152,6 +152,13 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 		return importResults, err
 	}
 
+	// close the database connection pool when the import finishes
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error().Err(err).Str("dataset", dbName).Str("directory", logDir).Msg("failed to close database connection pool after import")
+		}
+	}()
+
 	// get list of hourly log maps of all days of log files in directory
 	logMap, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
 

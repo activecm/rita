@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/activecm/rita/v5/config"
@@ -28,11 +29,31 @@ type DB struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	ImportStartedAt time.Time
+	closeOnce       sync.Once
+	closeErr        error
 }
 
 // GetSelectedDB returns the name of the target database of db connection
 func (db *DB) GetSelectedDB() string {
 	return db.selected
+}
+
+// Close closes the db's ClickHouse connection pool and cancels the context.
+// Safe to call more than once
+func (db *DB) Close() error {
+	if db == nil {
+		return nil
+	}
+	// only call cancel and close once
+	db.closeOnce.Do(func() {
+		if db.cancel != nil {
+			db.cancel()
+		}
+		if db.Conn != nil {
+			db.closeErr = db.Conn.Close()
+		}
+	})
+	return db.closeErr
 }
 
 // QueryParameters generates ClickHouse query parameters by creating a context with the specified parameters in it
