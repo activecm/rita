@@ -218,6 +218,9 @@ func (db *DB) createMIMETypeURIsTable(ctx context.Context) error {
 	err = db.Conn.Exec(ctx, `--sql
 		CREATE MATERIALIZED VIEW IF NOT EXISTS {database:Identifier}.mime_type_uris_mv
 		TO {database:Identifier}.mime_type_uris AS
+		WITH valid_mime_types_aggregated AS (
+			SELECT mime_type, groupArray(extension) AS extensions FROM metadatabase.valid_mime_types GROUP BY mime_type
+		)
 		SELECT
 			toStartOfHour(import_time) as import_hour,
 			toStartOfHour(ts) as hour,
@@ -235,10 +238,10 @@ func (db *DB) createMIMETypeURIsTable(ctx context.Context) error {
 			countState() AS mismatch_count
 		FROM {database:Identifier}.http h
 		-- for each uri, get the extension and join it with the valid mime types, 
-		-- keeping only the rows where the extension does not match the valid extension
+		-- keeping only the rows where the extension does not match one of the valid extensions
 	    ARRAY JOIN dst_mime_types
-		LEFT SEMI JOIN metadatabase.valid_mime_types v ON dst_mime_types = v.mime_type
-		WHERE uri != '/' AND extension != v.extension
+		INNER JOIN valid_mime_types_aggregated v ON dst_mime_types = v.mime_type
+		WHERE uri != '/' AND has(v.extensions, extension) = 0
 		GROUP BY import_hour, hour, hash, uri, path, extension, mime_type
 	`)
 
