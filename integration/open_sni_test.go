@@ -84,6 +84,7 @@ func (it *OpenSNITestSuite) TestThreats() {
 	ctx := it.db.QueryParameters(params)
 	rows, err := it.db.Conn.Query(ctx, query)
 	require.NoError(t, err)
+	defer rows.Close()
 
 	i := 0
 	for rows.Next() {
@@ -114,7 +115,7 @@ func (it *OpenSNITestSuite) TestThreats() {
 		require.InDelta(t, 0, res.FirstSeenScore, 0.001, "first seen score should equal 0 for a non-rolling dataset")
 		i++
 	}
-	rows.Close()
+	require.NoError(t, rows.Err())
 
 	require.EqualValues(t, len(expectedResults), i, "there should be an equal number of expected results")
 }
