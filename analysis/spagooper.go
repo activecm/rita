@@ -333,6 +333,7 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 		// return error and cancel all uconn analysis
 		return fmt.Errorf("could not retrieve unique SNI connections for analysis: %w", err)
 	}
+	defer rows.Close()
 	logger.Debug().Msg("successfully retrieved SNI connections")
 
 	i := uint64(0)
@@ -342,7 +343,6 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling SNI uconns query for analysis")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var res AnalysisResult
@@ -358,7 +358,9 @@ func (analyzer *Analyzer) ScoopSNIConns(ctx context.Context, bars *tea.Program) 
 			i++
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("could not read unique SNI connections for analysis: %w", err)
+	}
 	bars.Send(progressbar.ProgressMsg{ID: 1, Percent: 1})
 	return nil
 }
@@ -553,6 +555,7 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 		// return error and cancel all uconn analysis
 		return fmt.Errorf("could not retrieve unique IP connections for analysis: %w", err)
 	}
+	defer rows.Close()
 	logger.Debug().Msg("successsfully retrieved IP connections")
 	// loop over the rows
 	for rows.Next() {
@@ -560,7 +563,6 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling IP uconns query for analysis")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var res AnalysisResult
@@ -573,7 +575,9 @@ func (analyzer *Analyzer) ScoopIPConns(ctx context.Context, bars *tea.Program) e
 			analyzer.UconnChan <- res
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("could not read IP connections for analysis: %w", err)
+	}
 	return nil
 }
 
@@ -728,6 +732,7 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 		// return error and cancel all uconn analysis
 		return fmt.Errorf("could not retrieve unique exploded domains for analysis: %w", err)
 	}
+	defer rows.Close()
 	logger.Debug().Msg("successfully retrieved exploded dns")
 	// loop over the rows
 	for rows.Next() {
@@ -735,7 +740,6 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling exploded dns query for analysis")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var res AnalysisResult
@@ -747,6 +751,8 @@ func (analyzer *Analyzer) ScoopDNS(ctx context.Context, bars *tea.Program) error
 			analyzer.UconnChan <- res
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("could not read exploded dns for analysis: %w", err)
+	}
 	return nil
 }

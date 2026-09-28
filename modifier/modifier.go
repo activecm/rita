@@ -139,13 +139,13 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		select {
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling rare signature modifier query")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var res analysis.ThreatMixtape
@@ -169,7 +169,9 @@ func (modifier *Modifier) detectRareSignature(ctx context.Context) error {
 			modifier.writer.WriteChannel <- &res
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("could not read entries for rare signature modifier detection: %w", err)
+	}
 
 	return nil
 }
@@ -198,13 +200,13 @@ func (modifier *Modifier) detectMIMETypeMismatch(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		select {
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling MIME type/URI mismatch modifier query")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var res analysis.ThreatMixtape
@@ -228,7 +230,9 @@ func (modifier *Modifier) detectMIMETypeMismatch(ctx context.Context) error {
 			modifier.writer.WriteChannel <- &res
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("could not read entries for MIME type/URI mismatch modifier detection: %w", err)
+	}
 
 	return nil
 }

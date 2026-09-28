@@ -184,6 +184,7 @@ func GetResults(db *database.DB, filter *Filter, currentPage, pageSize int, minT
 	if err != nil {
 		return nil, false, err
 	}
+	defer rows.Close()
 
 	var items []list.Item
 	for rows.Next() {
@@ -194,7 +195,9 @@ func GetResults(db *database.DB, filter *Filter, currentPage, pageSize int, minT
 		items = append(items, list.Item(&res))
 	}
 
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("could not read mixtape results for viewer: %w", err)
+	}
 
 	return items, appliedFilter, nil
 }

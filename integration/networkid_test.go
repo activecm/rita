@@ -100,6 +100,7 @@ func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 		GROUP BY src_nuid
 	`)
 	require.NoError(t, err, "retrieving the unique src IPs for each src nuid should not error")
+	defer rows.Close()
 
 	i := 0
 	for rows.Next() {
@@ -110,7 +111,7 @@ func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 		require.ElementsMatch(t, srcIPs, expectedSrcNUIDs[srcNUID])
 		i++
 	}
-	rows.Close()
+	require.NoError(t, rows.Err())
 	require.EqualValues(t, len(expectedSrcNUIDs), i, "there should be %d unique src_nuids", len(expectedSrcNUIDs))
 
 	// verify that all expected destination nuids exist and have the right destination IPs
@@ -125,6 +126,7 @@ func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 		GROUP BY dst_nuid
 	`)
 	require.NoError(t, err)
+	defer rows.Close()
 	i = 0
 	hadExternalID := false
 	for rows.Next() {
@@ -140,7 +142,7 @@ func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 		}
 		i++
 	}
-	rows.Close()
+	require.NoError(t, rows.Err())
 	require.EqualValues(t, 2, i, "there should be %d unique dst_nuids", 2)
 	require.True(t, hadExternalID, "external network ID should have appeared in results")
 
