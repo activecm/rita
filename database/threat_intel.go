@@ -102,6 +102,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	// create a rate limiter to control the rate of writing to the database
 	limiter := rate.NewLimiter(5, 5)
@@ -186,6 +187,9 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			return err
 		}
 
+	}
+	if err := rows.Err(); err != nil {
+		return err
 	}
 
 	// iterate over each feed in the config that was not in the database

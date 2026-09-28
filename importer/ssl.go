@@ -220,6 +220,7 @@ func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Prog
 	if err != nil {
 		log.Panicln(err)
 	}
+	defer rows.Close()
 
 	i := 0
 	for rows.Next() {
@@ -227,7 +228,6 @@ func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Prog
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling SSL connection linking")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var entry SSLEntry
@@ -251,7 +251,9 @@ func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Prog
 			sslWriter.WriteChannel <- &entry
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
 	progress.Send(progressbar.ProgressMsg{ID: barID, Percent: 1})
 
 	return nil
