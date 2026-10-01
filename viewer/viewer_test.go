@@ -70,6 +70,12 @@ func (s *ViewerTestSuite) SetupSuite() {
 	s.db = db
 }
 
+func (s *ViewerTestSuite) TeardownSuite() {
+	s.T().Cleanup(func() {
+		require.NoError(s.T(), s.db.Close())
+	})
+}
+
 // SetupClickHouse creates a ClickHouse container using the test.docker-compose.yml and handles taking it down when complete
 func (s *ViewerTestSuite) SetupClickHouse(t *testing.T) {
 	t.Helper()

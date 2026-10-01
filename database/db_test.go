@@ -26,6 +26,9 @@ func (d *DatabaseTestSuite) TestConnectToDB() {
 		require.NoError(t, err, "importing data should not produce an error")
 
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to createddatabase should not produce an error")
 		require.NotNil(t, db)
 	})
@@ -34,6 +37,9 @@ func (d *DatabaseTestSuite) TestConnectToDB() {
 	d.Run("Connect to Non-Existent Database", func() {
 		t := d.T()
 		db, err := database.ConnectToDB(context.Background(), "nonExistentDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.Error(t, err, "connecting to a non-existent database should produce an error")
 		require.Nil(t, db)
 	})
@@ -45,6 +51,9 @@ func (d *DatabaseTestSuite) TestConnectToDB() {
 		invalidCfg.Env.DBConnection = "invalid connection string"
 
 		db, err := database.ConnectToDB(context.Background(), "testDB", &invalidCfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.Error(t, err, "connecting with invalid configuration should produce an error")
 		require.Nil(t, db)
 	})
@@ -57,6 +66,9 @@ func (d *DatabaseTestSuite) TestConnectToDB() {
 
 		// attempt to connect with a cancelled context
 		db, err := database.ConnectToDB(ctx, "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.Error(t, err, "connecting with a cancelled context should produce an error")
 		require.Nil(t, db)
 	})
@@ -71,6 +83,9 @@ func (d *DatabaseTestSuite) TestMinMaxTimestamps() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		// get the min and max timestamps from a test function that queries the conn, openconn, and dns tables
@@ -115,6 +130,9 @@ func (d *DatabaseTestSuite) TestMinMaxTimestamps() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		// get the min and max timestamps from a test function that queries the conn, openconn, and dns tables
@@ -212,6 +230,9 @@ func (d *DatabaseTestSuite) TestMinMaxTimestamps() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		// get the min and max timestamps from a test function that queries the conn, openconn, and dns tables
@@ -309,6 +330,9 @@ func (d *DatabaseTestSuite) TestMinMaxTimestamps() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		// get the min and max timestamps from a test function that queries the conn, openconn, and dns tables
@@ -403,6 +427,9 @@ func (d *DatabaseTestSuite) TestMinMaxTimestamps() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		// get the min and max timestamps from a test function that queries the conn, openconn, and dns tables
@@ -503,6 +530,9 @@ func (d *DatabaseTestSuite) TestGetNetworkSize() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		var result struct {
@@ -586,6 +616,9 @@ func (d *DatabaseTestSuite) TestGetNetworkSize() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		var result struct {
@@ -625,6 +658,9 @@ func (d *DatabaseTestSuite) TestGetNetworkSize() {
 
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), "testDBzzzz", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to database should not produce an error")
 
 		var result struct {
@@ -659,5 +695,4 @@ func (d *DatabaseTestSuite) TestGetNetworkSize() {
 		require.Equal(t, uint64(12), networkSize, "network size for test should match expected value")
 
 	})
-
 }

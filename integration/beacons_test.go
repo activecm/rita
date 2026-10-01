@@ -217,6 +217,9 @@ func TestProxyBeacons(t *testing.T) {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "test_proxy_beacons", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// check the total count for each beacon type

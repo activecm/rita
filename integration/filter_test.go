@@ -84,6 +84,9 @@ func (it *FilterTestSuite) TestNeverIncludeSubnets() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "never_include_subnet", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	var count uint64
@@ -177,6 +180,9 @@ func (it *FilterTestSuite) TestNeverIncludeDomains() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "never_include_domain", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	var count uint64
@@ -285,6 +291,9 @@ func (it *FilterTestSuite) TestAlwaysIncludeSubnets() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "always_include_subnet", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	var count uint64
@@ -385,6 +394,9 @@ func (it *FilterTestSuite) TestAlwaysIncludeDomains() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "always_include_domain", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	var count uint64
@@ -496,6 +508,9 @@ func (it *FilterTestSuite) TestFilterExternalToInternal() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "filter_ext_to_int", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// 	// there are ICMP connections that are only on connections that are external to internal

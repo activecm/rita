@@ -190,6 +190,10 @@ func (d *TTLTestSuite) TestTableTTLs() {
 	gT := d.T()
 	// connect to the database
 	metaDB, err := database.ConnectToDB(context.Background(), "metadatabase", d.cfg, nil)
+	gT.Cleanup(func() {
+		require.NoError(gT, metaDB.Close())
+	})
+
 	require.NoError(gT, err, "connecting to database should not produce an error")
 
 	// verify that time is equal to now (unchanged)
@@ -207,6 +211,9 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		fmt.Println("Triggering table merges...")
 		optimizeTables(t, db)
 		fmt.Println("Done merging.")
@@ -242,6 +249,9 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		verifyTimeChange(t, db, 26*time.Hour, 10)
 
 		fmt.Println("Triggering table merges...")
@@ -276,6 +286,9 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		fmt.Println("Triggering table merges...")
 		optimizeTables(t, db)
 		fmt.Println("Done merging.")
@@ -305,6 +318,9 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		for i := range test.imports {
 			t.Run(fmt.Sprintf("post +6 months check %d", i), func(t *testing.T) {
 				verifyTables(t, db, test.imports[i].importStartTime, true, true, true, false)
@@ -330,6 +346,9 @@ func (d *TTLTestSuite) TestTableTTLs() {
 		// connect to the database
 		db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
 		require.NoError(gT, err, "connecting to database should not produce an error")
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		for i := range test.imports {
 			t.Run(fmt.Sprintf("post +1 year check %d", i), func(t *testing.T) {
 				verifyMetaDBCountsByID(t, db, test.imports[i].importStartTime, []bool{true, true})
