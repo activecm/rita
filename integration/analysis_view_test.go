@@ -901,19 +901,34 @@ func (it *ValidDatasetTestSuite) TestMimeTypesURIsTable() {
 				},
 			},
 		},
-		{ // example: /api/?callback...
+		// the mismatch check must correctly handle multiple valid extensions for a given mime type.
+		// the test dataset doesn't have any cases where a connection's uris use multiple valid extensions for a given mime type,
+		// but it does have two different connections that have differing valid extensions for the same mime type (html and htm).
+		{ // uri: /js/6v/biz/common/store-proxy/store-proxy2.html
+			name:                 "Valid Extension",
+			src:                  "10.55.100.110",
+			fqdn:                 "is.alicdn.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
+		},
+		{ // uri: /cfbc.htm
+			name:                 "Second Valid Extension for Same Mime Type",
+			src:                  "10.55.100.103",
+			fqdn:                 "ul1.dvtps.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
+		},
+		{ // uri: /api/?callback...
 			name:                 "No Extensions - API Calls",
 			src:                  "10.55.100.104",
 			fqdn:                 "r.skimresources.com",
 			mimeTypesURIInfoList: []mimeTypesURIInfo{},
 		},
-		{ // example: /user_menubar
+		{ // uri: /user_menubar
 			name:                 "No Extensions - Page Elements",
 			src:                  "10.55.100.108",
 			fqdn:                 "www.businessinsider.com",
 			mimeTypesURIInfoList: []mimeTypesURIInfo{},
 		},
-		{ // example: /Top/Business/
+		{ // uri: /Top/Business/
 			name:                 "No Extensions - Trailing Slash Pages",
 			src:                  "10.55.100.106",
 			fqdn:                 "www.alexa.com",
