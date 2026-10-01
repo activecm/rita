@@ -449,10 +449,12 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []uti
 		}
 
 		// check if the file is readable
-		if _, err := afs.Open(path); err != nil {
+		file, err := afs.Open(path)
+		if err != nil {
 			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrInsufficientReadPermissions})
 			return nil //nolint:nilerr // log the issue and continue walking
 		}
+		file.Close()
 
 		// trim the path name to remove the file extensions, only to leave .log
 		trimmedFileName := strings.TrimSuffix(path, ".gz")
