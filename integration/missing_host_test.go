@@ -142,6 +142,7 @@ func (it *MissingHostSuite) TestThreat() {
 	ctx = it.db.QueryParameters(params)
 	rows, err := it.db.Conn.Query(ctx, query)
 	require.NoError(t, err, "getting the mixtape results shouldn't error")
+	defer rows.Close()
 
 	i := 0
 	for rows.Next() {
@@ -167,7 +168,7 @@ func (it *MissingHostSuite) TestThreat() {
 		require.ElementsMatch(t, expected.portProtoService, res.PortProtoService, "port:proto:service arrays should match")
 		i++
 	}
-	rows.Close()
+	require.NoError(t, rows.Err())
 	require.EqualValues(t, 1, i, "there should only be one row for an aggregated result in the mixtape: 73.54.23.243 -> 64.225.56.201")
 
 	// verify modifier for the threat
@@ -179,6 +180,7 @@ func (it *MissingHostSuite) TestThreat() {
 		AND import_id = (SELECT argMax(import_id, analyzed_at) FROM threat_mixtape)
 	`)
 	require.NoError(t, err, "retrieving the modifiers for this threat should not error")
+	defer rows.Close()
 
 	i = 0
 	for rows.Next() {
@@ -192,6 +194,7 @@ func (it *MissingHostSuite) TestThreat() {
 		require.InDelta(t, it.cfg.Modifiers.RareSignatureScoreIncrease, score, 0.001, "the rare signature score should match the config modifier value")
 		i++
 	}
+	require.NoError(t, rows.Err())
 	require.EqualValues(t, 1, i, "there should only be one modifier for 73.54.23.243 -> 64.225.56.201")
 
 	//  verify that the threat has the ICMP protocol in port:proto:service (in a previous import)

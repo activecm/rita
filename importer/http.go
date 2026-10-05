@@ -270,13 +270,13 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 	i := 0
 	for rows.Next() {
 		select {
 		// abort this function if the context was cancelled
 		case <-ctx.Done():
 			logger.Warn().Msg("cancelling HTTP connection linking")
-			rows.Close()
 			return ctx.Err()
 		default:
 			var entry HTTPEntry
@@ -339,7 +339,9 @@ func (importer *Importer) writeLinkedHTTP(ctx context.Context, progress *tea.Pro
 			}
 		}
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
 	progress.Send(progressbar.ProgressMsg{ID: barID, Percent: 1})
 
 	return nil
