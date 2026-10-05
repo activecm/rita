@@ -167,9 +167,6 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 		OpenSSLTmp:  database.NewBulkWriter(db, cfg, numWriters, db.GetSelectedDB(), "openssl_tmp", "INSERT INTO {database:Identifier}.openssl_tmp", limiter, false),
 	}
 
-	// create progressBar bar
-	progressBar := mpb.New(mpb.WithWidth(64))
-
 	// set the overall db import start time
 	db.ImportStartedAt = importStartedAt
 
@@ -196,8 +193,6 @@ func NewImporter(db *database.DB, cfg *config.Config, importStartedAt time.Time,
 		DoneChannels:             doneChannels,
 		Writers:                  logWriters,
 		WriteLimiter:             rate.NewLimiter(5, 5),
-		ProgressBar:              progressBar,
-		ProgressLogger:           log.New(progressBar, "", 0),
 		NumParsers:               numParsers,
 		NumDigesters:             numDigesters,
 		NumWriters:               numWriters,
@@ -236,6 +231,11 @@ func (importer *Importer) Import(afs afero.Fs, files map[string][]string) error 
 	if err != nil {
 		return err
 	}
+
+	// create the progress bar immediately before import starts so that it is not created if there are no files to import
+	importer.ProgressBar = mpb.New(mpb.WithWidth(64))
+	defer importer.ProgressBar.Shutdown()
+	importer.ProgressLogger = log.New(importer.ProgressBar, "", 0)
 
 	// initialize progress bar
 	importer.FileProgressBar = importer.ProgressBar.New(int64(importer.TotalFileCount),
