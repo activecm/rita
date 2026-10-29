@@ -1,10 +1,16 @@
 package testutils
 
 import (
+	"errors"
+	"io"
 	"os"
 	"sync"
 
 	"github.com/spf13/afero"
+)
+
+var (
+	ErrTestFileReadInterrupted = errors.New("test file read interrupted")
 )
 
 // CountingFS wraps an afero filesystem and counts the files opened and closed through it
@@ -82,4 +88,41 @@ func (f *countedFile) Close() error {
 		f.fs.mu.Unlock()
 	})
 	return f.File.Close()
+}
+
+// FailingFS is an afero.Fs that returns ErrTestFileReadInterrupted when the file at failPath is read, after failAfter bytes have been read from that file.
+// Reads all other files normally.
+type FailingFS struct {
+	afero.Fs
+	FailPath  string
+	FailAfter int64
+}
+
+func (fs *FailingFS) Open(name string) (afero.File, error) {
+	file, err := fs.Fs.Open(name)
+	if err != nil || name != fs.FailPath {
+		return file, err
+	}
+	// initialize remaining with the number of bytes to read before returning ErrTestFileReadInterrupted
+	return &FailingFile{File: file, remaining: fs.FailAfter}, nil
+}
+
+type FailingFile struct {
+	afero.File
+	remaining int64
+}
+
+func (f *FailingFile) Read(p []byte) (int, error) {
+	if f.remaining <= 0 {
+		return 0, ErrTestFileReadInterrupted
+	}
+	if int64(len(p)) > f.remaining {
+		p = p[:f.remaining]
+	}
+	n, err := f.File.Read(p)
+	f.remaining -= int64(n)
+	if errors.Is(err, io.EOF) {
+		err = nil
+	}
+	return n, err
 }
