@@ -218,7 +218,7 @@ func (importer *Importer) writeLinkedSSL(ctx context.Context, progress *tea.Prog
     
 `)
 	if err != nil {
-		log.Panicln(err)
+		return fmt.Errorf("failed to query linked ssl connections: %w", err)
 	}
 	defer rows.Close()
 
