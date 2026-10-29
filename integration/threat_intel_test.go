@@ -32,8 +32,9 @@ func (it *ThreatIntelSuite) SetupSuite() {
 	afs := afero.NewOsFs()
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	it.Require().NoError(err)
-	it.cfg = cfg
+	// ReadFileConfig sets DBConnection from DB_ADDRESS, which is not the test container
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+	it.cfg = cfg
 }
 
 func (it *ThreatIntelSuite) SetupTest() {
@@ -69,9 +70,8 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 
 	cfg, err := config.ReadFileConfig(afs, "threat_intel_config.hjson")
 	require.NoError(t, err)
-
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	cfg.Env.ThreatIntelCustomFeedsDirectory = "./threat_intel_feeds"
-	it.cfg = cfg
 
 	fs := afero.NewOsFs()
 	// // import data
@@ -124,7 +124,6 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	require.NoError(t, err)
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	require.Contains(t, cfg.RITA.ThreatIntel.OnlineFeeds, feedURL)
-	it.cfg = cfg
 
 	fs := afero.NewOsFs()
 	// // import data
@@ -220,7 +219,7 @@ func (d *ThreatIntelSuite) TestThreatIntelFeedFilesClosing() {
 	// between the 1 (the failed file) and the number of feeds plus the number of times the directory was opened.
 	directoryOpens := 2 // The threat intel feed folder is opened twice, once for ValidateDirectory and once for Walk
 	opened, closed = failingAfs.GetCounts()
-	require.Greater(t, opened, 1+directoryOpens, "the sync should have opened feeds before the failure... at minimum the failure file, and the directory openings")
+	require.GreaterOrEqual(t, opened, 1+directoryOpens, "the sync should have opened feeds before the failure... at minimum the failure file, and the directory openings")
 	require.LessOrEqual(t, opened, numFeeds+directoryOpens, "the sync should have opened no more than the total number of feeds plus the directory openings")
 	require.Equal(t, opened, closed, "a feed failing partway through left %d of %d files still open", opened-closed, opened)
 
