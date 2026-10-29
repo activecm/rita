@@ -260,6 +260,9 @@ func (server *ServerConn) DropMultipleSensorDatabases(dbName string, wildcardSta
 		// increment the number of databases deleted
 		numDeleted++
 	}
+	if err := rows.Err(); err != nil {
+		return numDeleted, err
+	}
 
 	return numDeleted, nil
 }
