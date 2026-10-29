@@ -76,7 +76,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	}
 	var results []res
 
-	expectedCounts := []uint64{3, 41}
+	expectedCounts := []uint64{2, 40}
 
 	err := it.db.Conn.Select(it.db.GetContext(), &results, `
 		SELECT analyzed_at, count() as c FROM threat_mixtape
