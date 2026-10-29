@@ -189,7 +189,7 @@ func (server *ServerConn) SyncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 		err = server.updateFeed(&entry, feeds[entry.Path].LastModified, feed, writer.WriteChannel)
 		if feed != nil {
 			if closeErr := feed.Close(); closeErr != nil {
-				return fmt.Errorf("failed to close threat intel feed after updating: %w", closeErr)
+				logger.Warn().Err(closeErr).Str("feed", entry.Path).Msg("[THREAT INTEL] Failed to close feed after updating it")
 			}
 		}
 		if err != nil {
@@ -227,7 +227,7 @@ func (server *ServerConn) SyncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			// add the new feed to the database
 			err = server.addNewFeed(path, &entry, feed, writer.WriteChannel)
 			if closeErr := feed.Close(); closeErr != nil {
-				return fmt.Errorf("failed to close threat intel feed after adding as new: %w", closeErr)
+				logger.Warn().Err(closeErr).Str("feed", path).Msg("[THREAT INTEL] Failed to close feed after adding it as new")
 			}
 			if err != nil {
 				return err
