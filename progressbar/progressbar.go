@@ -16,6 +16,7 @@ const (
 	padding  = 2
 	maxWidth = 80
 )
+var QuietMode bool
 
 // type ProgressMsg float64
 type ProgressMsg struct {
@@ -68,11 +69,15 @@ func NewSpinner(name string, id int) Spinner {
 }
 
 func New(ctx context.Context, bars []*ProgressBar, spinners []Spinner) *tea.Program {
+	opts := []tea.ProgramOption{tea.WithInput(nil)}
+	if QuietMode {
+		opts = append(opts, tea.WithoutRenderer())
+	}
 	return tea.NewProgram(&ProgressModel{
 		ProgressBars: bars,
 		Spinners:     spinners,
 		ctx:          ctx,
-	}, tea.WithInput(nil))
+	}, opts...)
 }
 
 type tickMsg string
