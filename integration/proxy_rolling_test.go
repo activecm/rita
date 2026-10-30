@@ -122,6 +122,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	ctx := it.db.QueryParameters(params)
 	rows, err := it.db.Conn.Query(ctx, query)
 	require.NoError(t, err)
+	defer rows.Close()
 
 	i := 0
 	for rows.Next() {
@@ -142,7 +143,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 		}
 		i++
 	}
-	rows.Close()
+	require.NoError(t, rows.Err())
 }
 
 func (it *ProxyRollingTestSuite) TestProxy() {

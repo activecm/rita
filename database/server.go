@@ -109,7 +109,7 @@ func SetUpNewImport(afs afero.Fs, cfg *config.Config, dbName string, rollingFlag
 	}
 
 	// sync threat intel feeds from config
-	err = server.syncThreatIntelFeedsFromConfig(afs, cfg)
+	err = server.SyncThreatIntelFeedsFromConfig(afs, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +287,9 @@ func (server *ServerConn) DropMultipleSensorDatabases(dbName string, wildcardSta
 
 		// increment the number of databases deleted
 		numDeleted++
+	}
+	if err := rows.Err(); err != nil {
+		return numDeleted, err
 	}
 
 	return numDeleted, nil
