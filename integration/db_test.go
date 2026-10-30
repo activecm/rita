@@ -1,7 +1,16 @@
 package integration_test
 
 import (
+	"bytes"
+	"runtime"
+	"testing"
+	"time"
+
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/activecm/rita/v5/cmd"
+	"github.com/activecm/rita/v5/config"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -105,4 +114,44 @@ func (it *ValidDatasetTestSuite) TestPrimaryKeySize() {
 
 	}
 
+}
+
+func TestImportClosesConnectionPools(t *testing.T) {
+	afs := afero.NewOsFs()
+
+	cfg, err := config.ReadFileConfig(afs, ConfigPath)
+	require.NoError(t, err)
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
+
+	before := countOpenConnectionPools()
+
+	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, "../test_data/valid_tsv", "conn_pool_cleanup", false, false)
+	require.NoError(t, err)
+
+	// closing a pool signals its goroutine to exit, so give it a moment to return
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.LessOrEqual(c, countOpenConnectionPools(), before, "import should close every connection pool it opens")
+	}, 5*time.Second, 50*time.Millisecond)
+}
+
+// countOpenConnectionPools returns the number of open ClickHouse connection pools in the process.
+// Each pool runs one startAutoCloseIdleConnections goroutine until it is closed
+func countOpenConnectionPools() int {
+	buf := make([]byte, 1<<20)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			buf = buf[:n]
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+
+	count := 0
+	for _, stack := range bytes.Split(buf, []byte("\n\n")) {
+		if bytes.Contains(stack, []byte(").startAutoCloseIdleConnections(")) {
+			count++
+		}
+	}
+	return count
 }
