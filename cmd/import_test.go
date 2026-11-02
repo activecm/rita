@@ -116,14 +116,15 @@ func (c *CmdTestSuite) TestImportCommand() {
 	commands := []*cli.Command{cmd.ImportCommand}
 	flags := []cli.Flag{}
 
-	// name of the spinner rendered by the progress bar program during import
-	progressOutput := "Sifting IP connections"
+	// texts shown next to rendered progress bars during import
+	progressOutput := []string{"Sifting IP connections", "Connection Analysis", "Seasoning", "DNS Analysis"}
 
 	tests := []struct {
-		name          string
-		args          []string
-		dbName        string
-		expectedQuiet bool
+		name           string
+		args           []string
+		dbName         string
+		redirectToFile bool
+		expectedQuiet  bool
 	}{
 		{
 			name:          "Progress Bars Rendered by Default",
@@ -143,6 +144,20 @@ func (c *CmdTestSuite) TestImportCommand() {
 			dbName:        "quiet_alias",
 			expectedQuiet: true,
 		},
+		{
+			name:           "Progress Bars Written to Redirected File by Default",
+			args:           []string{"app", "import", "--config=" + ConfigPath, "--database=redirect_dnscat2", "--logs=../test_data/valid_tsv"},
+			dbName:         "redirect_dnscat2",
+			redirectToFile: true,
+			expectedQuiet:  false,
+		},
+		{
+			name:           "Quiet Flag Keeps Progress Bars out of Redirected File",
+			args:           []string{"app", "import", "--config=" + ConfigPath, "--database=redirect_quiet", "--logs=../test_data/valid_tsv", "--quiet"},
+			dbName:         "redirect_quiet",
+			redirectToFile: true,
+			expectedQuiet:  true,
+		},
 	}
 
 	for _, test := range tests {
@@ -159,9 +174,13 @@ func (c *CmdTestSuite) TestImportCommand() {
 			// create a new app and context
 			app, ctx := setupTestApp(commands, flags)
 
-			// run app with test.args, capturing the rendered output
+			// run app with test.args, capturing the rendered output from a pipe or a redirected file
+			capture := captureOutput
+			if test.redirectToFile {
+				capture = captureOutputToFile
+			}
 			var err error
-			output := captureOutput(t, func() {
+			output := capture(t, func() {
 				err = app.RunContext(ctx, test.args)
 			})
 
@@ -169,9 +188,14 @@ func (c *CmdTestSuite) TestImportCommand() {
 			require.Equal(t, test.expectedQuiet, progressbar.QuietMode, "quiet mode should match expected value")
 
 			if test.expectedQuiet {
-				require.NotContains(t, output, progressOutput, "progress bars should not be rendered in quiet mode")
+				for _, text := range progressOutput {
+					require.NotContains(t, output, text, "progress bars should not be rendered in quiet mode")
+				}
+				require.NotContains(t, output, "\x1b[", "terminal escape sequences should not be written in quiet mode")
 			} else {
-				require.Contains(t, output, progressOutput, "progress bars should be rendered when not in quiet mode")
+				for _, text := range progressOutput {
+					require.Contains(t, output, text, "progress bars should be rendered when not in quiet mode")
+				}
 			}
 
 			// clean up the database

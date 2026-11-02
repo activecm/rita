@@ -254,3 +254,25 @@ func captureOutput(t *testing.T, f func()) string {
 	require.NoError(t, err)
 	return buf.String()
 }
+
+// captureOutputToFile redirects stdout to a file while running a function and returns the file contents
+func captureOutputToFile(t *testing.T, f func()) string {
+	t.Helper()
+
+	// redirect stdout to a file
+	file, err := os.Create(filepath.Join(t.TempDir(), "output.log"))
+	require.NoError(t, err, "creating output file should not produce an error")
+	old := os.Stdout
+	os.Stdout = file
+
+	// run the function
+	f()
+
+	// close the file and restore stdout
+	os.Stdout = old
+	require.NoError(t, file.Close(), "closing output file should not produce an error")
+
+	contents, err := os.ReadFile(file.Name())
+	require.NoError(t, err, "reading output file should not produce an error")
+	return string(contents)
+}
