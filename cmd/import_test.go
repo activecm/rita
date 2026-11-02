@@ -8,6 +8,7 @@ import (
 	"github.com/activecm/rita/v5/constants"
 	"github.com/activecm/rita/v5/database"
 	"github.com/activecm/rita/v5/importer"
+	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
 	iofs "io/fs"
@@ -20,6 +21,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli/v2"
 )
 
 /*
@@ -106,6 +108,74 @@ func (c *CmdTestSuite) TestWorkerCount() {
 			}
 
 			require.Equal(t, tc.expectedAvailableCores, availableCores, "number of available cores should be equal to: %d", tc.expectedAvailableCores)
+		})
+	}
+}
+
+func (c *CmdTestSuite) TestImportCommand() {
+	commands := []*cli.Command{cmd.ImportCommand}
+	flags := []cli.Flag{}
+
+	// name of the spinner rendered by the progress bar program during import
+	progressOutput := "Sifting IP connections"
+
+	tests := []struct {
+		name          string
+		args          []string
+		dbName        string
+		expectedQuiet bool
+	}{
+		{
+			name:          "Progress Bars Rendered by Default",
+			args:          []string{"app", "import", "--config=" + ConfigPath, "--database=dnscat2", "--logs=../test_data/valid_tsv"},
+			dbName:        "dnscat2",
+			expectedQuiet: false,
+		},
+		{
+			name:          "Quiet Flag Disables Progress Bars",
+			args:          []string{"app", "import", "--config=" + ConfigPath, "--database=quiet_flag", "--logs=../test_data/valid_tsv", "--quiet"},
+			dbName:        "quiet_flag",
+			expectedQuiet: true,
+		},
+		{
+			name:          "Quiet Flag Alias Disables Progress Bars",
+			args:          []string{"app", "import", "--config=" + ConfigPath, "--database=quiet_alias", "--logs=../test_data/valid_tsv", "-q"},
+			dbName:        "quiet_alias",
+			expectedQuiet: true,
+		},
+	}
+
+	for _, test := range tests {
+		c.Run(test.name, func() {
+			t := c.T()
+
+			// point the config loaded by the command to the test clickhouse container
+			t.Setenv("DB_ADDRESS", c.clickhouseConnection)
+
+			// set quiet mode to the opposite value to verify that the command sets it from the flag
+			progressbar.QuietMode = !test.expectedQuiet
+			t.Cleanup(func() { progressbar.QuietMode = false })
+
+			// create a new app and context
+			app, ctx := setupTestApp(commands, flags)
+
+			// run app with test.args, capturing the rendered output
+			var err error
+			output := captureOutput(t, func() {
+				err = app.RunContext(ctx, test.args)
+			})
+
+			require.NoError(t, err, "running import command should not produce an error")
+			require.Equal(t, test.expectedQuiet, progressbar.QuietMode, "quiet mode should match expected value")
+
+			if test.expectedQuiet {
+				require.NotContains(t, output, progressOutput, "progress bars should not be rendered in quiet mode")
+			} else {
+				require.Contains(t, output, progressOutput, "progress bars should be rendered when not in quiet mode")
+			}
+
+			// clean up the database
+			require.NoError(t, c.server.DeleteSensorDB(test.dbName), "dropping database should not produce an error")
 		})
 	}
 }
