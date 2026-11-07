@@ -3,7 +3,10 @@ package integration_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +14,7 @@ import (
 	"github.com/activecm/rita/v5/cmd"
 	"github.com/activecm/rita/v5/config"
 	"github.com/activecm/rita/v5/database"
+	"github.com/activecm/rita/v5/internal/testutils"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -28,6 +32,8 @@ func (it *ThreatIntelSuite) SetupSuite() {
 	afs := afero.NewOsFs()
 	cfg, err := config.ReadFileConfig(afs, ConfigPath)
 	it.Require().NoError(err)
+	// ReadFileConfig sets DBConnection from DB_ADDRESS, which is not the test container
+	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	it.cfg = cfg
 }
 
@@ -66,7 +72,6 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 	require.NoError(t, err)
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	cfg.Env.ThreatIntelCustomFeedsDirectory = "./threat_intel_feeds"
-	it.cfg = cfg
 
 	fs := afero.NewOsFs()
 	// // import data
@@ -119,7 +124,6 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	require.NoError(t, err)
 	cfg.Env.DBConnection = dockerInfo.clickhouseConnection
 	require.Contains(t, cfg.RITA.ThreatIntel.OnlineFeeds, feedURL)
-	it.cfg = cfg
 
 	fs := afero.NewOsFs()
 	// // import data
@@ -134,6 +138,140 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 	require.NoError(t, err)
 
 	checkThreatIntel(t, db)
+}
+
+func (d *ThreatIntelSuite) TestThreatIntelFeedFilesClosing() {
+	t := d.T()
+
+	// connect to clickhouse server
+	server, err := database.ConnectToServer(context.Background(), d.cfg)
+	t.Cleanup(func() {
+		require.NoError(t, server.Close())
+	})
+	require.NoError(t, err, "connecting to server should not produce an error")
+
+	require.NoError(t, server.CreateServerDBTables(), "creating the metadatabase should not error")
+
+	const numFeeds = 64
+
+	feedDir := t.TempDir()
+
+	// ----- FIRST SYNC -----
+	// make the time for the first round unique from the second round
+	firstRound := time.Now().Add(-2 * time.Hour)
+	makeFakeThreatIntelFeeds(t, feedDir, numFeeds, "192.0.2", firstRound)
+
+	// temporarily override the threat intel config
+	originalDir := d.cfg.Env.ThreatIntelCustomFeedsDirectory
+	originalFeeds := d.cfg.RITA.ThreatIntel.OnlineFeeds
+	d.cfg.Env.ThreatIntelCustomFeedsDirectory = feedDir
+	d.cfg.RITA.ThreatIntel.OnlineFeeds = nil
+	t.Cleanup(func() {
+		d.cfg.Env.ThreatIntelCustomFeedsDirectory = originalDir
+		d.cfg.RITA.ThreatIntel.OnlineFeeds = originalFeeds
+	})
+
+	afs := testutils.NewCountingFS(afero.NewOsFs())
+
+	require.NoError(t, server.SyncThreatIntelFeedsFromConfig(afs, d.cfg), "adding new feeds should not error")
+
+	opened, closed := afs.GetCounts()
+	require.GreaterOrEqual(t, opened, numFeeds, "the sync should have opened every fake feed")
+	require.Equal(t, opened, closed, "adding feeds left %d of %d files still open", opened-closed, opened)
+	require.EqualValues(t, numFeeds, d.threatIntelEntryCount(t, server, "192.0.2.0", "192.0.2.255"),
+		"every new feed's entries should be in the database after the first sync")
+
+	// ----- MODIFY FEEDS AND SYNC AGAIN -----
+	makeFakeThreatIntelFeeds(t, feedDir, numFeeds, "203.0.113", firstRound.Add(time.Hour))
+
+	openedBefore := opened
+	require.NoError(t, server.SyncThreatIntelFeedsFromConfig(afs, d.cfg), "updating modified feeds should not error")
+
+	opened, closed = afs.GetCounts()
+	require.GreaterOrEqual(t, opened-openedBefore, numFeeds, "running the sync again should have reopened every modified feed")
+	require.Equal(t, opened, closed, "updating feeds left %d of %d files still open", opened-closed, opened)
+
+	// if a feed closed before the parser reads it, it doesn't make it into the db
+	// make sure the entries from the second sync are in the metadatabase
+	require.EqualValues(t, numFeeds, d.threatIntelEntryCount(t, server, "203.0.113.0", "203.0.113.255"),
+		"modified feed's entries should be in the database after the second sync")
+
+	// ----- MODIFY FEEDS AND FAIL SYNC PARTWAY THROUGH -----
+	// modify every feed again, but make one of them fail partway through the sync
+	makeFakeThreatIntelFeeds(t, feedDir, numFeeds, "198.51.100", firstRound.Add(90*time.Minute)) // 1.5 hours after the first round
+
+	// the feed that will fail partway through the sync
+	// even though we're using the file in the middle of the list, the feeds are not opened in order,
+	// so it may not be the file in the literal middle of the sync that fails
+	failPath := filepath.Join(feedDir, fmt.Sprintf("feed_%02d.txt", numFeeds/2))
+	failInfo, err := os.Stat(failPath)
+	require.NoError(t, err)
+
+	// use a failing file system that returns an error when the feed at failPath is read almost to the end of the file
+	require.Greater(t, failInfo.Size(), int64(5), "the feed that will fail partway through the sync should be at least 6 bytes long")
+	failingAfs := testutils.NewCountingFS(&testutils.FailingFS{Fs: afero.NewOsFs(), FailPath: failPath, FailAfter: failInfo.Size() - 5})
+
+	writersBefore := countBulkWriterGoroutines()
+	err = server.SyncThreatIntelFeedsFromConfig(failingAfs, d.cfg)
+	require.ErrorIs(t, err, testutils.ErrTestFileReadInterrupted, "the sync should return the error from the feed that failed partway through")
+
+	// The feeds are not opened in order, so we validate the number of opened files as somewhere
+	// between the 1 (the failed file) and the number of feeds plus the number of times the directory was opened.
+	directoryOpens := 2 // The threat intel feed folder is opened twice, once for ValidateDirectory and once for Walk
+	opened, closed = failingAfs.GetCounts()
+	require.GreaterOrEqual(t, opened, 1+directoryOpens, "the sync should have opened feeds before the failure... at minimum the failure file, and the directory openings")
+	require.LessOrEqual(t, opened, numFeeds+directoryOpens, "the sync should have opened no more than the total number of feeds plus the directory openings")
+	require.Equal(t, opened, closed, "a feed failing partway through left %d of %d files still open", opened-closed, opened)
+
+	// the writer may still be exiting right after the sync returns, so wait a little bit and keep checking
+	require.Eventually(t, func() bool {
+		return countBulkWriterGoroutines() <= writersBefore
+	}, 2*time.Second, 10*time.Millisecond,
+		"a feed failing partway through left %d writers running, expected no more than %d",
+		countBulkWriterGoroutines()-writersBefore, writersBefore)
+}
+
+// countBulkWriterGoroutines returns how many BulkWriter workers are running
+func countBulkWriterGoroutines() int {
+	buf := make([]byte, 1<<20)
+	for {
+		n := runtime.Stack(buf, true)
+		if n < len(buf) {
+			buf = buf[:n]
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+
+	count := 0
+	for _, g := range strings.Split(string(buf), "\n\n") {
+		if strings.Contains(g, "(*BulkWriter).Start.func") {
+			count++
+		}
+	}
+	return count
+}
+
+func (d *ThreatIntelSuite) threatIntelEntryCount(t *testing.T, server *database.ServerConn, from, to string) uint64 {
+	t.Helper()
+
+	var count uint64
+	err := server.Conn.QueryRow(server.GetContext(), `
+		SELECT count() FROM metadatabase.threat_intel
+		WHERE ip BETWEEN toIPv6($1) AND toIPv6($2)
+	`, from, to).Scan(&count)
+	require.NoError(t, err, "counting threat intel entries should not error")
+	return count
+}
+
+func makeFakeThreatIntelFeeds(t *testing.T, dir string, count int, prefix string, modTime time.Time) {
+	t.Helper()
+	for i := 1; i <= count; i++ {
+		path := filepath.Join(dir, fmt.Sprintf("feed_%02d.txt", i))
+		body := fmt.Sprintf("# staged threat intel feed %d\n%s.%d\n", i, prefix, i)
+		require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+		require.NoError(t, os.Chtimes(path, modTime, modTime))
+	}
 }
 
 func checkThreatIntel(t *testing.T, db *database.DB) {
