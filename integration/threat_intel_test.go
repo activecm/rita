@@ -75,6 +75,9 @@ func (it *ThreatIntelSuite) TestFileFeeds() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), dbName, cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	checkThreatIntel(t, db)
@@ -125,6 +128,9 @@ func (it *ThreatIntelSuite) TestOnlineFeeds() {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), dbName, cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	checkThreatIntel(t, db)

@@ -48,6 +48,12 @@ func TestOpenSNI(t *testing.T) {
 	suite.Run(t, openSNISuite)
 }
 
+func (it *OpenSNITestSuite) TeardownSuite() {
+	it.T().Cleanup(func() {
+		require.NoError(it.T(), it.db.Close())
+	})
+}
+
 func (it *OpenSNITestSuite) TestThreats() {
 	t := it.T()
 

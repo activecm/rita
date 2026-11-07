@@ -100,60 +100,53 @@ func TestImportTracking(t *testing.T) {
 	// new import
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afs, TestDataPath+"/open_conns/closed", "test_import_rolling", true, false)
 	require.NoError(t, err, "new rolling import should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_rolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_rolling")
 
 	// import another folder
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/open", "test_import_rolling", true, false)
 	require.NoError(t, err, "importing another folder to a rolling database should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_rolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_rolling")
 
 	// rebuild dataset
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/open", "test_import_rolling", true, true)
 	require.NoError(t, err, "importing same folder to a rebuilt rolling database should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_rolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_rolling")
 
 	// ***************************************************************************
 	// NON-ROLLING IMPORT
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/closed", "test_import_nonrolling", false, true)
 	require.NoError(t, err, "new non-rolling import should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_nonrolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_nonrolling")
 
 	// import another folder
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/closed", "test_import_nonrolling", false, false)
 	require.Error(t, err, "importing another folder to a non-rolling database should not succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_nonrolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_nonrolling")
 
 	// rebuild dataset
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/closed", "test_import_nonrolling", false, true)
 	require.NoError(t, err, "importing same folder to a rebuilt non-rolling database should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_nonrolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_nonrolling")
 
 	// rebuild dataset & convert to rolling
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/open", "test_import_nonrolling", true, true)
 	require.NoError(t, err, "importing once to a non-rolling database converted to a rolling database should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_nonrolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_nonrolling")
 
 	// import again to rolling dataset
 	_, err = cmd.RunImportCmd(time.Now(), cfg, afero.NewOsFs(), TestDataPath+"/open_conns/closed", "test_import_nonrolling", true, true)
 	require.NoError(t, err, "importing twice to a converted rolling database should succeed")
-	// connect to database
-	_, err = database.ConnectToDB(context.Background(), "test_import_nonrolling", cfg, nil)
-	require.NoError(t, err)
+	verifyDatabaseIsConnectable(t, cfg, "test_import_nonrolling")
+}
 
+func verifyDatabaseIsConnectable(t *testing.T, cfg *config.Config, dbName string) {
+	t.Helper()
+	// connect to database
+	db, err := database.ConnectToDB(context.Background(), dbName, cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
+	require.NoError(t, err, "database should be connectable")
 }
 
 // TestMinMaxTimestamps tests that the min and max timestamps are correctly stored in the metadatabase.imports table
@@ -188,6 +181,9 @@ func TestMinMaxTimestamps(t *testing.T) {
 
 		// connect to database
 		db, err := database.ConnectToDB(context.Background(), "test_minmax_open", cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err)
 
 		minTSBeacon := 1517420070
@@ -232,6 +228,9 @@ func TestMinMaxTimestamps(t *testing.T) {
 
 		// connect to database
 		db, err := database.ConnectToDB(context.Background(), "test_minmax", cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err)
 
 		min, max, minOpen, maxOpen := getMinMaxTimestamps(t, db, results.ImportID[0])
@@ -320,6 +319,9 @@ func TestMetaDatabase(t *testing.T) {
 
 	// connect to metadatabase
 	db, err := database.ConnectToDB(context.Background(), "metadatabase", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// test metadatabase tables

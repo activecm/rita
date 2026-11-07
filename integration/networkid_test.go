@@ -55,6 +55,12 @@ func TestNetworkID(t *testing.T) {
 	suite.Run(t, networkIDSuite)
 }
 
+func (it *NetworkIDSuite) TeardownSuite() {
+	it.T().Cleanup(func() {
+		require.NoError(it.T(), it.db.Close())
+	})
+}
+
 func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 	t := it.T()
 
