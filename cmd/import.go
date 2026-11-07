@@ -21,6 +21,7 @@ import (
 	i "github.com/activecm/rita/v5/importer"
 	zlog "github.com/activecm/rita/v5/logger"
 	m "github.com/activecm/rita/v5/modifier"
+	"github.com/activecm/rita/v5/progressbar"
 	"github.com/activecm/rita/v5/util"
 
 	"github.com/spf13/afero"
@@ -79,6 +80,13 @@ var ImportCommand = &cli.Command{
 			Value:    false,
 			Required: false,
 		},
+		&cli.BoolFlag{
+			Name:     "quiet",
+			Aliases:  []string{"q"},
+			Usage:    "disable progress bar rendering",
+			Value:    false,
+			Required: false,
+		},
 		ConfigFlag(false),
 	},
 	Action: func(cCtx *cli.Context) error {
@@ -94,6 +102,8 @@ var ImportCommand = &cli.Command{
 
 		// set the import start time in microseconds
 		startTime := time.Now()
+
+		progressbar.QuietMode = cCtx.Bool("quiet")
 
 		// run import command
 		_, err = RunImportCmd(startTime, cfg, afs, cCtx.String("logs"), cCtx.String("database"), cCtx.Bool("rolling"), cCtx.Bool("rebuild"))
