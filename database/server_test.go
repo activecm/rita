@@ -154,6 +154,42 @@ func (d *DatabaseTestSuite) TestConnectToServer() {
 	})
 }
 
+func (d *DatabaseTestSuite) TestCloseIsIdempotent() {
+	// the ClickHouse driver's Close blocks forever if called a second time
+	// ensure that calling Close twice on the server and database connections does not block and does not produce an error
+	requireClosesTwice := func(t *testing.T, closer interface{ Close() error }) {
+		t.Helper()
+		done := make(chan error, 1)
+		go func() {
+			if err := closer.Close(); err != nil {
+				done <- err
+				return
+			}
+			done <- closer.Close()
+		}()
+		select {
+		case err := <-done:
+			require.NoError(t, err, "closing twice should not produce an error")
+		case <-time.After(10 * time.Second):
+			require.FailNow(t, "the second Close did not return")
+		}
+	}
+
+	d.Run("Server Connection", func() {
+		t := d.T()
+		server, err := database.ConnectToServer(context.Background(), d.cfg)
+		require.NoError(t, err, "connecting to clickhouse server should not produce an error")
+		requireClosesTwice(t, server)
+	})
+
+	d.Run("Database Connection", func() {
+		t := d.T()
+		db, err := database.ConnectToDB(context.Background(), "default", d.cfg, nil)
+		require.NoError(t, err, "connecting to the default database should not produce an error")
+		requireClosesTwice(t, db)
+	})
+}
+
 func (d *DatabaseTestSuite) TestDeleteSensorDB() {
 	d.Run("Drop Existing Database", func() {
 		t := d.T()
@@ -161,6 +197,9 @@ func (d *DatabaseTestSuite) TestDeleteSensorDB() {
 		require.NoError(t, err, "importing data should not produce an error")
 
 		db, err := database.ConnectToDB(context.Background(), "testDB", d.cfg, nil)
+		t.Cleanup(func() {
+			require.NoError(t, db.Close())
+		})
 		require.NoError(t, err, "connecting to created database should not produce an error")
 		require.NotNil(t, db)
 
@@ -185,6 +224,9 @@ func (d *DatabaseTestSuite) checkDatabaseDeletion(dbName string) {
 	t := d.T()
 	// attempt to connect to the dropped database
 	db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.Error(t, err, "connecting to a dropped database should produce an error")
 	require.Nil(t, db)
 	ctx := d.server.QueryParameters(clickhouse.Parameters{
@@ -211,6 +253,9 @@ func (d *DatabaseTestSuite) checkDatabaseNonDeletion(dbName string) {
 	t := d.T()
 	// attempt to connect to the database
 	db, err := database.ConnectToDB(context.Background(), dbName, d.cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err, "connecting to a database that was not dropped should not produce an error")
 	require.NotNil(t, db)
 	ctx := d.server.QueryParameters(clickhouse.Parameters{
