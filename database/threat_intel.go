@@ -21,6 +21,9 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// the maximum time to wait for an online feed to download before timing out
+const feedDownloadTimeout = 5 * time.Minute
+
 // threatIntelFeed represents a threat intel feed source from config
 type threatIntelFeed struct {
 	LastModified time.Time
@@ -78,8 +81,8 @@ func (server *ServerConn) createThreatIntelTables() error {
 	return nil
 }
 
-// syncThreatIntelFeedsFromConfig updates the threat intel feeds in the metadatabase based on the config
-func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *config.Config) error {
+// SyncThreatIntelFeedsFromConfig updates the threat intel feeds in the metadatabase based on the config
+func (server *ServerConn) SyncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *config.Config) error {
 	logger := zlog.GetLogger()
 
 	// get the list of threat intel feeds from the config
@@ -102,6 +105,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 	if err != nil {
 		return err
 	}
+	defer rows.Close()
 
 	// create a rate limiter to control the rate of writing to the database
 	limiter := rate.NewLimiter(5, 5)
@@ -109,6 +113,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 	// create a channel to write feed entries to the database
 	writer := NewBulkWriter(server, cfg, 1, "metadatabase", "threat_intel", "INSERT INTO metadatabase.threat_intel", limiter, false)
 	writer.Start(0)
+	defer writer.Close()
 
 	// iterate over each existing feed in the database
 	for rows.Next() {
@@ -149,7 +154,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			logger.Info().Str("feed_url", entry.Path).Msg("[THREAT INTEL] Updating online feed...")
 
 			// download the feed
-			feed, err = getOnlineFeed(server.GetContext(), entry.Path)
+			feed, err = getOnlineFeed(server.GetContext(), entry.Path, feedDownloadTimeout)
 			if err != nil {
 				// log the error as a warning and continue. do not return an error, as this should not stop the import process
 				logger.Warn().Err(err).Str("feed_url", entry.Path).Msg("[THREAT INTEL] Failed to download online feed, could not update feed in database...")
@@ -182,10 +187,19 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 		}
 
 		// update the feed record in the database
-		if err = server.updateFeed(&entry, feeds[entry.Path].LastModified, feed, writer.WriteChannel); err != nil {
+		err = server.updateFeed(&entry, feeds[entry.Path].LastModified, feed, writer.WriteChannel)
+		if feed != nil {
+			if closeErr := feed.Close(); closeErr != nil {
+				logger.Warn().Err(closeErr).Str("feed", entry.Path).Msg("[THREAT INTEL] Failed to close feed after updating it")
+			}
+		}
+		if err != nil {
 			return err
 		}
 
+	}
+	if err := rows.Err(); err != nil {
+		return err
 	}
 
 	// iterate over each feed in the config that was not in the database
@@ -196,7 +210,7 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 			if entry.Online {
 				logger.Info().Str("feed_url", path).Msg("[THREAT INTEL] Adding new online feed...")
 				// download the feed
-				feed, err = getOnlineFeed(server.GetContext(), path)
+				feed, err = getOnlineFeed(server.GetContext(), path, feedDownloadTimeout)
 				if err != nil {
 					// log the error and skip adding the feed, but do not return an error, as this should not stop the import process
 					logger.Warn().Err(err).Str("feed_url", path).Msg("[THREAT INTEL] Failed to download online feed, skipping addition to database...")
@@ -215,12 +229,16 @@ func (server *ServerConn) syncThreatIntelFeedsFromConfig(afs afero.Fs, cfg *conf
 				}
 			}
 			// add the new feed to the database
-			if err = server.addNewFeed(path, &entry, feed, writer.WriteChannel); err != nil {
+			err = server.addNewFeed(path, &entry, feed, writer.WriteChannel)
+			if closeErr := feed.Close(); closeErr != nil {
+				logger.Warn().Err(closeErr).Str("feed", path).Msg("[THREAT INTEL] Failed to close feed after adding it as new")
+			}
+			if err != nil {
 				return err
 			}
 		}
 	}
-	writer.Close()
+
 	return nil
 }
 
@@ -305,7 +323,7 @@ func getOnlineFeedsList(feeds map[string]threatIntelFeed, onlineFeedsList []stri
 }
 
 // getOnlineFeed gets the feed at the specified URL and returns an io.ReadCloser
-func getOnlineFeed(ctx context.Context, url string) (io.ReadCloser, error) {
+func getOnlineFeed(ctx context.Context, url string, timeout time.Duration) (io.ReadCloser, error) {
 	// build request with context
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -313,7 +331,8 @@ func getOnlineFeed(ctx context.Context, url string) (io.ReadCloser, error) {
 	}
 
 	// execute request
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
@@ -468,8 +487,6 @@ func parseFeedEntries(feedHash util.FixedString, feed io.ReadCloser, writeChan c
 			break // End of file
 		}
 	}
-	feed.Close()
-
 	return nil
 }
 

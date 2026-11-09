@@ -152,6 +152,13 @@ func RunImportCmd(startTime time.Time, cfg *config.Config, afs afero.Fs, logDir 
 		return importResults, err
 	}
 
+	// close the database connection pool when the import finishes
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error().Err(err).Str("dataset", dbName).Str("directory", logDir).Msg("failed to close database connection pool after import")
+		}
+	}()
+
 	// get list of hourly log maps of all days of log files in directory
 	logMap, walkErrors, err := WalkFiles(afs, logDir, db.Rolling)
 
@@ -441,10 +448,12 @@ func WalkFiles(afs afero.Fs, root string, rolling bool) ([]HourlyZeekLogs, []uti
 		}
 
 		// check if the file is readable
-		if _, err := afs.Open(path); err != nil {
+		file, err := afs.Open(path)
+		if err != nil {
 			walkErrors = append(walkErrors, util.WalkError{Path: path, Error: ErrInsufficientReadPermissions})
 			return nil //nolint:nilerr // log the issue and continue walking
 		}
+		file.Close()
 
 		// trim the path name to remove the file extensions, only to leave .log
 		trimmedFileName := strings.TrimSuffix(path, ".gz")
