@@ -43,6 +43,7 @@ var ViewCommand = &cli.Command{
 			Aliases:  []string{"l"},
 			Usage:    "limit the number of results to display",
 			Required: false,
+			Value: 100,
 		},
 		ConfigFlag(false),
 	},

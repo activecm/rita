@@ -13,17 +13,11 @@ import (
 
 // can pass in filter here so that users can pass in a search as a cmdline flag
 // func GetCSVOutput(items []list.Item, relativeTimestamp time.Time) string {
-func GetCSVOutput(db *database.DB, minTimestamp, relativeTimestamp time.Time, search string, limit int) (string, error) {
+func GetCSVOutput(db *database.DB, minTimestamp, relativeTimestamp time.Time, search string, pageSize int) (string, error) {
 	// parse the search input
 	filter, parseErr := ParseSearchInput(search)
 	if parseErr != "" {
 		return "", fmt.Errorf("error parsing search input: %s", parseErr)
-	}
-
-	// default to 100 results if no limit is specified
-	pageSize := 100
-	if limit > 0 {
-		pageSize = limit
 	}
 
 	// get results from the database
