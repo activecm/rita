@@ -3,6 +3,7 @@ package integration_test
 import (
 	"database/sql"
 	"errors"
+	"net"
 	"testing"
 
 	"github.com/activecm/rita/v5/importer"
@@ -605,8 +606,8 @@ func (it *ValidDatasetTestSuite) TestUSNI() {
 		SrcIPBytesListLen uint64   `ch:"src_ip_bytes_list_len"`
 		FirstSeen         uint32   `ch:"first_seen"`
 		LastSeen          uint32   `ch:"last_seen"`
-		ServerIPs         []string `ch:"server_ips"`
-		ProxyIPs          []string `ch:"proxy_ips"`
+		ServerIPs         []net.IP `ch:"server_ips"`
+		ProxyIPs          []net.IP `ch:"proxy_ips"`
 		ProxyCount        uint64   `ch:"proxy_count"`
 		ProxyBoolCount    uint64   `ch:"proxy_bool_count"`
 	}
@@ -665,8 +666,8 @@ func (it *ValidDatasetTestSuite) TestUSNI() {
 				require.EqualValues(t, test.srcIPBytesListLen, result.SrcIPBytesListLen, "number of elements in src_ip_bytes_list field should match expected value")
 				require.EqualValues(t, test.firstSeen, result.FirstSeen, "first_seen should match expected value")
 				require.EqualValues(t, test.lastSeen, result.LastSeen, "last_seen should match expected value")
-				require.ElementsMatch(t, test.serverIPs, result.ServerIPs, "server_ips should match expected value")
-				require.ElementsMatch(t, test.proxyIPs, result.ProxyIPs, "proxy_ips should match expected value")
+				require.ElementsMatch(t, test.serverIPs, ipStrings(result.ServerIPs), "server_ips should match expected value")
+				require.ElementsMatch(t, test.proxyIPs, ipStrings(result.ProxyIPs), "proxy_ips should match expected value")
 				require.EqualValues(t, test.proxyCount, result.ProxyCount, "proxy_count should match expected value")
 				require.EqualValues(t, test.proxyCount, result.ProxyBoolCount, "proxy field boolean count should match proxy_count")
 
@@ -806,4 +807,14 @@ func (it *ValidDatasetTestSuite) TestLongConnections() {
 			require.InEpsilon(t, bottomThree[i].totalDuration, r.TotalDur, 0.3, "uconn: total duration should match (bottom #1%d src: %s, fqdn: %s)", i, bottomThree[i].src, bottomThree[i].dst)
 		}
 	})
+}
+
+// ipStrings converts ips from ClickHouse ipv6 columns to strings
+// (ipv4-mapped addresses are turned into plain ipv4 strings)
+func ipStrings(ips []net.IP) []string {
+	out := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		out = append(out, ip.String())
+	}
+	return out
 }

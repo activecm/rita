@@ -94,13 +94,13 @@ func FormatListTable(dbs []database.ImportDatabase) *table.Table {
 		Headers(headers...).
 		Rows(data...).
 		StyleFunc(func(row, _ int) lipgloss.Style {
-			if row == 0 {
+			if row == table.HeaderRow {
 				return headerStyle
 			}
 
-			even := row%2 == 0
-
-			if even {
+			// the header row is -1, the first data row is 0
+			odd := row%2 == 1
+			if odd {
 				return baseStyle.Foreground(lipgloss.Color("245"))
 			}
 			return baseStyle.Foreground(lipgloss.Color("252"))

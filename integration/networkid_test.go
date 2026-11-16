@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
 
@@ -105,10 +106,10 @@ func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 	i := 0
 	for rows.Next() {
 		var srcNUID uuid.UUID
-		var srcIPs []string
+		var srcIPs []net.IP
 		err = rows.Scan(&srcNUID, &srcIPs)
 		require.NoError(t, err)
-		require.ElementsMatch(t, srcIPs, expectedSrcNUIDs[srcNUID])
+		require.ElementsMatch(t, ipStrings(srcIPs), expectedSrcNUIDs[srcNUID])
 		i++
 	}
 	require.NoError(t, rows.Err())
@@ -131,8 +132,9 @@ func (it *NetworkIDSuite) TestNetworkIDSeparation() {
 	hadExternalID := false
 	for rows.Next() {
 		var dstNUID uuid.UUID
-		var dstIPs []string
-		err = rows.Scan(&dstNUID, &dstIPs)
+		var dstIPList []net.IP
+		err = rows.Scan(&dstNUID, &dstIPList)
+		dstIPs := ipStrings(dstIPList)
 		require.NoError(t, err)
 		if dstNUID.String() == "ffffffff-ffff-ffff-ffff-ffffffffffff" {
 			hadExternalID = true
