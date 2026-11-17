@@ -139,6 +139,9 @@ func TestExternalToInternalPrevalence(t *testing.T) {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "dnscat2_ja3_strobe_external", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	var results []prevalenceRes

@@ -43,6 +43,9 @@ func TestValidTSV(t *testing.T) {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "dnscat2_ja3_strobe", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// determine which max timestamp to use for relative time calculations
@@ -72,6 +75,9 @@ func TestValidJSON(t *testing.T) {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "dnscat2_ja3_strobe_json", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// determine which max timestamp to use for relative time calculations
@@ -620,6 +626,9 @@ func TestTSVLogFieldParsing(t *testing.T) {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "test_tsv_field_parsing", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// test tsv log field parsing
@@ -651,6 +660,9 @@ func TestJSONLogFieldParsing(t *testing.T) {
 
 	// connect to database
 	db, err := database.ConnectToDB(context.Background(), "json_with_all_fields", cfg, nil)
+	t.Cleanup(func() {
+		require.NoError(t, db.Close())
+	})
 	require.NoError(t, err)
 
 	// test json log field parsing

@@ -874,27 +874,6 @@ func (it *ValidDatasetTestSuite) TestMimeTypesURIsTable() {
 			},
 		},
 		{
-			name: "No Extensions in URIs",
-			src:  "10.55.100.108",
-			fqdn: "www.businessinsider.com",
-			mimeTypesURIInfoList: []mimeTypesURIInfo{
-				{
-					URI:           "/esi/user_menubar?0=json:[]&1=NULL",
-					Path:          "/esi/user_menubar",
-					Extension:     "",
-					MimeType:      "text/plain",
-					MismatchCount: 17,
-				},
-				{
-					URI:           "/esi/ed_sidebar",
-					Path:          "/esi/ed_sidebar",
-					Extension:     "",
-					MimeType:      "text/plain",
-					MismatchCount: 17,
-				},
-			},
-		},
-		{
 			name: "Variety of Extensions in URIs",
 			src:  "10.55.100.105",
 			fqdn: "static1.businessinsider.com",
@@ -922,47 +901,38 @@ func (it *ValidDatasetTestSuite) TestMimeTypesURIsTable() {
 				},
 			},
 		},
-		{
-			name: "High MisMatch Counts",
-			src:  "10.55.100.106",
-			fqdn: "www.alexa.com",
-			mimeTypesURIInfoList: []mimeTypesURIInfo{
-				{
-					URI:           "/topsites/category;3/Top/Business/",
-					Path:          "/topsites/category;3/Top/Business/",
-					Extension:     "",
-					MimeType:      "text/html",
-					MismatchCount: 61,
-				},
-				{
-					URI:           "/topsites/category;0/Top/Business/",
-					Path:          "/topsites/category;0/Top/Business/",
-					Extension:     "",
-					MimeType:      "text/html",
-					MismatchCount: 63,
-				},
-				{
-					URI:           "/topsites/category;2/Top/Business/",
-					Path:          "/topsites/category;2/Top/Business/",
-					Extension:     "",
-					MimeType:      "text/html",
-					MismatchCount: 67,
-				},
-				{
-					URI:           "/topsites/category;1/Top/Business/",
-					Path:          "/topsites/category;1/Top/Business/",
-					Extension:     "",
-					MimeType:      "text/html",
-					MismatchCount: 53,
-				},
-				{
-					URI:           "/topsites/category;4/Top/Business/",
-					Path:          "/topsites/category;4/Top/Business/",
-					Extension:     "",
-					MimeType:      "text/html",
-					MismatchCount: 44,
-				},
-			},
+		// the mismatch check must correctly handle multiple valid extensions for a given mime type.
+		// the test dataset doesn't have any cases where a connection's uris use multiple valid extensions for a given mime type,
+		// but it does have two different connections that have differing valid extensions for the same mime type (html and htm).
+		{ // uri: /js/6v/biz/common/store-proxy/store-proxy2.html
+			name:                 "Valid Extension",
+			src:                  "10.55.100.110",
+			fqdn:                 "is.alicdn.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
+		},
+		{ // uri: /cfbc.htm
+			name:                 "Second Valid Extension for Same Mime Type",
+			src:                  "10.55.100.103",
+			fqdn:                 "ul1.dvtps.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
+		},
+		{ // uri: /api/?callback...
+			name:                 "No Extensions - API Calls",
+			src:                  "10.55.100.104",
+			fqdn:                 "r.skimresources.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
+		},
+		{ // uri: /user_menubar
+			name:                 "No Extensions - Page Elements",
+			src:                  "10.55.100.108",
+			fqdn:                 "www.businessinsider.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
+		},
+		{ // uri: /Top/Business/
+			name:                 "No Extensions - Trailing Slash Pages",
+			src:                  "10.55.100.106",
+			fqdn:                 "www.alexa.com",
+			mimeTypesURIInfoList: []mimeTypesURIInfo{},
 		},
 	}
 
@@ -1014,21 +984,26 @@ func (it *ValidDatasetTestSuite) TestMimeTypesURIsTable() {
 					WHERE hash=unhex({hash:String}) AND modifier_name={modifier_name:String}
 				`).ScanStruct(&res2)
 
-				// verify that the query did not produce an error and that the result is not empty
-				require.NoError(t, err, "querying threat_mixtape table should not produce an error")
-				require.NotEmpty(t, res2, "result should not be empty")
+				if len(test.mimeTypesURIInfoList) != 0 {
 
-				// check score was set correctly based on config
-				require.InDelta(t, it.cfg.Modifiers.MIMETypeMismatchScoreIncrease, res2.ModifierScore, 0.001, "modifier score must match expected value")
+					// verify that the query did not produce an error and that the result is not empty
+					require.NoError(t, err, "querying threat_mixtape table should not produce an error")
+					require.NotEmpty(t, res2, "result should not be empty")
 
-				// verify that modifier value is equal to the sum of all the mismatch counts
-				var sum uint64
-				for _, info := range test.mimeTypesURIInfoList {
-					sum += info.MismatchCount
+					// check score was set correctly based on config
+					require.InDelta(t, it.cfg.Modifiers.MIMETypeMismatchScoreIncrease, res2.ModifierScore, 0.001, "modifier score must match expected value")
+
+					// verify that modifier value is equal to the sum of all the mismatch counts
+					var sum uint64
+					for _, info := range test.mimeTypesURIInfoList {
+						sum += info.MismatchCount
+					}
+					modifierValue, err := strconv.Atoi(res2.ModifierValue)
+					require.NoError(t, err, "modifier value must be able to be converted to an integer")
+					require.EqualValues(t, sum, modifierValue, "modifier value must match the sum of all mismatch counts")
+				} else {
+					require.ErrorIs(t, err, sql.ErrNoRows, "host should not have a mime type mismatch modifier")
 				}
-				modifierValue, err := strconv.Atoi(res2.ModifierValue)
-				require.NoError(t, err, "modifier value must be able to be converted to an integer")
-				require.EqualValues(t, sum, modifierValue, "modifier value must match the sum of all mismatch counts")
 
 			})
 

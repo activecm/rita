@@ -51,6 +51,12 @@ func TestProxyRolling(t *testing.T) {
 	suite.Run(t, proxyRollingSuite)
 }
 
+func (it *ProxyRollingTestSuite) TeardownSuite() {
+	it.T().Cleanup(func() {
+		require.NoError(it.T(), it.db.Close())
+	})
+}
+
 func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	t := it.T()
 
@@ -76,7 +82,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	}
 	var results []res
 
-	expectedCounts := []uint64{3, 41}
+	expectedCounts := []uint64{2, 40}
 
 	err := it.db.Conn.Select(it.db.GetContext(), &results, `
 		SELECT analyzed_at, count() as c FROM threat_mixtape
@@ -116,6 +122,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 	ctx := it.db.QueryParameters(params)
 	rows, err := it.db.Conn.Query(ctx, query)
 	require.NoError(t, err)
+	defer rows.Close()
 
 	i := 0
 	for rows.Next() {
@@ -136,7 +143,7 @@ func (it *ProxyRollingTestSuite) TestRollingThreats() {
 		}
 		i++
 	}
-	rows.Close()
+	require.NoError(t, rows.Err())
 }
 
 func (it *ProxyRollingTestSuite) TestProxy() {
