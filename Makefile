@@ -5,7 +5,7 @@ CGO_ENABLED ?= 0
 GOARCH ?= $(shell go env GOARCH)
 GOOS ?= $(shell go env GOOS)
 
-.PHONY: build test test-unit test-integration test-database test-cmd test-viewer clean
+.PHONY: build test test-unit test-integration test-database test-cmd test-viewer test-lab compose-lab-config lab-up lab-down clean
 
 build:
 	CGO_ENABLED=$(CGO_ENABLED) GOARCH=$(GOARCH) GOOS=$(GOOS) go build $(LDFLAGS) -o rita
@@ -26,6 +26,18 @@ test-cmd:
 
 test-viewer:
 	go test ./viewer/... -timeout 1800s
+
+test-lab:
+	go test ./lab/...
+
+compose-lab-config:
+	docker compose -f docker-compose.lab.yml config
+
+lab-up:
+	docker compose -f docker-compose.lab.yml up --build --abort-on-container-exit
+
+lab-down:
+	docker compose -f docker-compose.lab.yml down --volumes
 
 clean:
 	rm -f rita

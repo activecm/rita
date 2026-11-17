@@ -1,0 +1,47 @@
+{
+  schema_version: "v1"
+  assets: [
+    {
+      cidr: "192.168.0.0/24"
+      asset_id: "lab-workstations"
+      asset_type: "workstation"
+      owner: "lab-operations"
+      importance: 40
+      network_zone: "lab"
+    }
+    {
+      cidr: "192.168.0.15"
+      asset_id: "lab-critical-server"
+      asset_type: "server"
+      owner: "lab-operations"
+      importance: 90
+      network_zone: "restricted"
+    }
+  ]
+  allowlists: {
+    domains: [
+      {
+        pattern: "*.updates.example.test"
+        score_reduction: 0.30
+        reason: "controlled software-update test endpoint"
+        enabled: true
+      }
+    ]
+  }
+  scoring: {
+    version: "v1"
+    rita_evidence_weight: 0.45
+    asset_importance_weight: 0.20
+    threat_intel_weight: 0.15
+    persistence_weight: 0.10
+    rarity_weight: 0.10
+    persistence_count_target: 20
+    persistence_duration_minutes: 30
+  }
+  reporting: {
+    default_window: "30m"
+  }
+  dns_features: {
+    enabled: true
+  }
+}

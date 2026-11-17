@@ -66,6 +66,9 @@ To destroy and recreate a dataset, use the `--rebuild` flag.
 ## Configuration
 See [Configuration](/docs/Configuration.md) for details on adjusting scoring.
 
+## RITA-Lab reports
+This checkout also includes an optional, read-only RITA-Lab reporting layer for controlled Zeek-log experiments. It adds asset association, report-period allowlist annotations, time-window alert aggregation, explainable secondary triage priority, and Markdown/CSV/HTML output without changing RITA's native detection logic. See [RITA-Lab](docs/RITALab.md) for the offline fixture workflow and safety boundary.
+
 ## Searching
 
 RITA follows a GitHub-style search syntax. Each field follows the `<field>:<value>` format, with each search criteria separated by a space. 
